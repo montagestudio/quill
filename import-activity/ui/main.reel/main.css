@@ -1,0 +1,57 @@
+
+body {
+    overflow: auto;
+}
+
+.Importer {
+    display: -webkit-flex;
+    height: 100%;
+    width: 100%;
+    padding: 14px;
+    text-shadow: 0 1px 0 hsla(0,0%,100%,.5);
+    background: hsl(0,0%,95%) -webkit-radial-gradient( hsl(0,0%,98%), hsl(0,0%,90%) );
+    -webkit-user-select: none;
+    cursor: default;
+}
+
+.Activities {
+    overflow: auto;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: hsl(0, 0%, 85%);
+    border: 1px solid hsla(0, 0%, 0%, .06);
+}
+
+.Activity-list {
+    position: relative;
+    width: 100%;
+    margin: 0;
+    padding: 4px 8px;
+    list-style: none;
+    background-color: hsl(0, 0%, 95%);
+}
+
+.Activity-list-item {
+    display: block;
+    padding: 0;
+    font-size: 16px;
+    text-decoration: none;
+    color: hsl(0, 0%, 30%);
+    border-top: 1px solid hsla(0, 0%, 100%, .5);
+    border-bottom: 1px solid hsla(0, 0%, 0%, .1);
+    background: hsl(0, 0%, 95%);
+    cursor: pointer;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.Activity-list-item:hover {
+    border-top: 1px solid hsla(0, 0%, 100%, .1);
+    background: hsl(0, 0%, 97%);
+}
+
+.Activity-list-item:active {
+    background: hsl(0, 0%, 90%);
+}

@@ -1,0 +1,74 @@
+<html><head>
+    <title>Main</title>
+    <meta charset="utf-8">
+
+    <link href="main.css" rel="stylesheet">
+
+    <script type="text/montage-serialization">
+    {
+        "owner": {
+            "properties": {
+                "element": {
+                    "#": "main"
+                }
+            },
+            "listeners": [
+                {
+                    "type": "openDocument",
+                    "listener": {
+                        "@": "owner"
+                    }
+                },
+                {
+                    "type": "action",
+                    "listener": {
+                        "@": "owner"
+                    }
+                }
+
+            ]
+        },
+
+        "localizer": {
+            "prototype": "montage/core/localizer[defaultLocalizer]"
+        },
+
+        "activityList": {
+            "prototype": "montage/ui/repetition.reel",
+            "properties": {
+                "element": {
+                    "#": "activityList"
+                }
+            },
+            "bindings": {
+                "contentController": {"<-": "@owner.contentController"}
+            }
+        },
+
+        "activity": {
+                "prototype": "import-activity/ui/activity-list-item.reel",
+                "properties": {
+                    "element": {"#": "activity"}
+                },
+                "bindings": {
+                    "item": {"<-": "@activityList.objectAtCurrentIteration"}
+                }
+            }
+    }
+    </script>
+</head>
+<body>
+
+    <div data-montage-id="main" class="main Importer">
+        <section class="Activities">
+            <ul data-montage-id="activityList" class="Activity-list">
+                <li class="Activity-list-item">
+                    <div data-montage-id="activity"></div>
+                </li>
+            </ul>
+        </section>
+    </div>
+
+
+
+</body></html>

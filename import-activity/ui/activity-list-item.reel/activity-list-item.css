@@ -1,0 +1,52 @@
+
+.Activity-box {
+    background: url('../../assets/images/pdf-icon.png') no-repeat;
+    background-size:32px 32px;
+    background-repeat:no-repeat;
+    background-position:left center;
+
+    padding: 0 48px;
+}
+
+.Activity-progress {
+    width: 100%;
+    box-sizing: content-box;
+}
+
+.Activity-status {
+    position: relative;
+    top: -3px;
+    font-size: 12px;
+}
+
+/* Add Button ---------------------------- */
+
+.Activity-close-button {
+    position: relative;
+    right: -13px;
+    top: -1px;
+
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    margin: 0 6px 0 0;
+    padding: 0;
+    line-height: 0;
+    font-size: 12px;
+    color: hsl(0,0%,60%);
+    text-shadow: 0 1px hsla(0,0%,100%,0.4);
+    border-radius: 11px;
+    border-color: hsl(0,0%,80%);
+    background: -webkit-linear-gradient( hsl(120,0%,96%), hsl(120,0%,86%) );
+    box-shadow: inset 0 1px 0 hsla(0,0%,100%,.6), 0 1px 2px hsla(0,0%,0%,.06);
+}
+
+.Activity-close-button:hover {
+    border-color: hsl(0,0%,76%);
+    background: -webkit-linear-gradient( hsl(120,0%,97%), hsl(120,0%,88%) );
+}
+
+.Activity-close-button.active {
+    background: hsl(0,0%,84%);
+    box-shadow: 0 1px 2px hsla(0,0%,0%,.06);
+}

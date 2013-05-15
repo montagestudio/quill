@@ -1,0 +1,36 @@
+{
+    "en": "English",
+    "en-x-test": "English (Test)",
+
+    "version": {
+        "message": "Version {number}",
+        "description": "Shows the version number of the application",
+        "locations": [
+            "bibliotheque/ui/main.reel/main.html"
+        ]
+    },
+
+    "copyright": {
+        "message": "© 2013 Declarativ Inc.",
+        "description": "",
+        "locations": [
+            "bibliotheque/ui/main.reel/main.html"
+        ]
+    },
+    "new_book": {
+        "message": "New",
+        "description": "Button to create a new book",
+        "locations": [
+            "bibliotheque/ui/main.reel/main.html"
+        ]
+    },
+
+    "open_book": {
+        "message": "Open",
+        "description": "Button to add a book",
+        "locations": [
+            "bibliotheque/ui/main.reel/main.html"
+        ]
+    }
+
+}

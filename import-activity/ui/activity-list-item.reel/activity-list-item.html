@@ -1,0 +1,106 @@
+<html><head>
+    <title>ActivityListItem</title>
+    <meta charset="utf-8">
+
+    <link href="activity-list-item.css" rel="stylesheet">
+
+    
+
+<script type="text/montage-serialization">{
+    "owner": {
+        "properties": {
+            "element": {
+                "#": "activityListItem"
+            }
+        },
+        "bindings": {
+            "status": {"<-": "@owner.item.status"},
+            "currentPage": {"<-": "@owner.item.currentPage"},
+            "nbrPages": {"<-": "@owner.item.nbrPages"}
+        }
+    },
+    "closeButton": {
+        "prototype": "matte/ui/button.reel",
+        "properties": {
+            "element": {
+                "#": "close-button"
+            },
+            "enabled": true
+        },
+        "listeners": [
+            {
+                "type": "action",
+                "listener": {"@": "owner"}
+            }
+        ],
+        "bindings": {
+            "detail.get('associatedObject')": {"<-": "@owner.item"}
+        }
+
+    },
+    "name": {
+        "prototype": "montage/ui/text.reel",
+        "properties": {
+            "element": {
+                "#": "name"
+            }
+        },
+        "bindings": {
+            "value": {
+                "<-": "@owner.item.name"
+            }
+        }
+    },
+    "progress": {
+        "prototype": "matte/ui/progress.reel",
+        "properties": {
+            "element": {
+                "#": "progress"
+            },
+            "max": 0,
+            "value": 0
+        },
+        "bindings": {
+            "max": {
+                "<-": "@owner.item.nbrPages"
+            },
+            "value": {
+                "<-": "@owner.item.currentPage"
+            }
+        }
+    },
+    "status": {
+        "prototype": "montage/ui/text.reel",
+        "properties": {
+            "element": {
+                "#": "status"
+            }
+        },
+        "bindings": {
+            "value": {
+                "<-": "@owner.statusLabel"
+            }
+        }
+    }
+}</script></head>
+<body>
+
+<div data-montage-id="activityListItem" class="Activity-box">
+    <section>
+        <span data-montage-id="name" class="Activity-name"></span>
+        <span>&nbsp;</span>
+    </section>
+    <section>
+        <progress data-montage-id="progress" class="Activity-progress"></progress>
+        <button data-montage-id="close-button" class="Activity-close-button">x</button>
+    </section>
+    <section>
+        <span data-montage-id="status" class="Activity-status">Waiting...</span>
+        <span>&nbsp;</span>
+        <!--input type="button" data-montage-id="action-button"-->
+    </section>
+</div>
+
+
+
+</body></html>

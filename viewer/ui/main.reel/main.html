@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+    <title>Main</title>
+    <meta charset="utf-8">
+
+    <link href="main.css" rel="stylesheet" />
+
+    <script type="text/montage-serialization">
+        {
+            "localizer": {
+                "object": "montage/core/localizer[defaultLocalizer]"
+            },
+
+            "owner": {
+                "properties": {
+                    "element": {"#": "main"},
+                    "viewer": {"@": "viewer"},
+                    "footer": {"@": "footer"},
+
+                    "documentPath": "samples/hello.pdf"
+                }
+            },
+
+            "viewer": {
+                "prototype": "viewer/ui/pdf-viewer.reel",
+                "properties": {
+                    "element": {"#": "viewer"}
+                },
+                "bindings": {
+                    "documentPath": {"<->": "@owner.params.path"},
+                    "pageNumber": {"<->": "@owner.params.p"},
+                    "renderingMode": {"<-": "@owner.params.m"},
+                    "scale": {"<-": "@owner.params.s"}
+                }
+            },
+
+            "footer": {
+                "prototype": "viewer/ui/footer.reel",
+                "properties": {
+                    "element": {"#": "footer"},
+                    "viewer": {"@": "viewer"}
+                },
+                "bindings": {
+                    "pageNumber": {"<-": "@viewer.pageNumber"},
+                    "numberOfPages": {"<-": "@viewer.numberOfPages"},
+                    "mode": {"<->": "@viewer.mode"},
+                    "opacity": {"<->": "@viewer.opacity"},
+                    "showText": {"<->": "@viewer.showText"},
+                    "showImage": {"<->": "@viewer.showImage"},
+                    "showGraphic": {"<->": "@viewer.showGraphic"}
+                }
+            }
+        }
+    </script>
+
+</head>
+<body>
+
+    <div data-montage-id="main" class="main">
+        <div class="viewer">
+            <div data-montage-id="viewer"></div>
+        </div>
+        <div data-montage-id="footer"></div>
+    </div>
+
+</body>
+</html>

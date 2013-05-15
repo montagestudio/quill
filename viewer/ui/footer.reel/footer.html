@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link href="footer.css" rel="stylesheet" />
+
+    <script type="text/montage-serialization">
+        {
+            "localizer": {
+                "object": "montage/core/localizer[defaultLocalizer]"
+            },
+
+            "owner": {
+                "properties": {
+                    "element": {"#": "footer"}
+                }
+            },
+
+            "overlayRadio": {
+                "prototype": "native/ui/input-radio.reel",
+                "properties": {
+                    "element": {"#": "position-overlay"}
+                },
+                "bindings": {
+                    "checked": {"<->": "@owner.mode == 'overlay'"}
+                }
+
+            },
+
+            "asideRadio": {
+                "prototype": "native/ui/input-radio.reel",
+                "properties": {
+                    "element": {"#": "position-aside"}
+                },
+                "bindings": {
+                    "checked": {"<->": "@owner.mode == 'aside'"}
+                }
+            },
+
+            "showTextCheckbox": {
+                "prototype": "native/ui/input-checkbox.reel",
+                "properties": {
+                    "element": {"#": "show-text"}
+                },
+                "bindings": {
+                    "checked": {"<->": "@owner.showText"}
+                }
+
+            },
+
+            "showImageCheckbox": {
+                "prototype": "native/ui/input-checkbox.reel",
+                "properties": {
+                    "element": {"#": "show-image"}
+                },
+                "bindings": {
+                    "checked": {"<->": "@owner.showImage"}
+                }
+
+            },
+
+            "showGraphicCheckbox": {
+                "prototype": "native/ui/input-checkbox.reel",
+                "properties": {
+                    "element": {"#": "show-graphic"}
+                },
+                "bindings": {
+                    "checked": {"<->": "@owner.showGraphic"}
+                }
+
+            },
+
+            "pageNumber": {
+                "prototype": "montage/ui/text.reel",
+                "properties": {
+                    "element": {"#": "page-number"}
+                },
+                "bindings": {
+                    "value": {"<-": "'Page ' + @owner.pageNumber + ' of ' + @owner.numberOfPages"}
+                }
+            },
+
+            "opacityRange": {
+                "prototype": "native/ui/input-range.reel",
+                "properties": {
+                    "element": {"#": "opacity"},
+                    "name": "opacity",
+                    "min": 0,
+                    "max": 1,
+                    "step": 0.01
+                },
+                "bindings": {
+                    "value": {"<->": "@owner.opacity"},
+                    "disabled": {"<-": "@owner.mode != 'overlay'"}
+                }
+            }
+
+        }
+    </script>
+
+</head>
+<body>
+
+    <div data-montage-id="footer" class="footer">
+        <label class="label">Position:</label>
+        <label><input type="radio" data-montage-id="position-overlay" name="mode" value="overlay">overlay</label>
+        <label><input type="radio" data-montage-id="position-aside" name="mode" value="aside" checked>side by side</label>
+
+        <span class="label">Opacity:</span>
+        <input type="range" data-montage-id="opacity"/>
+
+        <span class="label">Show txt:</span>
+        <input type="checkbox" data-montage-id="show-text"/>
+        <span class="no-space">img:</span>
+        <input type="checkbox" data-montage-id="show-image"/>
+        <span class="no-space">svg:</span>
+        <input type="checkbox" data-montage-id="show-graphic"/>
+
+
+        <span class="label"></span><span data-montage-id="page-number"></span>
+    </div>
+
+</body>
+</html>

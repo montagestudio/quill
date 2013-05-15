@@ -1,0 +1,73 @@
+
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.main {
+    position: relative;
+    height: 100%;
+    overflow: auto;
+
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+}
+
+.viewer {
+    margin: 8px 8px 34px 8px;
+}
+
+#toolbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+
+    border-top: 1px solid black;
+    background-image:url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIHZpZXdCb3g9IjAgMCAxIDEiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiPgo8bGluZWFyR3JhZGllbnQgaWQ9Imc4NjIiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjAlIiB5Mj0iMTAwJSI+CjxzdG9wIHN0b3AtY29sb3I9IiM2NjY2NjYiIG9mZnNldD0iMCIvPjxzdG9wIHN0b3AtY29sb3I9IiMyMjIyMjIiIG9mZnNldD0iMSIvPgo8L2xpbmVhckdyYWRpZW50Pgo8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSJ1cmwoI2c4NjIpIiAvPgo8L3N2Zz4=);
+    background-color: #565656;
+    color: #eeeeee;
+}
+
+#menubar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 4px;
+    border-bottom: 1px solid black;
+    image:url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIHZpZXdCb3g9IjAgMCAxIDEiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiPgo8bGluZWFyR3JhZGllbnQgaWQ9Imc1MjciIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjAlIiB5Mj0iMTAwJSI+CjxzdG9wIHN0b3AtY29sb3I9IiM5OTk5OTkiIG9mZnNldD0iMCIvPjxzdG9wIHN0b3AtY29sb3I9IiNDQ0NDQ0MiIG9mZnNldD0iMSIvPgo8L2xpbmVhckdyYWRpZW50Pgo8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSJ1cmwoI2c1MjcpIiAvPgo8L3N2Zz4=);    background-color: #565656;
+    color: #222222;
+}
+
+
+#toolbar .label {
+    margin: 0 4px 0 20px;
+}
+
+#toolbar .no-space {
+    margin: 0 4px 0 4px;
+}
+
+#toolbar .info {
+    font-style:italic;
+    font-weight: 100;
+}
+
+#toolbar .offset {
+    display: inline-block;
+    width: 3em;
+}
+
+#toolbar input {
+    vertical-align: baseline;
+}
+
+#toolbar input[type="range"] {
+    vertical-align: middle;
+}
+

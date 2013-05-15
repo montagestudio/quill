@@ -1,0 +1,41 @@
+{
+    "name": "plume",
+    "version": "0.1.0",
+    "private": true,
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:declarativ/plume.git"
+    },
+    "dependencies": {
+        "montage": "0.13.0-alpha",
+        "matte": "0.1.1-alpha",
+        "native": "0.1.1-alpha",
+        "mousse": "0.1.0",
+        "q": "0.9.2",
+        "q-connection": "0.5.3",
+        "q-io": "1.6.5",
+        "qs": "0.5.2",
+        "mop": "git+ssh://git@github.com:montagejs/mop.git#edge",
+        "npm": "1.1.70",
+        "minit": "0.3.0-alpha",
+        "minimatch": "0.2.9"
+    },
+    "devDependencies": {
+        "jasmine-node": "1.2.2",
+        "sandboxed-module": "0.1.4",
+        "montage-testing": "git+ssh://git@github.com:montagejs/montage-testing.git#edge",
+        "shelljs": "0.1.2",
+        "jshint": "1.1.0"
+    },
+    "mappings": {
+        "filament-extension": {
+            "name": "filament-extension",
+            "location": "filament-extension"
+        }
+    },
+    "scripts": {
+        "test": "node test/run.js",
+        "lint": "node test/lint.js"
+    },
+    "manifest": true
+}

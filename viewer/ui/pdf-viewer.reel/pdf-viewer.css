@@ -1,0 +1,41 @@
+.pdf-viewer {
+    position: relative;
+    -webkit-user-select: none;
+}
+
+.pdf-viewer-loading > canvas, .pdf-viewer-loading > html {
+    display: none;
+}
+
+.pdf-viewer-output {
+    box-sizing: content-box;
+    margin: 0;
+    border:1px solid darkgray;
+    xbackground: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAJ0lEQVQYV2O8ePHifwY0oKenhy7EwDgUFP4HAnSXX7p0CdMzQ0AhAGa4NDFrqJhAAAAAAElFTkSuQmCC) repeat;
+    background-color: white;
+}
+
+.pdf-viewer-html {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    overflow: hidden;
+
+    -webkit-transition: left 0.3s ease-out;
+}
+
+.pdf-viewer-html span, .pdf-viewer-html svg {
+    -webkit-user-select: auto;
+}
+
+.pdf-viewer-html.no-text span {
+    display: none;
+}
+
+.pdf-viewer-html.no-image img {
+    display: none;
+}
+
+.pdf-viewer-html.no-graphic svg {
+    display: none;
+}
