@@ -18,7 +18,9 @@
         "mop": "git+ssh://git@github.com:montagejs/mop.git#edge",
         "npm": "1.1.70",
         "minit": "0.3.0-alpha",
-        "minimatch": "0.2.9"
+        "minimatch": "0.2.9",
+        "pdf.js": "git+ssh://git@github.com:ducarroz/pdf.js.git#master"
+
     },
     "devDependencies": {
         "jasmine-node": "1.2.2",
