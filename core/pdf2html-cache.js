@@ -84,32 +84,27 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
 
     initialize: {
         value: function(path, pdf) {
-            var thisRef = this,
+            var self = this,
                 defered = Promise.defer();
 
-            console.log(">>> SETUP CACHE FOR", path, pdf.pdfInfo.fingerprint);
+            console.log(">>> SETUP CACHE FOR", decodeURIComponent(path.substring("fs://localhost".length)), pdf.pdfInfo.fingerprint);
 
 
             if (IS_IN_LUMIERES) {
                 if (path.indexOf("fs://localhost") === 0) {
-                    var fs = thisRef.backend.get("fs");
+                    var fs = self.backend.get("fs");
 
-                    thisRef.folderPath = path.substring(14) + ".plume/assets";
+                    this.folderPath = decodeURIComponent(path.substring("fs://localhost".length));
+                    if (this.folderPath.charAt(this.folderPath.length - 1) !== "/") {
+                        this.folderPath += "/";
+                    }
 
                     fs.invoke("exists", this.folderPath).then(function(exists){
-                        console.log("....exists....", exists);
-                        var createFolderPromise;
-                        if (!exists) {
-                            createFolderPromise = fs.invoke("makeTree", thisRef.folderPath, "777");
+                        if (exists) {
+                            defered.resolve(self);
                         } else {
-                            createFolderPromise = Promise.resolve();
+                            defered.reject("Cannot initialize the PDF Object cache: cache path does not exist!");
                         }
-
-                        createFolderPromise.then(function() {
-                            defered.resolve(thisRef)
-                        }, function(error) {
-                            defered.reject("Cannot initialize the PDF Object cache: cannot create folder,", error);
-                        });
                     })
                 } else {
                     defered.reject("Cannot initialize the PDF Object cache: invalid document path!");
@@ -124,19 +119,19 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
 
     setObject: {
         value: function(data, page, callback) {
-            var thisRef = this,
+            var self = this,
                 name = data[0],
                 pageNbr = data[1] + 1,
                 type = data[2],
                 imageData = data[3],
                 referenceID = data[4],
-                filePath = this.folderPath + "/image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
+                filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
                 bytes,
                 length;
 
             var writeToDisk = function(filePath, bytes) {
                 console.log("===== writeToDisk[1]", filePath, bytes.length)
-                return thisRef.backend.get("fs").invoke("open", filePath, "wb", "").then(function(writer) {
+                return self.backend.get("fs").invoke("open", filePath, "wb", "").then(function(writer) {
                     var offset = 0,
                         remaining = bytes.length;
 
@@ -242,12 +237,12 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
 
     objectUrl: {
         value: function(data, page, callback) {
-            var thisRef = this,
-                fs = thisRef.backend.get("fs"),
+            var self = this,
+                fs = self.backend.get("fs"),
                 name = data[0],
                 type = data[2],
                 referenceID = data[3],
-                filePath = this.folderPath + "/image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name);
+                filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name);
 
             console.log(">>> CACHE GET OBJECT URL:", filePath, type);
 

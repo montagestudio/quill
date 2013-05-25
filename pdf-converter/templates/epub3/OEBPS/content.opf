@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/" unique-identifier="bookid" version="3.0" prefix="rendition: http://www.idpf.org/vocab/rendition/# ibooks: http://vocabulary.itunes.apple.com/rdf/ibooks/vocabulary-extensions-1.0/">
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+        <meta name="fixed-layout" content="{{fixed-layout}}"/>
+        <meta name="generator" content="Declarativ-Plume"/>
+        <meta name="original-resolution" content="{{original-resolution}}"/>
+        <meta name="orientation-lock" content="portrait"/>
+        <meta name="RegionMagnification" content="true"/>
+        <dc:title>{{document-title}}</dc:title>
+        <dc:creator>{{document-author}}</dc:creator>
+        <dc:description>{{document-description}}</dc:description>
+        <dc:publisher>{{document-publisher}}</dc:publisher>
+        <dc:date>{{document-date}}</dc:date>
+        <dc:language>{{document-language}}</dc:language>
+        <dc:identifier id="bookid">{{book-id}}</dc:identifier>
+        <meta property="dcterms:modified">{{modification-date}}</meta>
+        <meta name="cover" content="cover.jpg" />
+        <meta property="rendition:layout">pre-paginated</meta>
+        <meta property="ibooks:specified-fonts">true</meta>
+        <meta property="ibooks:version">1.0</meta>
+    </metadata>
+    <manifest>
+        <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+        <item id="cover.jpeg" href="assets/cover.jpeg" properties="cover-image" media-type="image/jpeg"/>
+        {{manifest}}
+    </manifest>
+    <spine toc="ncx">
+        {{spine}}
+    </spine>
+</package>

@@ -36,11 +36,15 @@ exports.Main = Montage.create(Component, {
         value: []
     },
 
-    isFirstRun: {
-        value: true
-    },
+//    isFirstRun: {
+//        value: true
+//    },
 
     contentController: {
+        value: null
+    },
+
+    destination: {
         value: null
     },
 
@@ -59,11 +63,17 @@ foo = this;
                     var backend = self.environmentBridge.backend; // force open backend connection
 
                     self.environmentBridge.userPreferences.then(function (prefs) {
-                        self.isFirstRun = prefs.firstRun;
-                        //TODO I don't want firstrun to be set-able as an API, but this feels a little weird
+                        console.log("PLUME PREFERENCES", prefs)
+
+//                        self.isFirstRun = prefs.firstRun;
+//                        //TODO I don't want firstrun to be set-able as an API, but this feels a little weird
+
+                        self.destination = prefs.importDestinationPath.substring("fs://localhost".length);
                         self.needsDraw = true;
                     });
                 });
+
+
 
             } else {
                 alert("Plume cannot be run outside of Lumieres!");
@@ -89,11 +99,11 @@ foo = this;
 
     draw: {
         value: function () {
-            if (this.isFirstRun) {
-                this.element.classList.add("isFirstRun");
-            } else {
-                this.element.classList.remove("isFirstRun");
-            }
+//            if (this.isFirstRun) {
+//                this.element.classList.add("isFirstRun");
+//            } else {
+//                this.element.classList.remove("isFirstRun");
+//            }
         }
     },
 
@@ -203,8 +213,9 @@ console.log("--restoreContent")
                             this.contentController.content.some(function (object) {
                                 if (object.url === item.url) {
                                     object.status = item.status;
-                                    object.currentPage = item.currentPage;
                                     object.nbrPages = item.nbrPages;
+                                    object.currentPage = item.currentPage;
+                                    object.destination = item.destination;
                                     return true;
                                 }
                                 return false;

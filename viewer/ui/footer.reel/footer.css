@@ -39,3 +39,6 @@
     vertical-align: middle;
 }
 
+.footer input[type="checkbox"] {
+    margin-left: -6px;
+}

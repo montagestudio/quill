@@ -39,3 +39,22 @@
 .pdf-viewer-html.no-graphic svg {
     display: none;
 }
+
+.pdf-viewer-html.show-box span {
+    margin: -1px;
+    border: 1px #800080 solid;
+}
+
+.pdf-viewer-html.show-box span > span {
+    border: 1px green solid;
+}
+
+.pdf-viewer-html.show-box img {
+    margin: -1px;
+    border: 1px blue solid;
+}
+
+.pdf-viewer-html.show-box svg {
+    margin: -1px;
+    border: 1px red solid;
+}

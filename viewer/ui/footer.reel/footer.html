@@ -70,6 +70,17 @@
 
             },
 
+            "showBoxCheckbox": {
+                "prototype": "native/ui/input-checkbox.reel",
+                "properties": {
+                    "element": {"#": "show-box"}
+                },
+                "bindings": {
+                    "checked": {"<->": "@owner.showBox"}
+                }
+
+            },
+
             "pageNumber": {
                 "prototype": "montage/ui/text.reel",
                 "properties": {
@@ -116,6 +127,8 @@
         <span class="no-space">svg:</span>
         <input type="checkbox" data-montage-id="show-graphic"/>
 
+        <span class="label">Show box:</span>
+        <input type="checkbox" data-montage-id="show-box"/>
 
         <span class="label"></span><span data-montage-id="page-number"></span>
     </div>

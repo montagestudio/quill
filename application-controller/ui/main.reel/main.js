@@ -42,6 +42,10 @@ exports.Main = Montage.create(Component, {
         value: []
     },
 
+    importDestinationPath: {
+        value: null
+    },
+
     didCreate: {
         value: function () {
 console.log("ACTIVITY MONITOR CREATED");
@@ -57,8 +61,20 @@ foo = this;
                     var backend = self.environmentBridge.backend; // force open backend connection
 
                     self.environmentBridge.userPreferences.then(function (prefs) {
+                        if (typeof prefs.importDestinationPath !== "string" || !prefs.importDestinationPath.length) {
+                            self.environmentBridge.backend.get("application").invoke("specialFolderURL", "documents", "user").then(function(path) {
+                                self.importDestinationPath = path.url + "/" + lumieres.applicationName;
+                                lumieres.setUserPreferences({importDestinationPath: self.importDestinationPath}, function (error, result) {
+                                    if (error) {
+                                        console.warm("Cannot set preferences")
+                                    }
+                                });
+                            }).done();
+                        } else {
+                            self.importDestinationPath = prefs.importDestinationPath;
+                        }
                         self.needsDraw = true;
-                    });
+                    }).done();
                 });
 
             } else {
@@ -155,7 +171,7 @@ foo = this;
                     else if (command === "itemUpdate") {
                         return this.importItems.some(function(object) {
                             if (data[1].url === object.url) {
-                                self.updateItemState(object, data[1].status, data[1].currentPage, data[1].nbrPages)
+                                self.updateItemState(object, data[1].status, data[1].currentPage, data[1].nbrPages, data[1].destination)
                                 return true;
                             }
                             return false;
@@ -222,9 +238,9 @@ foo = this;
                             newContent = [];
 
                         list.forEach(function(item) {
-                            // check if not already in the content
+                            // check if not already in the queue getting imported or waiting
                             if (!importItems.some(function(object) {
-                                return item.fileUrl === object.url;
+                                return item.fileUrl === object.url && object.status !== STATUS_READY;
                             })) {
                                 newContent.push({
                                     name: item.name,
@@ -291,12 +307,14 @@ foo = this;
     import: {
         value: function(item) {
             console.log("STARTING PROCESS", item.name);
+
             this.updateItemState(item, STATUS_IMPORTING);
 //            self.childProcessIDs.push(item.name);
 
             var windowParams = {
-                url: "http://client/pdf-converter/index.html?path=" + encodeURIComponent(item.url),
-                showWindow: false
+                url: "http://client/pdf-converter/index.html?source=" + encodeURIComponent(item.url),
+                showWindow: true,
+                canResize: true
             };
 
             this.environmentBridge.backend.get("application").invoke("openWindow", windowParams).then(function() {
@@ -306,7 +324,7 @@ foo = this;
     },
 
     updateItemState: {
-        value: function(item, status, currentPage, nbrPages) {
+        value: function(item, status, currentPage, nbrPages, destination) {
             var self = this,
                 ipc = this.environmentBridge.backend.get("ipc"),
                 statusChanged = false;
@@ -315,6 +333,10 @@ foo = this;
                 if (status == "success") {
                     item.status = STATUS_READY;
                     statusChanged = true;
+console.log("WILL CALL updateContentInfo")
+                    // Update the content.opf - this is optional at this stage
+                    this.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, {"fixed-layout": "true"}).done();
+
                 } else if (typeof status === "number") {
                     item.status = status;
                 }
@@ -328,8 +350,11 @@ foo = this;
                 item.nbrPages = nbrPages;
             }
 
+            if (destination !== null && destination !== undefined) {
+                item.destination = destination;
+            }
+
             ipc.invoke("namedProcesses", "monitor").then(function(processID) {
-                console.log("--- updateItemState", processID)
                 if (processID) {
                     return ipc.invoke("send", self.processID, processID[0], ["itemUpdate", item]);
                 }

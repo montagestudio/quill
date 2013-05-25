@@ -45,6 +45,20 @@
             }
         },
 
+        "destination": {
+           "prototype": "montage/ui/text.reel",
+           "properties": {
+               "element": {
+                   "#": "destination"
+               }
+           },
+           "bindings": {
+               "value": {
+                   "<-": "@owner.destination"
+               }
+           }
+        },
+
         "activity": {
                 "prototype": "import-activity/ui/activity-list-item.reel",
                 "properties": {
@@ -67,6 +81,8 @@
                 </li>
             </ul>
         </section>
+        <br>
+        <section class="footer">Importing documents into <span data-montage-id="destination"></span></section>
     </div>
 
 

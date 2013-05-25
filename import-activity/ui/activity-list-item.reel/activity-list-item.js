@@ -58,7 +58,9 @@ exports.ActivityListItem = Montage.create(Component, {
             }
 
             else if (this.item.status === 2) {
-                this.statusLabel = "Ready!"
+                var folderName =  this.item.destination.substring("fs://localhost".length);
+                folderName = folderName.substring(folderName.lastIndexOf("/") + 1);
+                this.statusLabel = "Your book \"" + folderName + "\" is ready!";
             }
         }
     },

@@ -1,7 +1,7 @@
 /* global lumieres */
 var Montage = require("montage/core/core").Montage,
     Component = require("montage/ui/component").Component,
-    PDF2HTML = require("./pdf2html.js").PDF2HTML;
+    PDF2HTML = require("core/pdf2html.js").PDF2HTML;
 
 
 var STATE_Unknown = 0,
@@ -166,6 +166,15 @@ devicePixelRatio = 1; //JFD DEBUG
                     this._drawShowGraphic = this.showGraphic;
                 }
 
+                if (this.showBox !== this._drawShowBox) {
+                    if (this.showBox) {
+                        this._htmlView.classList.add("show-box");
+                    } else {
+                        this._htmlView.classList.remove("show-box");
+                    }
+                    this._drawShowBox = this.showBox;
+                }
+
             }
 
             this._drawState = this._state;
@@ -297,6 +306,25 @@ devicePixelRatio = 1; //JFD DEBUG
             this.needsDraw = true;
         }
     },
+
+    _drawShowBox: {
+        value: null
+    },
+
+    _showBox: {
+        value: false
+    },
+
+    showBox: {
+        get: function() {
+            return this._showBox;
+        },
+        set: function(value) {
+            this._showBox = value;
+            this.needsDraw = true;
+        }
+    },
+
     _documentPath: {
         value: null
     },
@@ -319,13 +347,14 @@ devicePixelRatio = 1; //JFD DEBUG
             this._document = null;
             this._page = null;
 
-            console.log("path:", value, this.pageNumber)
+            console.log("path:", this._documentPath, this.pageNumber)
 
             if (typeof value === "string" && value.length) {
                 this.state = STATE_LoadingDocument;
-
+console.log("WILL LOAD:")
                 // Load the document
                 PDF2HTML.getDocument(this._documentPath).then(function(pdf) {
+console.log("PDF:", pdf)
                     thisRef._document = pdf;
                     thisRef.state = STATE_DocumentLoaded;
                     thisRef.numberOfPages = pdf.pdfInfo.numPages;

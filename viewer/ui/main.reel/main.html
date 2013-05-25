@@ -23,7 +23,7 @@
             },
 
             "viewer": {
-                "prototype": "viewer/ui/pdf-viewer.reel",
+                "prototype": "ui/pdf-viewer.reel",
                 "properties": {
                     "element": {"#": "viewer"}
                 },
@@ -48,7 +48,8 @@
                     "opacity": {"<->": "@viewer.opacity"},
                     "showText": {"<->": "@viewer.showText"},
                     "showImage": {"<->": "@viewer.showImage"},
-                    "showGraphic": {"<->": "@viewer.showGraphic"}
+                    "showGraphic": {"<->": "@viewer.showGraphic"},
+                    "showBox": {"<->": "@viewer.showBox"}
                 }
             }
         }

@@ -54,7 +54,6 @@ exports.namedProcesses = function(name) {
 exports.send = function(from, to, data) {
     var deferred = Q.defer();
 
-    console.log("-- sending:", from, to, data);
     // only accept message from a registered process or null
     if (g_registeredProcess[from]) {
         var dest = g_registeredProcess[to];

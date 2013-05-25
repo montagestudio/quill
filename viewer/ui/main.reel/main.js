@@ -28,21 +28,9 @@ exports.Main = Montage.create(Component, {
 
             for (i in searches) {
                 var param = searches[i].split("=");
-                this.params[unescape(param[0])] = param.length > 1 ? unescape(param[1]) : null;
+                this.params[decodeURIComponent(param[0])] = param.length > 1 ? decodeURIComponent(param[1]) : null;
             }
-            console.log(this.params);
-
-////            setupLocalFileSystem(function(fs, error) {
-//                if (error === undefined) {
-//                    console.log('Opened file system: ' + fs.name, fs);
-//                    globalScope.fs = fs;
-//                }
-//
-//                loadPDFDocument("samples/hello.pdf", function(pdf, page) {
-//                   console.log("pdf document loaded", pdf, page);
-//               })
-////            });
-
+            console.log("PATH[2]:",this.params.path);
         }
     }
 });

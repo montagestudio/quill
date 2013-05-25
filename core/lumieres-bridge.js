@@ -72,7 +72,8 @@ exports.LumiereBridge = Montage.create(EnvironmentBridge, {
             if (typeof url === "string") {
                 url = url.replace(/^\w+:\/\/\w*/m, "");
             }
-            return url;
+
+            return decodeURIComponent(url);
         }
     },
 

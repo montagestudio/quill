@@ -1,6 +1,8 @@
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
-    PDF2HTMLCache = require("./pdf2html-cache.js").PDF2HTMLCache;
+    PDF2HTMLCache = require("./pdf2html-cache.js").PDF2HTMLCache,
+    adaptConnection = require("q-connection/adapt"),
+    Connection = require("q-connection");
 
 
 var origin_time = new Date().getTime();
@@ -9,6 +11,8 @@ var timestamp = function() {return "[" + ((new Date().getTime() - origin_time) %
 var renderingMode = 3;
 
 var xmlns = "http://www.w3.org/2000/svg";
+
+var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 
 function blobFromDataURL(dataURL) {
@@ -33,9 +37,10 @@ function blobFromDataURL(dataURL) {
 }
 
 var _baselineOffsetCache = {};
-function getBaselineOffset(glyphs, font, height, rootElem) {
-    if (_baselineOffsetCache[font] !== undefined) {
-        return _baselineOffsetCache[font];
+function getBaselineOffset(font, data, fontStyle, height) {
+
+    if (_baselineOffsetCache[fontStyle] !== undefined) {
+        return _baselineOffsetCache[fontStyle];
     }
 
     // Create a temporary canvas
@@ -45,11 +50,9 @@ function getBaselineOffset(glyphs, font, height, rootElem) {
 
     var _findVerticalFirstPixel = function(ctx, originX, width) {
         var pixels = ctx.getImageData(originX, 0, originX + width, canvas.height);
-
         for (var x = 0; x < pixels.width; x ++) {
             for (var y = 0; y < pixels.height; y ++) {
                if (pixels.data[((x + y * pixels.width) * 4) + 3] !== 0) {
-
                    return y;
                }
            }
@@ -61,43 +64,59 @@ function getBaselineOffset(glyphs, font, height, rootElem) {
     canvas.width = 100;
     canvas.height = height * 10;     // to make sure we can deal with the most exotic font
 
-    for (var i = 0; i < glyphs.length; i ++) {
-        var character = glyphs[i] ? glyphs[i].fontChar : null;
 
-        if (character === null) {
-            continue;
-        }
-
-        ctx.save();
-        ctx.font = font;
-        charWidth = ctx.measureText(character).width;
-        canvas.width = charWidth;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.font = font;     // the context was reset when resizing the canvas!
-        ctx.fillStyle = "rgba(0, 0, 0, 255)";
-
-        ctx.textBaseline = "alphabetic";
-        ctx.fillText(character, 0, height * 5);
-        var baseline = _findVerticalFirstPixel(ctx, 0, charWidth);
-        if (baseline !== -1) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.textBaseline = "top";
-            ctx.fillText(character, 0, height * 5);
-
-            var topline = _findVerticalFirstPixel(ctx, 0, charWidth);
-            if (topline !== -1) {
-                _baselineOffsetCache[font] = baseline - topline;
-
-                console.log("baseline offset:", baseline - topline, (baseline -topline) / height);
-                return baseline - topline;
+    // Let's make sure we have enough glyphs in the font cache
+    if (typeof data !== "string") {
+        data.forEach(function(item) {
+            if (typeof item === "string") {
+                font.charsToGlyphs(item);
             }
-        }
-
-        ctx.restore();
+        })
+    } else {
+        font.charsToGlyphs(data);
     }
 
-    console.log("#error: cannot calculate the baseline offset!");
-    return -1;
+    for (var seq in font.charsCache) {
+        var glyphs = font.charsCache[seq];
+
+        for (var i = 0; i < glyphs.length; i ++) {
+            var character = glyphs[i] ? glyphs[i].fontChar : null;
+
+            if (character === null) {
+                continue;
+            }
+
+            ctx.save();
+            ctx.font = fontStyle;
+            charWidth = ctx.measureText(character).width || 64; // Some time ctx.mesureText returns 0, let use a default char width
+            canvas.width = charWidth;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = fontStyle;     // the context was reset when resizing the canvas!
+            ctx.fillStyle = "rgba(0, 0, 0, 255)";
+
+            ctx.textBaseline = "alphabetic";
+            ctx.fillText(character, 0, height * 5);
+            var baseline = _findVerticalFirstPixel(ctx, 0, charWidth);
+            if (baseline !== -1) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.textBaseline = "top";
+                ctx.fillText(character, 0, height * 5);
+
+                var topline = _findVerticalFirstPixel(ctx, 0, charWidth);
+                if (topline !== -1) {
+                    _baselineOffsetCache[fontStyle] = baseline - topline;
+
+                    console.log("baseline offset:", baseline - topline, (baseline -topline) / height);
+                    return baseline - topline;
+                }
+            }
+
+            ctx.restore();
+        }
+    }
+
+    console.warn("#error: cannot calculate the baseline offset!, will return 90% of the font height");
+    return - height * 0.9;
 }
 
 function roundValue(value, precission) {
@@ -132,29 +151,72 @@ exports.PDF2HTML = Montage.create(Montage, {
         }
     },
 
+    rootDirectory: {
+        value: "~/"
+    },
+
+    _backend: {
+        value: null
+    },
+
+    backend: {
+        get: function () {
+            var self = this,
+                resolvePort = function () {
+                    if (lumieres.nodePort) {
+                        port.resolve(lumieres.nodePort);
+                    }
+                };
+
+            if (self._backend == null) {
+                var port = Promise.defer();
+                if (lumieres.nodePort) {
+                    port.resolve(lumieres.nodePort);
+                } else {
+                    while (port.promise.isPending()) {
+                        port.promise.delay(20).then(resolvePort);
+                    }
+                }
+                var connection = adaptConnection(new WebSocket("ws://localhost:" + lumieres.nodePort));
+                connection.closed.then(function () {
+                    self._backend = null;
+                });
+
+                self._backend = Connection(connection);
+            }
+
+            return self._backend;
+        }
+    },
+
     getDocument: {
-        value: function(path) {
-            var thisRef = this,
+        value: function(path, outputDirectory) {
+            var self = this,
                 defered = Promise.defer();
 
             // note: PDFJS uses it own variation of promise
             PDFJS.getDocument(path).then(
                 function(pdf) {
-                    thisRef._pdf = pdf;
+                    self._pdf = pdf;
                     pdf.cssFonts = {};  // Setup a cache for the fonts
 
-                    // Setup local storage for images
-                    Montage.create(PDF2HTMLCache).initialize(path, pdf).then(function(cache) {
-                            PDFJS.objectsCache = cache;
-                            defered.resolve(pdf)
-                        }, function(error) {
-                            console.warn(error);
-                            defered.resolve(pdf)
-                        }
-                    ).done()
+                    if (IS_IN_LUMIERES && outputDirectory) {
+                        self.rootDirectory = outputDirectory;
+
+                        Montage.create(PDF2HTMLCache).initialize(self.rootDirectory + "/assets/", pdf).then(function(cache) {
+                                PDFJS.objectsCache = cache;
+                                defered.resolve(pdf)
+                            }, function(error) {
+                                console.warn(error);
+                                defered.resolve(pdf)
+                            }
+                        );
+                    } else {
+                        defered.resolve(pdf)
+                    }
                 },
                 function(exception) {
-                    defered.reject(exception)
+                    defered.reject(exception);
                 },
                 function(progress) {
                     defered.notify(progress);
@@ -192,7 +254,7 @@ exports.PDF2HTML = Montage.create(Montage, {
 
     renderPage: {
         value: function(page, scale, canvas, rootNode) {
-            var thisRef = this,
+            var self = this,
                 defered = Promise.defer(),
                 renderContext,
                 ctx = canvas.getContext('2d');
@@ -236,18 +298,59 @@ exports.PDF2HTML = Montage.create(Montage, {
 
             renderContext.continueCallback = function(callback) {
                 console.log("  >>> next");
-                thisRef._preProcessor.endSVG();
+                self._preProcessor.endSVG();
                 callback();
             }
 
             page.render(renderContext).then(
                 function() {
                     console.log("...success");
-                    page.destroy();
-                    defered.resolve();
+
+                    if (IS_IN_LUMIERES) {
+                        var fs = self.backend.get("fs"),
+                            folderPath = decodeURIComponent((self.rootDirectory + "/pages/").substring("fs://localhost".length)),
+                            data = rootNode.innerHTML;
+
+                        // Convert URL to relative
+                        var expr = new RegExp(self.rootDirectory + "/", "g");
+                        data = data.replace(expr, "../");
+
+                        //replace entities
+                        data = data.replace(/&nbsp;/g, "&#160;");
+
+                        // properly terminate tags, XML is very strict!
+                        var tags = ["img"]
+                        expr = new RegExp("(<(" + tags.join("|") + ") [^>]*[^/])(>)", "gi");
+                        data = data.replace(expr, "$1/$3");
+
+// TODO: temporary for image resize by factor 2
+//data = data.replace(/(<img [^>]*-webkit-transform: matrix\()([^)]*)(\)[^>]*\/>)/gi, function(match, param1, param2, param3){
+//    var matrix = param2.replace(/ /g, "").split(",");
+//    matrix[0] *= 2.0;
+//    matrix[3] *= 2.0;
+//    return param1 + matrix.join(", ") + param3
+//});
+
+                        self.backend.get("plume-backend").invoke("createFromTemplate", "/pdf-converter/templates/page.xhtml", folderPath + (page.pageInfo.pageIndex + 1) + ".xhtml", {
+                            "page-width": Math.round(renderContext.viewport.width),
+                            "page-height": Math.round(renderContext.viewport.height),
+                            "page-title": "TODO: TITLE",
+                            "page-headers": "",
+                            "page-content": data
+                        }).then(function() {
+                            page.destroy();
+                            defered.resolve();
+                        }, function(execption) {
+                            page.destroy();
+                            defered.reject(exception)
+                        });
+                    } else {
+                        page.destroy();
+                        defered.resolve();
+                    }
                 },
                 function(exception) {
-                    console.log("...error:", exception);
+                    console.log("...error:", exception.message, exception.stack);
                     page.destroy();
                     defered.reject(exception)
                 },
@@ -282,7 +385,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                 console.log("  IMG:appendImage", object);
 
                 var context = object.context,
-                    canvasHeight = context.ctx.canvas.height,
+//                    canvasHeight = context.ctx.canvas.height,
                     transform = context.ctx.mozCurrentTransform,
                     position,
                     elem,
@@ -298,7 +401,8 @@ exports.PDF2HTML = Montage.create(Montage, {
                     var imageData = object.imgData,
                         width = imageData.width,
                         height = imageData.height,
-                        imageCanvas = createScratchCanvas(width, height);
+                        imageCanvas = createScratchCanvas(width, height),
+                        imageCtx = imageCanvas.getContext('2d');
 
                     position = context.getCanvasPosition(0, -height);
                     transform[4] = position[0];
@@ -306,9 +410,9 @@ exports.PDF2HTML = Montage.create(Montage, {
 
 
                     if (typeof ImageData !== 'undefined' && imageData instanceof ImageData) {
-                        imageCanvas.putImageData(imageData, 0, 0);
+                        imageCtx.putImageData(imageData, 0, 0);
                     } else {
-                      context.putBinaryImageData.call(context, imageCanvas.getContext('2d'), imageData.data, width, height);
+                      context.putBinaryImageData.call(context, imageCtx, imageData.data, width, height);
                     }
 
                     elem = document.createElement("img");
@@ -465,7 +569,7 @@ exports.PDF2HTML = Montage.create(Montage, {
             showText: function(context, text) {
                 if (renderingMode < 3) return;
 
-                var isSpacedText = typeof data !== "string",
+                var isSpacedText = typeof text !== "string",
                     current = context.current,
                     ctx = context.ctx,
                     font = current.font,
@@ -479,7 +583,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     outerElemStyle = outerElem.style,
                     previousSpan = null,
                     vOffset = null,
-                    glyphs = isSpacedText ? null : font.charsToGlyphs(data),
+                    glyphs = isSpacedText ? null : font.charsToGlyphs(text),
                     data = isSpacedText ? text : glyphs,
                     dataLen = data.length,
                     x = 0,
@@ -488,10 +592,26 @@ exports.PDF2HTML = Montage.create(Montage, {
                     roundPosition = (renderingMode === 4),
                     i;
 
-                console.log("========== showText:", text, fontSize);
+                console.log("========== showText:", data, fontSize);
+
+                try {
 
                 ctx.save();
                 context.applyTextTransforms();
+
+
+                // Export the font
+                    // JFD TODO: write them to disk...
+                if (this.owner._pdf.cssFonts[fontName] == undefined) {
+                    this.owner._pdf.cssFonts[fontName] = /*this.page.commonObjs.getData(fontName)*/font.bindDOM();
+  console.log("*** FONT:", fontName, font)
+
+                    var style = document.createElement("style");
+                    style.type = "text/css";
+                    style.innerText = this.owner._pdf.cssFonts[fontName];
+                    this.owner._rootNodeStack[0].insertBefore(style, this.owner._rootNodeStack[0].firstChild);
+                }
+
 
 // JFD TODO: Not sure how to apply the line width for text outline in css
                 var lineWidth = current.lineWidth,
@@ -512,7 +632,7 @@ exports.PDF2HTML = Montage.create(Montage, {
 //                ctx.lineWidth = lineWidth;
 
                 if (glyphs) {
-                    vOffset = getBaselineOffset(glyphs, "normal normal " + (scale / fontSizeScale) + "px " + fontName, (scale / fontSizeScale));
+                    vOffset = getBaselineOffset(font, text, "normal normal " + (scale / fontSizeScale) + "px " + fontName, (scale / fontSizeScale));
 //                    outerElemStyle.webkitTransformOrigin = "0 " + (vOffset / scale * -1) + "px";
                     console.log("transform #1", ctx.mozCurrentTransform)
 
@@ -561,11 +681,11 @@ exports.PDF2HTML = Montage.create(Montage, {
                             j = 0;
 
                             if (vOffset === null) {
-                                vOffset = getBaselineOffset(glyphs, "normal normal " + (scale / fontSizeScale) + "px " + fontName, (scale / fontSizeScale));
+                                vOffset = vOffset || getBaselineOffset(font, text, "normal normal " + (scale / fontSizeScale) + "px " + fontName, (scale / fontSizeScale));
                                 outerElemStyle.webkitTransformOrigin = "0 " + (roundPosition ? roundValue(vOffset / scale * -1, 0) : vOffset / scale * -1) + "px";
                                 ctx.scale(1/scale, 1/scale);
                                 ctx.translate(0, vOffset);
-                                console.log("scale:", scale, "fontsize:", fontSizeScale);
+                                console.log("scale:", scale, "fontsize:", scale / fontSizeScale);
                                 console.log("transform #3", ctx.mozCurrentTransform)
 
                                 outerElemStyle.webkitTransform = "matrix(" + [
@@ -637,6 +757,10 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                 this.owner._rootNodeStack[0].appendChild(outerElem);
 
+                } catch (ex) {
+                    console.log("========== showText ERROR:", ex.message, ex.stack);
+                }
+                console.log("========== showText end");
                 ctx.restore();
             }
         }
