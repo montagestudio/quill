@@ -632,7 +632,7 @@ exports.PDF2HTML = Montage.create(Montage, {
 //                ctx.lineWidth = lineWidth;
 
                 if (glyphs) {
-                    vOffset = getBaselineOffset(font, text, "normal normal " + (scale / fontSizeScale) + "px " + fontName, (scale / fontSizeScale));
+                    vOffset = getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px " + fontName, fontSize * scale / fontSizeScale);
 //                    outerElemStyle.webkitTransformOrigin = "0 " + (vOffset / scale * -1) + "px";
                     console.log("transform #1", ctx.mozCurrentTransform)
 
@@ -656,7 +656,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                 outerElemStyle.position = "absolute";
                 outerElemStyle.webkitTransformOrigin = "0 0";
                 outerElemStyle.fontFamily = fontName + ", " + font.fallbackName;
-                outerElemStyle.fontSize = scale + "px";
+                outerElemStyle.fontSize = (fontSize * scale / fontSizeScale) + "px";
                 outerElemStyle.color = current.fillColor;
 
                 for (i = 0; i < dataLen; i ++) {
@@ -681,7 +681,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                             j = 0;
 
                             if (vOffset === null) {
-                                vOffset = vOffset || getBaselineOffset(font, text, "normal normal " + (scale / fontSizeScale) + "px " + fontName, (scale / fontSizeScale));
+                                vOffset = vOffset || getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px " + fontName, (scale / fontSizeScale));
                                 outerElemStyle.webkitTransformOrigin = "0 " + (roundPosition ? roundValue(vOffset / scale * -1, 0) : vOffset / scale * -1) + "px";
                                 ctx.scale(1/scale, 1/scale);
                                 ctx.translate(0, vOffset);
