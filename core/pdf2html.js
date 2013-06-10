@@ -412,7 +412,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     if (typeof ImageData !== 'undefined' && imageData instanceof ImageData) {
                         imageCtx.putImageData(imageData, 0, 0);
                     } else {
-                      context.putBinaryImageData.call(context, imageCtx, imageData.data, width, height);
+                      context.putBinaryImageData.call(context, imageCtx, imageData);
                     }
 
                     elem = document.createElement("img");
