@@ -41,7 +41,6 @@ function bytesFromDataURL(dataURL) {
   return bytes;
 }
 
-
 exports.PDF2HTMLCache = Montage.create(Montage, {
 
     _backend: {
@@ -85,12 +84,11 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
     initialize: {
         value: function(path, pdf) {
             var self = this,
-                defered = Promise.defer();
-
-            console.log(">>> SETUP CACHE FOR", decodeURIComponent(path.substring("fs://localhost".length)), pdf.pdfInfo.fingerprint);
-
+                deferred = Promise.defer();
 
             if (IS_IN_LUMIERES) {
+                console.log(">>> SETUP CACHE FOR", decodeURIComponent(path.substring("fs://localhost".length)), pdf.pdfInfo.fingerprint);
+
                 if (path.indexOf("fs://localhost") === 0) {
                     var fs = self.backend.get("fs");
 
@@ -98,22 +96,67 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                     if (this.folderPath.charAt(this.folderPath.length - 1) !== "/") {
                         this.folderPath += "/";
                     }
-
                     fs.invoke("exists", this.folderPath).then(function(exists){
                         if (exists) {
-                            defered.resolve(self);
+                            deferred.resolve(self);
                         } else {
-                            defered.reject("Cannot initialize the PDF Object cache: cache path does not exist!");
+                            deferred.reject("Cannot initialize the PDF Object cache: cache path does not exist!");
                         }
                     })
                 } else {
-                    defered.reject("Cannot initialize the PDF Object cache: invalid document path!");
+                    deferred.reject("Cannot initialize the PDF Object cache: invalid document path!");
                 }
             } else {
-                defered.reject("The PDF object cache can only be set when running under Lumieres!")
+                deferred.reject("The PDF object cache can only be set when running under Lumieres!")
             }
 
-            return defered.promise;
+            return deferred.promise;
+        }
+    },
+
+    writeToDisk: {
+        enumerable: false,
+        value:     function(filePath, bytes) {
+            var self = this;
+            return self.backend.get("fs").invoke("open", filePath, "wb").then(function(writer) {
+                var offset = 0,
+                    remaining = bytes.length;
+
+                var writeNextChunk = function() {
+                    if (remaining > 0) {
+                        var chunks = [],
+                            k;
+
+                        for (k = 0; k < 4 && remaining > 0; k ++) {
+                            var chunckLength = Math.min(256 * 1024, remaining),
+                                chunkData,
+                                i, j;
+
+                            if (typeof bytes.subarray == "function") {
+                                chunkData = bytes.subarray(offset, offset + chunckLength);
+                            } else if (typeof bytes.slice == "function") {
+                                chunkData = bytes.slice(offset, offset + chunckLength + 1);
+                            } else {
+                                chunkData = [];
+                                for (i = 0, j = offset; i < chunckLength; i ++, j ++) {
+                                    chunkData[i]  = bytes[j];
+                                }
+                            }
+
+                            chunks.push(writer.write(chunkData, "binary"));
+
+                            offset += chunckLength;
+                            remaining -= chunckLength;
+
+                        }
+                        return Promise.all(chunks).then(writeNextChunk);
+                    } else {
+                        return;
+                    }
+                }
+
+                return writeNextChunk();
+            });
         }
     },
 
@@ -123,117 +166,107 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                 name = data[0],
                 pageNbr = data[1] + 1,
                 type = data[2],
-                imageData = data[3],
+                objectData = data[3],
                 referenceID = data[4],
                 filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
                 bytes,
                 length;
 
-            var writeToDisk = function(filePath, bytes) {
-                console.log("===== writeToDisk[1]", filePath, bytes.length)
-                return self.backend.get("fs").invoke("open", filePath, "wb", "").then(function(writer) {
-                    var offset = 0,
-                        remaining = bytes.length;
-
-                    var writeNextChunk = function() {
-                        if (remaining > 0) {
-                            var chunks = [],
-                                k;
-
-                            for (k = 0; k < 3 && remaining > 0; k ++) {
-                                var chunckLength = Math.min(256 * 1024, remaining),
-                                    chunkData = [],
-                                    i, j;
-                                for (i = 0, j = offset; i < chunckLength; i ++, j ++) {
-                                    chunkData[i]  = bytes[j];
-                                }
-
-                                console.log("    ===== writeToDisk[2]:", offset, chunkData.length);
-                                chunks.push(writer.write(chunkData));
-
-                                offset += chunckLength;
-                                remaining -= chunckLength;
-
-                            }
-                            return Promise.all(chunks).then(writeNextChunk);
-                        } else {
-                            return;
-                        }
-                    }
-
-//                    while (remaining > 0) {
-//                        var chunckLength = Math.min(512 * 1024, remaining),
-//                            chunkData = [],
-//                            i, j;
-//
-//                        for (i = 0, j = offset; i < chunckLength; i ++, j ++) {
-//                            chunkData[i]  = bytes[j];
-//                        }
-//                        console.log("    ===== writeToDisk[2]:", offset, chunkData.length);
-//                        chuncks.push(writer.write(chunkData));
-//
-//                        offset += chunckLength;
-//                        remaining -= chunckLength;
-//                    }
-//                    return Promise.all(chuncks);
-
-                    return writeNextChunk();
-                });
-            };
 
             if (PDFJS.useExternalDiskCache) {
-                console.log(">>> CACHE SET OBJECT", name, pageNbr, type, typeof data[3], data[3].length, data[4]);
+//                console.log(">>> CACHE SET OBJECT", name, pageNbr, type, typeof data[3], data[3].length, data[4]);
     //            console.log(">>> ID:", page.objs.resolve(data[0]))
                 switch (type) {
                     case "JpegStream":
                         filePath += ".jpeg";
 
-                        length = imageData.length;
+                        length = objectData.length;
                         bytes = new Uint8Array(length);
 
                         for (var i = 0; i < length; i ++) {
-                            bytes[i] = imageData.charCodeAt(i);
+                            bytes[i] = objectData.charCodeAt(i);
                         }
                         break;
 
                     case "Image":
-                        var width = imageData.width,
-                            height = imageData.height,
+                        var width = objectData.width,
+                            height = objectData.height,
                             imageCanvas = createScratchCanvas(width, height);
 
                         filePath += ".jpeg";
 
-                        console.log("...imageData", imageData)
-                        if (typeof ImageData !== 'undefined' && imageData instanceof ImageData) {
-                            imageCanvas.putImageData(imageData, 0, 0);
+                        if (typeof ImageData !== 'undefined' && objectData instanceof ImageData) {
+                            imageCanvas.putImageData(objectData, 0, 0);
                         } else {
-                            putBinaryImageData(imageCanvas.getContext('2d'), imageData.data, width, height);
+                            putBinaryImageData(imageCanvas.getContext('2d'), objectData.data, width, height);
                         }
 
                         // JFD TODO: check if image requires the alpha channel!
                         bytes = bytesFromDataURL(imageCanvas.toDataURL("image/jpeg"));
-                        console.log("...bytes", bytes)
-
                         break;
                 }
             }
 
             if (bytes) {
-                writeToDisk(filePath, bytes).then(function() {
+                self.writeToDisk(filePath, bytes).then(function() {
+                    console.log("--- object written to disk at", filePath);
                     callback("fs://localhost" + filePath);
-                }).fail(function(error) {
+                }, function(error) {console.log("ERROR", error)}).fail(function(error) {
                     if (error instanceof Error) {
                         console.warn("Cannot save image to disk:", error.message, error.stack);
                     } else {
                         console.warn("Cannot save image to disk:", error);
                     }
                     callback();
-                });
+                }).done();
             } else {
                 callback();
             }
         }
     },
+
+    setFonts: {
+        value: function(fonts, callback) {
+            var self = this,
+                nbrFonts = fonts ? fonts.length : 0;
+
+            var writeFontToDisk = function(fontIndex) {
+                var font = fonts[fontIndex],
+                    filePath = self.folderPath + font.name + ".otf",
+                    fontURL = encodeURI("fs://localhost" + filePath),
+                    fs = self.backend.get("fs");
+
+                console.log("--font:", filePath);
+                return fs.invoke("exists", filePath).then(function(exists) {
+                    if (!exists) {
+                        return self.writeToDisk(filePath, font.data).then(function() {
+                            font.url = fontURL;
+                            if (++ fontIndex < nbrFonts) {
+                                return writeFontToDisk(fontIndex);
+                            }
+                        });
+                    } else {
+                        font.url = fontURL;
+                        if (++ fontIndex < nbrFonts) {
+                            return writeFontToDisk(fontIndex);
+                        }
+                    }
+                });
+            }
+
+            writeFontToDisk(0).then(function() {
+                if (callback) {
+                    callback();
+                }
+            }, function(error) {
+                console.log("FONT SAVING ERROR", error.message);
+                if (callback) {
+                    callback();
+                }
+            }).done();
+        }
+    },
+
 
     objectUrl: {
         value: function(data, page, callback) {
@@ -251,8 +284,8 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                 case "Image": filePath += ".jpeg";           break;
             }
 
-            fs.invoke("exists", filePath).then(function(exists) {
-                callback(exists ? "fs://localhost" + filePath : null);
+            fs.invoke("stat", filePath).then(function(stats) {
+                callback(stats && stats.size ? "fs://localhost" + filePath : null);
             }, function(error) {
                 callback(null);
             });

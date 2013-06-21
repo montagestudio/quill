@@ -119,6 +119,16 @@ function getBaselineOffset(font, data, fontStyle, height) {
     return - height * 0.9;
 }
 
+function sanitizeFontName(fontName) {
+    // convert the name of a partial font set to is full set equivalent
+
+    if (fontName.length > 7 && fontName.charAt(6) == "+") {
+        return fontName.substring(7);
+    }
+
+    return fontName;
+}
+
 function roundValue(value, precission) {
     if (typeof precission !== "number") {
         precission = 3;
@@ -302,62 +312,88 @@ exports.PDF2HTML = Montage.create(Montage, {
                 callback();
             }
 
-            page.render(renderContext).then(
-                function() {
-                    console.log("...success");
+            try {
+                page.render(renderContext).then(
+                    function() {
+                        console.log("...success");
 
-                    if (IS_IN_LUMIERES) {
-                        var fs = self.backend.get("fs"),
-                            folderPath = decodeURIComponent((self.rootDirectory + "/pages/").substring("fs://localhost".length)),
+                        if (IS_IN_LUMIERES) {
+                            var fs = self.backend.get("fs"),
+                                folderPath = decodeURIComponent((self.rootDirectory + "/pages/").substring("fs://localhost".length)),
+                                data,
+                                styleNode,
+                                style;
+
+                            styleNode = rootNode.getElementsByTagName("style")[0];
+                            if (styleNode) {
+                                // remove the style from the body
+                                styleNode.parentNode.removeChild(styleNode);
+                                style = styleNode.innerHTML;
+                            } else {
+                                style = "";
+                            }
                             data = rootNode.innerHTML;
 
-                        // Convert URL to relative
-                        var expr = new RegExp(self.rootDirectory + "/", "g");
-                        data = data.replace(expr, "../");
+                            // Put the style back (needed by the viewer)
+                            if (styleNode) {
+                                rootNode.insertBefore(styleNode, rootNode.firstChild)
+                            }
 
-                        //replace entities
-                        data = data.replace(/&nbsp;/g, "&#160;");
+                            // Convert URL to relative
+                            var expr = new RegExp(self.rootDirectory + "/", "g");
+                            data = data.replace(expr, "../");
+                            style = style.replace(expr, "../");
 
-                        // properly terminate tags, XML is very strict!
-                        var tags = ["img"]
-                        expr = new RegExp("(<(" + tags.join("|") + ") [^>]*[^/])(>)", "gi");
-                        data = data.replace(expr, "$1/$3");
+                            //replace entities
+                            data = data.replace(/&nbsp;/g, "&#160;");
+                            style = style.replace(/&nbsp;/g, "&#160;");
+
+                            // properly terminate tags, XML is very strict!
+                            var tags = ["img"]
+                            expr = new RegExp("(<(" + tags.join("|") + ") [^>]*[^/])(>)", "gi");
+                            data = data.replace(expr, "$1/$3");
 
 // TODO: temporary for image resize by factor 2
-//data = data.replace(/(<img [^>]*-webkit-transform: matrix\()([^)]*)(\)[^>]*\/>)/gi, function(match, param1, param2, param3){
-//    var matrix = param2.replace(/ /g, "").split(",");
-//    matrix[0] *= 2.0;
-//    matrix[3] *= 2.0;
-//    return param1 + matrix.join(", ") + param3
-//});
+//    data = data.replace(/(<img [^>]*-webkit-transform: matrix\()([^)]*)(\)[^>]*\/>)/gi, function(match, param1, param2, param3){
+//        var matrix = param2.replace(/ /g, "").split(",");
+//        matrix[0] *= 2.0;
+//        matrix[3] *= 2.0;
+//        return param1 + matrix.join(", ") + param3
+//    });
 
-                        self.backend.get("plume-backend").invoke("createFromTemplate", "/pdf-converter/templates/page.xhtml", folderPath + (page.pageInfo.pageIndex + 1) + ".xhtml", {
-                            "page-width": Math.round(renderContext.viewport.width),
-                            "page-height": Math.round(renderContext.viewport.height),
-                            "page-title": "TODO: TITLE",
-                            "page-headers": "",
-                            "page-content": data
-                        }).then(function() {
+                            self.backend.get("plume-backend").invoke("createFromTemplate", "/pdf-converter/templates/page.xhtml", folderPath + (page.pageInfo.pageIndex + 1) + ".xhtml", {
+                                "page-width": Math.round(renderContext.viewport.width),
+                                "page-height": Math.round(renderContext.viewport.height),
+                                "page-title": "TODO: TITLE",
+                                "page-headers": "",
+                                "page-style": style,
+                                "page-content": data
+                            }).then(function() {
+                                page.destroy();
+                                defered.resolve();
+                            }, function(execption) {
+                                page.destroy();
+                                defered.reject(exception)
+                            });
+                        } else {
                             page.destroy();
                             defered.resolve();
-                        }, function(execption) {
-                            page.destroy();
-                            defered.reject(exception)
-                        });
-                    } else {
+                        }
+                    },
+                    function(exception) {
+                        console.log("...error:", exception.message, exception.stack);
                         page.destroy();
-                        defered.resolve();
-                    }
-                },
-                function(exception) {
-                    console.log("...error:", exception.message, exception.stack);
-                    page.destroy();
-                    defered.reject(exception)
-                },
-                function(progress) {
-                    console.log("...renderPage progress:", progress);
-                    defered.notify(progress);
-                });
+                        defered.reject(exception)
+                    },
+                    function(progress) {
+                        console.log("...renderPage progress:", progress);
+                        defered.notify(progress);
+                    });
+
+            } catch(e) {
+                console.log("RENDERING ERROR:", e.message, e.stack);
+                defered.reject(e);
+            }
 
             return defered.promise;
         }
@@ -569,11 +605,13 @@ exports.PDF2HTML = Montage.create(Montage, {
             showText: function(context, text) {
                 if (renderingMode < 3) return;
 
-                var isSpacedText = typeof text !== "string",
+                var self = this,
+                    isSpacedText = typeof text !== "string",
                     current = context.current,
                     ctx = context.ctx,
                     font = current.font,
-                    fontName = font.loadedName,
+                    fontName = font.name || font.loadedName,
+                    fallbackName;
                     fontSize = current.fontSize,
                     fontSizeScale = /*current.fontSizeScale*/ 1.0,
                     charSpacing = current.charSpacing,
@@ -603,15 +641,40 @@ exports.PDF2HTML = Montage.create(Montage, {
                 // Export the font
                     // JFD TODO: write them to disk...
                 if (this.owner._pdf.cssFonts[fontName] == undefined) {
-                    this.owner._pdf.cssFonts[fontName] = /*this.page.commonObjs.getData(fontName)*/font.bindDOM();
-  console.log("*** FONT:", fontName, font)
+                    var addFontStyle = function() {
+                        var styles = self.owner._rootNodeStack[0].getElementsByTagName("style"),
+                            style = styles.length > 0 ? styles[0] : null,
+                            insertStyleNode = false;
 
-                    var style = document.createElement("style");
-                    style.type = "text/css";
-                    style.innerText = this.owner._pdf.cssFonts[fontName];
-                    this.owner._rootNodeStack[0].insertBefore(style, this.owner._rootNodeStack[0].firstChild);
+                        if (!style) {
+                            style = document.createElement("style");
+                            style.setAttribute("type", "text/css");
+                            style.setAttribute("scoped", true);
+                            insertStyleNode = true;
+                        }
+
+                        style.appendChild(document.createTextNode(self.owner._pdf.cssFonts[fontName] + "\n"));
+
+                        if (insertStyleNode) {
+                            self.owner._rootNodeStack[0].insertBefore(style, self.owner._rootNodeStack[0].firstChild);
+                        }
+                    }
+
+                    if (0 && font.url) {   // JFD TODO: Using a file URL somehow randomly crashes CEF!!!
+                        self.owner._pdf.cssFonts[fontName] = '@font-face {font-family: "' + fontName + '"; src: url(\'' + font.url + '\');}';
+                    } else {
+                        var fontStyle = font.bindDOM();
+                        self.owner._pdf.cssFonts[fontName] = fontStyle.replace(font.loadedName, fontName);
+                    }
+                    addFontStyle();
                 }
 
+                fallbackName = sanitizeFontName(fontName);
+                if (fallbackName !== fontName) {
+                    fallbackName += ", " + font.fallbackName;
+                } else {
+                    fallbackName = font.fallbackName;
+                }
 
 // JFD TODO: Not sure how to apply the line width for text outline in css
                 var lineWidth = current.lineWidth,
@@ -632,7 +695,7 @@ exports.PDF2HTML = Montage.create(Montage, {
 //                ctx.lineWidth = lineWidth;
 
                 if (glyphs) {
-                    vOffset = getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px " + fontName, fontSize * scale / fontSizeScale);
+                    vOffset = getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px '" + fontName + "'", fontSize * scale / fontSizeScale);
 //                    outerElemStyle.webkitTransformOrigin = "0 " + (vOffset / scale * -1) + "px";
                     console.log("transform #1", ctx.mozCurrentTransform)
 
@@ -655,7 +718,7 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                 outerElemStyle.position = "absolute";
                 outerElemStyle.webkitTransformOrigin = "0 0";
-                outerElemStyle.fontFamily = fontName + ", " + font.fallbackName;
+                outerElemStyle.fontFamily = "'" + fontName + "', " + fallbackName;
                 outerElemStyle.fontSize = (fontSize * scale / fontSizeScale) + "px";
                 outerElemStyle.color = current.fillColor;
 
@@ -681,7 +744,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                             j = 0;
 
                             if (vOffset === null) {
-                                vOffset = vOffset || getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px " + fontName, (scale / fontSizeScale));
+                                vOffset = vOffset || getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px '" + fontName + "'", (scale / fontSizeScale));
                                 outerElemStyle.webkitTransformOrigin = "0 " + (roundPosition ? roundValue(vOffset / scale * -1, 0) : vOffset / scale * -1) + "px";
                                 ctx.scale(1/scale, 1/scale);
                                 ctx.translate(0, vOffset);
@@ -712,15 +775,14 @@ exports.PDF2HTML = Montage.create(Montage, {
                                     charWidth = width * fontSize * current.fontMatrix[0] + charSpacing * current.fontDirection,
                                     innerElem = document.createElement("span"),
                                     innerElemStyle = innerElem.style,
-                                    roundScaledX = roundValue(x * scale, 0);
+                                    roundScaledX = roundValue(x * scale, 0),
+                                    character = glyph.fontChar;
 
 //                                innerElemStyle.position = "absolute";
 //                                innerElemStyle.webkitTransform = "translate(" + (x * scale) + "px, 0)";
-                                if (glyph.fontChar === ' ') {
+                                if (character === ' ' || character.charCodeAt(0) === 0) {
                                     innerElem.innerHTML = "&nbsp;";
                                 } else {
-                                    var character = glyph.fontChar;
-
 //                                    if (character.charCodeAt(0) === 57357) {
 //                                        innerElem.innerHTML = "&#xfb01;"
 //                                    } else {

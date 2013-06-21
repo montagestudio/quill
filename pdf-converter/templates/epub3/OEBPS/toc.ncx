@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
 	<head>
 		<meta name="dtb:uid" content="001"/>
@@ -13,98 +12,13 @@
 	<navMap>
 		<navPoint id="navpoint1" playOrder="1">
 			<navLabel>
-				<text>Front Cover</text>
+				<text>First page</text>
 			</navLabel>
-			<content src="1.xhtml"/>
+			<content src="pages/1.xhtml"/>
 		</navPoint>
-		<navPoint id="navpoint2" playOrder="2">
-			<navLabel>
-				<text>The ‘FLO’ Diagram</text>
-			</navLabel>
-			<content src="2.xhtml"/>
-		</navPoint>
-		<navPoint id="navpoint3" playOrder="3">
-			<navLabel>
-				<text>Contents</text>
-			</navLabel>
-			<content src="3.xhtml"/>
-		</navPoint>
-		<navPoint id="navpoint4" playOrder="4">
-			<navLabel>
-				<text>Raw Power</text>
-			</navLabel>
-			<content src="4.xhtml"/>
-		</navPoint>
-		<navPoint id="navpoint5" playOrder="5">
-			<navLabel>
-				<text>Ducati Monster</text>
-			</navLabel>
-			<content src="6.xhtml"/>
-		</navPoint>
-		<navPoint id="navpoint6" playOrder="6">
-			<navLabel>
-				<text>The Unusual Suspects</text>
-			</navLabel>
-			<content src="8.xhtml"/>
-		</navPoint>
-		<navPoint id="navpoint7" playOrder="7">
-			<navLabel>
-				<text>Dinosaur Roar!</text>
-			</navLabel>
-			<content src="10.xhtml"/>
-		</navPoint>
-		<navPoint id="navpoint8" playOrder="8">
-			<navLabel>
-				<text>Impressions of Morocco</text>
-			</navLabel>
-			<content src="12.xhtml"/>
-		</navPoint>
-		<navPoint id="navpoint9" playOrder="9">
-			<navLabel>
-				<text>Camel Train</text>
-			</navLabel>
-			<content src="14.xhtml"/>
-		</navPoint>
-		<navPoint id="navpoint10" playOrder="10">
-			<navLabel>
-				<text>Pumpkins</text>
-			</navLabel>
-			<content src="16.xhtml"/>
-		</navPoint>
-		<navPoint id="navpoint11" playOrder="11">
-			<navLabel>
-				<text>Three types of type</text>
-			</navLabel>
-			<content src="18.xhtml"/>
-		</navPoint>
-		<navPoint id="navpoint12" playOrder="12">
-			<navLabel>
-				<text>Back Cover</text>
-			</navLabel>
-			<content src="20.xhtml"/>
-		</navPoint>
-</navMap>
+    </navMap>
 	<pageList id="page-mapping" class="page-mapping">
 		<navLabel><text>Page Mapping</text></navLabel>
-		<pageTarget id="x1" value="1" type="normal"><navLabel><text>1</text></navLabel><content src="1.xhtml" /></pageTarget>
-		<pageTarget id="x2" value="2" type="normal"><navLabel><text>2</text></navLabel><content src="2.xhtml" /></pageTarget>
-		<pageTarget id="x3" value="3" type="normal"><navLabel><text>3</text></navLabel><content src="3.xhtml" /></pageTarget>
-		<pageTarget id="x4" value="4" type="normal"><navLabel><text>4</text></navLabel><content src="4.xhtml" /></pageTarget>
-		<pageTarget id="x5" value="5" type="normal"><navLabel><text>5</text></navLabel><content src="5.xhtml" /></pageTarget>
-		<pageTarget id="x6" value="6" type="normal"><navLabel><text>6</text></navLabel><content src="6.xhtml" /></pageTarget>
-		<pageTarget id="x7" value="7" type="normal"><navLabel><text>7</text></navLabel><content src="7.xhtml" /></pageTarget>
-		<pageTarget id="x8" value="8" type="normal"><navLabel><text>8</text></navLabel><content src="8.xhtml" /></pageTarget>
-		<pageTarget id="x9" value="9" type="normal"><navLabel><text>9</text></navLabel><content src="9.xhtml" /></pageTarget>
-		<pageTarget id="x10" value="10" type="normal"><navLabel><text>10</text></navLabel><content src="10.xhtml" /></pageTarget>
-		<pageTarget id="x11" value="11" type="normal"><navLabel><text>11</text></navLabel><content src="11.xhtml" /></pageTarget>
-		<pageTarget id="x12" value="12" type="normal"><navLabel><text>12</text></navLabel><content src="12.xhtml" /></pageTarget>
-		<pageTarget id="x13" value="13" type="normal"><navLabel><text>13</text></navLabel><content src="13.xhtml" /></pageTarget>
-		<pageTarget id="x14" value="14" type="normal"><navLabel><text>14</text></navLabel><content src="14.xhtml" /></pageTarget>
-		<pageTarget id="x15" value="15" type="normal"><navLabel><text>15</text></navLabel><content src="15.xhtml" /></pageTarget>
-		<pageTarget id="x16" value="16" type="normal"><navLabel><text>16</text></navLabel><content src="16.xhtml" /></pageTarget>
-		<pageTarget id="x17" value="17" type="normal"><navLabel><text>17</text></navLabel><content src="17.xhtml" /></pageTarget>
-		<pageTarget id="x18" value="18" type="normal"><navLabel><text>18</text></navLabel><content src="18.xhtml" /></pageTarget>
-		<pageTarget id="x19" value="19" type="normal"><navLabel><text>19</text></navLabel><content src="19.xhtml" /></pageTarget>
-		<pageTarget id="x20" value="20" type="normal"><navLabel><text>20</text></navLabel><content src="20.xhtml" /></pageTarget>
+		<pageTarget id="x1" value="1" type="normal"><navLabel><text>1</text></navLabel><content src="pages/1.xhtml" /></pageTarget>
 	</pageList>
 </ncx>

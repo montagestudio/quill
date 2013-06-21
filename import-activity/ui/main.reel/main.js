@@ -8,10 +8,7 @@ var Montage = require("montage/core/core").Montage,
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 // Constants
-var STATUS_WAITING = 0,
-    STATUS_IMPORTING = 1
-
-    MAX_CHILDPROCESS = 2;
+var MAX_CHILDPROCESS = 2;
 
 
 exports.Main = Montage.create(Component, {
@@ -48,11 +45,10 @@ exports.Main = Montage.create(Component, {
         value: null
     },
 
-    didCreate: {
-        value: function () {
+    constructor: {
+        value: function Main() {
 console.log("ACTIVITY MONITOR CREATED");
 foo = this;
-
             var self = this;
             if (IS_IN_LUMIERES) {
 

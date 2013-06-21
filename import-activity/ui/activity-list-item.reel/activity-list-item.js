@@ -1,6 +1,12 @@
 var Montage = require("montage/core/core").Montage,
     Component = require("montage/ui/component").Component;
 
+// Constants (must match STATUS in application-controller/ui/main.reel/main.js)
+var STATUS_WAITING = 0,
+    STATUS_IMPORTING = 1,
+    STATUS_STALLED = 2,
+    STATUS_READY = 10;
+
 exports.ActivityListItem = Montage.create(Component, {
 
     item: {
@@ -45,20 +51,26 @@ exports.ActivityListItem = Montage.create(Component, {
         value: function() {
             // JFD TODO: L10n
 
-            if (this.item.status === 0) {
+            var item = this.item;
+
+            if (item.status === STATUS_WAITING) {
                 this.statusLabel = "Waiting..."
             }
 
-            else if (this.item.status === 1) {
-                if (this.item.currentPage > 0 && this.item.nbrPages > 0) {
-                    this.statusLabel = "Importing page " + this.item.currentPage + " of " + this.item.nbrPages;
+            else if (item.status === STATUS_IMPORTING || item.status == STATUS_STALLED) {
+                if (item.currentPage > 0 && item.nbrPages > 0) {
+                    this.statusLabel = "Importing page " + item.currentPage + " of " + item.nbrPages;
                 } else {
                     this.statusLabel = "Importing..."
                 }
+
+                if (item.status == STATUS_STALLED) {
+                    this.statusLabel += " (stalled)";
+                }
             }
 
-            else if (this.item.status === 2) {
-                var folderName =  this.item.destination.substring("fs://localhost".length);
+            else if (item.status === STATUS_READY) {
+                var folderName =  item.destination.substring("fs://localhost".length);
                 folderName = folderName.substring(folderName.lastIndexOf("/") + 1);
                 this.statusLabel = "Your book \"" + folderName + "\" is ready!";
             }

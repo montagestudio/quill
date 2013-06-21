@@ -30,7 +30,7 @@
         },
 
         "localizer": {
-            "prototype": "montage/core/localizer[defaultLocalizer]"
+            "object": "montage/core/localizer[defaultLocalizer]"
         },
 
         "activityList": {
@@ -60,14 +60,14 @@
         },
 
         "activity": {
-                "prototype": "import-activity/ui/activity-list-item.reel",
-                "properties": {
-                    "element": {"#": "activity"}
-                },
-                "bindings": {
-                    "item": {"<-": "@activityList.objectAtCurrentIteration"}
-                }
+            "prototype": "import-activity/ui/activity-list-item.reel",
+            "properties": {
+                "element": {"#": "activity"}
+            },
+            "bindings": {
+                "item": {"<-": "@activityList.objectAtCurrentIteration"}
             }
+        }
     }
     </script>
 </head>
@@ -81,7 +81,6 @@
                 </li>
             </ul>
         </section>
-        <br>
         <section class="footer">Importing documents into <span data-montage-id="destination"></span></section>
     </div>
 

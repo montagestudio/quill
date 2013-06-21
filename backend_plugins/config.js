@@ -170,7 +170,7 @@ exports.menusAddOns = function() {
         },
 
         {
-            location: {"insertBefore": "runPageLayout"},
+            location: {"insertAfter": "revertDocumentToSaved"},
             title: "Import…",
             enabled: true,
             keyEquivalent: "command+I",
@@ -179,7 +179,7 @@ exports.menusAddOns = function() {
         },
 
         {
-            location: {"insertBefore": "runPageLayout"},
+            location: {"insertAfter": "revertDocumentToSaved"},
             separator: true
         },
 

@@ -3,7 +3,8 @@ var PATH = require("path"),
     fs = require("fs"),
     Q = require("q"),
     QFS = require("q-io/fs"),
-    minimatch = require('minimatch');
+    minimatch = require('minimatch'),
+    child_process = require('child_process');
 
 
 var guard = function(exclude) {
@@ -33,6 +34,27 @@ var pathFromURL = function(path) {
 
     return path;
 }
+
+var exec = function(command, options) {
+    var deferred = Q.defer(),
+        process;
+
+    console.log("EXCEC COMMAND:", command)
+    options = options || {};
+    process = child_process.exec(command, options, function (error, stdout, stderr) {
+        console.log('stdout: ' + stdout);
+        if (error !== null) {
+            console.log('exec error: ' + error);
+            console.log('stderr: ' + stderr);
+            deferred.reject(error);
+        } else {
+            deferred.resolve(stdout);
+        }
+    });
+
+    return deferred.promise;
+};
+
 
 /**
  * Lists all the files in the given path except node_modules and dotfiles.
@@ -183,15 +205,21 @@ exports.updateContentInfo = function(rootDirectory, options) {
                     var path = PATH.relative(root, pathFromURL(file.url)),
                         name = PATH.basename(path),
                         ext = PATH.extname(name),
-                        type = "application/octet-stream";
+                        type = "application/octet-stream",
+                        properties = null;
 
                     switch (ext.toLowerCase()) {
                         case ".html":    type = "text/html";                     break;
-                        case ".xhtml":   type = "application/xhtml+xml";         break;
+                        case ".xhtml":
+                            type = "application/xhtml+xml";
+                            properties = "svg";
+                            // JFD TODO: only add the svg property if the page actually uses svg
+                            break;
                         case ".css":     type = "text/css";                      break;
                         case ".jpeg":    type = "image/jpeg";                    break;
                     }
-                    manifest.push('<item id="' + name + '" href="' + path + '" media-type="' + type +'"/>');
+
+                    manifest.push('<item id="' + name + '" href="' + path + '"' + (properties !== null ? ' properties="' + properties + '"' : '') + ' media-type="' + type +'"/>');
 
                     if (path.indexOf("pages/") === 0) {
                         pages.push(name);
@@ -221,3 +249,30 @@ exports.updateContentInfo = function(rootDirectory, options) {
         return exports.customizeFile(PATH.join(root, "content.opf"), options);
     });
 };
+
+exports.generateEPUB3 = function(rootDirectory, options) {
+    var root = pathFromURL(rootDirectory),
+        name,
+        options = {cwd: root},
+        result = "",
+        i;
+
+    name = PATH.basename(rootDirectory);
+    i = name.indexOf(".ebook");
+    if (i > 0) {
+        name = name.substr(0, i);
+    }
+    name += ".epub";
+
+    console.log("CMD:", "zip -X '" + name + "' mimetype", root)
+
+    return exec("zip -X '" + name + "' mimetype", options).then(function(stdout) {
+        result += stdout;
+        return exec("zip -rg '" + name + "' META-INF -x \\*/.*", options).then(function(stdout) {
+            result += stdout;
+            return exec("zip -rg '" + name + "' OEBPS -x \\*/.*", options).then(function(stdout) {
+                return result + stdout;
+            });
+        });
+    });
+}

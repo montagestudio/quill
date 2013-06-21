@@ -7,17 +7,17 @@
         "url": "git@github.com:declarativ/plume.git"
     },
     "dependencies": {
-        "montage": "0.13.0-alpha",
-        "matte": "0.1.1-alpha",
-        "native": "0.1.1-alpha",
-        "mousse": "0.1.0",
-        "q": "0.9.2",
+        "montage": "git://github.com/montagejs/montage.git#6096b96573e7f1ea35761d38cd9c5d8b8f6cf36f",
+        "matte": "0.1.1",
+        "native": "0.1.1",
+        "mousse": "0.1.2",
+        "q": "0.9.3",
         "q-connection": "0.5.3",
-        "q-io": "1.6.5",
+        "q-io": "1.7",
         "qs": "0.5.2",
         "mop": "git+ssh://git@github.com:montagejs/mop.git#edge",
         "npm": "1.1.70",
-        "minit": "0.3.0-alpha",
+        "minit": "0.3.1",
         "minimatch": "0.2.9",
         "pdf.js": "git+ssh://git@github.com:ducarroz/pdf.js.git#master"
 

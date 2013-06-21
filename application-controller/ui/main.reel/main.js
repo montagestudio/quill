@@ -9,11 +9,18 @@ var Montage = require("montage/core/core").Montage,
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 // Constants
+// Constants (must match STATUS in import-activity/ui/main.reel/main.js)
+
 var STATUS_WAITING = 0,
     STATUS_IMPORTING = 1,
-    STATUS_READY = 2,
+    STATUS_STALLED = 2,
+    STATUS_READY = 10,
 
     MAX_CHILDPROCESS = 2;
+
+    CHECK_INTERVAL  = 10,
+    STALL_TIMEOUT = 30,
+    RESTART_TIMEOUT = 60;
 
 
 exports.Main = Montage.create(Component, {
@@ -32,10 +39,6 @@ exports.Main = Montage.create(Component, {
         get: function() {
             return this._processID;
         }
-    },
-
-    childProcessIDs: {
-        value: []
     },
 
     importItems: {
@@ -76,6 +79,8 @@ foo = this;
                         self.needsDraw = true;
                     }).done();
                 });
+
+                window.setInterval(function() { self.checkImporters() }, CHECK_INTERVAL * 1000);
 
             } else {
                 alert("Plume cannot be run outside of Lumieres!");
@@ -124,7 +129,7 @@ foo = this;
             var self = this;
 
             to = parseInt(to, 10);
-            console.log("---onIPCMessage", from, to, data)
+//            console.log("---onIPCMessage", from, to, data)
 
             if (to === this.processID) {
                 if (data && data.length) {
@@ -159,9 +164,11 @@ foo = this;
                     }
 
                     else if (command === "converterInfo") {
+                        console.log("*** converterInfo:", data[1].url, data[1])
                         return this.importItems.some(function(object) {
                             if (data[1].url === object.url) {
                                 object.processID = data[1].processID;
+                                object.lastContact = new Date().getTime() / 1000;
                                 return true;
                             }
                             return false;
@@ -171,7 +178,8 @@ foo = this;
                     else if (command === "itemUpdate") {
                         return this.importItems.some(function(object) {
                             if (data[1].url === object.url) {
-                                self.updateItemState(object, data[1].status, data[1].currentPage, data[1].nbrPages, data[1].destination)
+                                self.updateItemState(object, data[1].status, data[1].currentPage, data[1].nbrPages, data[1].destination, data[1].meta)
+                                object.lastContact = new Date().getTime() / 1000;
                                 return true;
                             }
                             return false;
@@ -248,7 +256,9 @@ foo = this;
                                     status: STATUS_WAITING,
                                     nbrPages: 0,
                                     currentPage: 0,
-                                    processID: null
+                                    processID: null,
+                                    lastContact: 0,
+                                    retries: 0
                                 });
                             }
                         });
@@ -284,23 +294,44 @@ foo = this;
             var self = this;
             console.log("-- launchProcess", this.importItems)
             // Check if we have a process to launch
-            var nbrProcess = 0;
+            var nbrProcess = 0,
+                waitings = [];
 
-            this.importItems.some(function(item) {
-                if (nbrProcess >=  MAX_CHILDPROCESS) {
-                    return false;
-                }
+            // sort the processes per status and retries count
+            this.importItems.map(function(item) {
+                var status = item.status,
+                    retries = item.retries;
 
-                if (item.status === STATUS_WAITING) {
-                    self.import(item);
-                    nbrProcess ++;
-                } else if (item.status == STATUS_IMPORTING) {
-                    if (forceRelaunch === true) {
-                        self.import(item);
+                if (status == STATUS_WAITING) {
+                    if (waitings[retries] === undefined) {
+                        waitings[retries] = [item];
+                    } else {
+                        waitings[retries].push(item);
                     }
+                } else if (status == STATUS_IMPORTING || status == STATUS_STALLED) {
                     nbrProcess ++;
                 }
             });
+
+            if (nbrProcess <  MAX_CHILDPROCESS) {
+                for (var retries in waitings) {
+                    for (var index in waitings[retries]) {
+                        var item = waitings[retries][index];
+
+                        console.log("***** START PROCESS:", item.name, item.status, item.retries);
+                        self.import(item);
+                        nbrProcess ++;
+
+                        if (nbrProcess >=  MAX_CHILDPROCESS) {
+                            break;
+                        }
+                    }
+
+                    if (nbrProcess >=  MAX_CHILDPROCESS) {
+                        break;
+                    }
+                }
+            }
         }
     },
 
@@ -308,23 +339,29 @@ foo = this;
         value: function(item) {
             console.log("STARTING PROCESS", item.name);
 
+            item.lastContact = new Date().getTime() / 1000;
             this.updateItemState(item, STATUS_IMPORTING);
-//            self.childProcessIDs.push(item.name);
 
             var windowParams = {
                 url: "http://client/pdf-converter/index.html?source=" + encodeURIComponent(item.url),
-                showWindow: true,
+                showWindow: false,
                 canResize: true
             };
 
+            if (item.retries) {
+                windowParams.url += "&p=" + item.currentPage + "&dest=" + encodeURIComponent(item.destination);
+            }
+
             this.environmentBridge.backend.get("application").invoke("openWindow", windowParams).then(function() {
                 console.log("PDF Converter for", item.url, "launched");
+            }, function(e) {
+                console.log("ERROR:", e.message, e.stack);
             });
         }
     },
 
     updateItemState: {
-        value: function(item, status, currentPage, nbrPages, destination) {
+        value: function(item, status, currentPage, nbrPages, destination, meta) {
             var self = this,
                 ipc = this.environmentBridge.backend.get("ipc"),
                 statusChanged = false;
@@ -332,13 +369,19 @@ foo = this;
             if (status !== null && status !== undefined) {
                 if (status == "success") {
                     item.status = STATUS_READY;
+                    item.meta = meta;
                     statusChanged = true;
-console.log("WILL CALL updateContentInfo")
+
                     // Update the content.opf - this is optional at this stage
-                    this.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, {"fixed-layout": "true"}).done();
+                    this.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, meta).then(function() {
+                        return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination).then(function(stdout) {
+                            console.log("EPUB3 generated:", stdout);
+                        });
+                    }).done();
 
                 } else if (typeof status === "number") {
                     item.status = status;
+                    statusChanged = true;
                 }
             }
 
@@ -365,6 +408,40 @@ console.log("WILL CALL updateContentInfo")
             if (statusChanged) {
                 this.launchProcess();
             }
+        }
+    },
+
+    checkImporters: {
+        value: function() {
+            var self = this;
+
+            console.log("TIME TO CHECK FOR ANY STALL IMPORT");
+            var now = new Date().getTime() / 1000;
+            this.importItems.map(function(item) {
+                if (item.status === STATUS_IMPORTING && item.lastContact) {
+                    if (Math.round(now - item.lastContact) >= STALL_TIMEOUT) {
+                        self.updateItemState(item, STATUS_STALLED, item.currentPage, item.nbrPages, item.destination, item.meta)
+                    }
+
+                } else if (item.status === STATUS_STALLED) {
+                    if (Math.round(now - item.lastContact) >= RESTART_TIMEOUT && item.processID) {
+                        // jumpstart the import...
+                        console.log("**************** jump start");
+                        self.environmentBridge.backend.get("ipc").invoke("send", self.processID, item.processID, ["close"]).then(function() {
+                            item.retries = (item.retries || 0) + 1;
+                            item.lastContact = now;
+                            item.processID = 0;
+                            setTimeout(function() {
+                                self.updateItemState(item, STATUS_WAITING, item.currentPage, item.nbrPages, item.destination, item.meta);
+                            }, 500);    // We need to give some time for the window to go away
+                        }, function(e){
+                            console.log("JUMPSTART ERROR:", e.message, e.stack);
+                            // JFD TODO: Kill the old process
+                            self.updateItemState(item, STATUS_WAITING, item.currentPage, item.nbrPages, item.destination, item.meta);
+                        }).done();
+                    }
+                }
+            });
         }
     }
 
