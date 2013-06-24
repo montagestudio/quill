@@ -96,12 +96,14 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                     if (this.folderPath.charAt(this.folderPath.length - 1) !== "/") {
                         this.folderPath += "/";
                     }
-                    fs.invoke("exists", this.folderPath).then(function(exists){
-                        if (exists) {
-                            deferred.resolve(self);
-                        } else {
-                            deferred.reject("Cannot initialize the PDF Object cache: cache path does not exist!");
-                        }
+                    fs.invoke("makeTree", self.folderPath).then(function() {
+                        fs.invoke("exists", self.folderPath).then(function(exists){
+                            if (exists) {
+                                deferred.resolve(self);
+                            } else {
+                                deferred.reject("Cannot initialize the PDF Object cache: cache path does not exist!");
+                            }
+                        })
                     })
                 } else {
                     deferred.reject("Cannot initialize the PDF Object cache: invalid document path!");
