@@ -328,10 +328,27 @@ exports.PDF2HTML = Montage.create(Montage, {
                             if (styleNode) {
                                 // remove the style from the body
                                 styleNode.parentNode.removeChild(styleNode);
-                                style = styleNode.innerHTML;
                             } else {
-                                style = "";
+                                styleNode = document.createElement("style");
                             }
+
+                            // Add font-face style rules
+                            for (var property in self._pdf.cssFonts) {
+                              if (self._pdf.cssFonts.hasOwnProperty(property)) {
+                                  var fontExpr = new RegExp(property, "g");
+
+                                  styleNode.appendChild(document.createTextNode(self._pdf.cssFonts[property].style + "\n"));
+
+                                  // Replace the font name everywhere
+//                                  data = data.replace(fontExpr, self._pdf.cssFonts[property].fontName);
+                              }
+                            }
+
+                            // Get the style as text
+                            style = styleNode.innerHTML;
+                            console.log("CSS FONTS:",self._pdf.cssFonts )
+                            console.log("FONT STYLE:", styleNode )
+
                             data = rootNode.innerHTML;
 
                             // Put the style back (needed by the viewer)
@@ -344,7 +361,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                             data = data.replace(expr, "../");
                             style = style.replace(expr, "../");
 
-                            //replace entities
+                            //replace entities (for now just the nbsp entity
                             data = data.replace(/&nbsp;/g, "&#160;");
                             style = style.replace(/&nbsp;/g, "&#160;");
 
@@ -610,7 +627,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     current = context.current,
                     ctx = context.ctx,
                     font = current.font,
-                    fontName = font.name || font.loadedName,
+                    fontName = /*font.name || */font.loadedName,
                     fallbackName;
                     fontSize = current.fontSize,
                     fontSizeScale = /*current.fontSizeScale*/ 1.0,
@@ -641,36 +658,22 @@ exports.PDF2HTML = Montage.create(Montage, {
                 // Export the font
                     // JFD TODO: write them to disk...
                 if (this.owner._pdf.cssFonts[fontName] == undefined) {
-                    var addFontStyle = function() {
-                        var styles = self.owner._rootNodeStack[0].getElementsByTagName("style"),
-                            style = styles.length > 0 ? styles[0] : null,
-                            insertStyleNode = false;
-
-                        if (!style) {
-                            style = document.createElement("style");
-                            style.setAttribute("type", "text/css");
-                            style.setAttribute("scoped", true);
-                            insertStyleNode = true;
-                        }
-
-                        style.appendChild(document.createTextNode(self.owner._pdf.cssFonts[fontName] + "\n"));
-
-                        if (insertStyleNode) {
-                            self.owner._rootNodeStack[0].insertBefore(style, self.owner._rootNodeStack[0].firstChild);
-                        }
-                    }
-
-                    if (0 && font.url) {   // JFD TODO: Using a file URL somehow randomly crashes CEF!!!
-                        self.owner._pdf.cssFonts[fontName] = '@font-face {font-family: "' + fontName + '"; src: url(\'' + font.url + '\');}';
+                    if (font.url) {
+                        self.owner._pdf.cssFonts[fontName] = {
+                            style: '@font-face {font-family: "' + fontName + '"; src: url(\'' + font.url + '\');}',
+                            loadedFontName: font.loadedName,
+                            fontName: font.name
+                        };
                     } else {
                         var fontStyle = font.bindDOM();
-                        self.owner._pdf.cssFonts[fontName] = fontStyle.replace(font.loadedName, fontName);
+                        self.owner._pdf.cssFonts[fontName] = {
+                            style: fontStyle
+                        }
                     }
-                    addFontStyle();
                 }
 
-                fallbackName = sanitizeFontName(fontName);
-                if (fallbackName !== fontName) {
+                fallbackName = sanitizeFontName(font.name);
+                if (fallbackName !== font.fallbackName) {
                     fallbackName += ", " + font.fallbackName;
                 } else {
                     fallbackName = font.fallbackName;
