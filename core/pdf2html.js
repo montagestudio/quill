@@ -8,7 +8,7 @@ var Montage = require("montage/core/core").Montage,
 var origin_time = new Date().getTime();
 var timestamp = function() {return "[" + ((new Date().getTime() - origin_time) % 600000) / 1000 + "] "};
 
-var renderingMode = 3;
+var renderingMode = 4;
 
 var xmlns = "http://www.w3.org/2000/svg";
 
@@ -105,8 +105,6 @@ function getBaselineOffset(font, data, fontStyle, height) {
                 var topline = _findVerticalFirstPixel(ctx, 0, charWidth);
                 if (topline !== -1) {
                     _baselineOffsetCache[fontStyle] = baseline - topline;
-
-                    console.log("baseline offset:", baseline - topline, (baseline -topline) / height);
                     return baseline - topline;
                 }
             }
@@ -285,7 +283,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                 var images = rootNode.getElementsByTagName("img");
                 [].forEach.call(images, function(image) {
                     if (image.src.substring(0, 5) === "blob:") {
-                        console.log("IMAGE:", image.src);
                         window.URL.revokeObjectURL(image.src);
                     }
                 })
@@ -346,9 +343,6 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                             // Get the style as text
                             style = styleNode.innerHTML;
-                            console.log("CSS FONTS:",self._pdf.cssFonts )
-                            console.log("FONT STYLE:", styleNode )
-
                             data = rootNode.innerHTML;
 
                             // Put the style back (needed by the viewer)
@@ -357,7 +351,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                             }
 
                             // Convert URL to relative
-                            var expr = new RegExp(self.rootDirectory + "/", "g");
+                            var expr = new RegExp(encodeURI(self.rootDirectory) + "/", "g");
                             data = data.replace(expr, "../");
                             style = style.replace(expr, "../");
 
@@ -645,6 +639,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     previousX = 0,
                     previousRoundScaledX = 0,
                     roundPosition = (renderingMode === 4),
+                    roundingPrecission = 2,
                     i;
 
                 console.log("========== showText:", data, fontSize);
@@ -699,28 +694,21 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                 if (glyphs) {
                     vOffset = getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px '" + fontName + "'", fontSize * scale / fontSizeScale);
-//                    outerElemStyle.webkitTransformOrigin = "0 " + (vOffset / scale * -1) + "px";
-                    console.log("transform #1", ctx.mozCurrentTransform)
 
                     ctx.scale(1/scale, 1/scale);
                     ctx.translate(0, vOffset);
-//                    outerElemStyle.webkitTransform = "matrix(" + ctx.mozCurrentTransform.join(", ") + ")";
-                    console.log("transform #2", ctx.mozCurrentTransform)
 
                     outerElemStyle.webkitTransform = "matrix(" + [
                         sanitizeCSSValue(ctx.mozCurrentTransform[0]),
                         sanitizeCSSValue(ctx.mozCurrentTransform[1]),
                         sanitizeCSSValue(ctx.mozCurrentTransform[2]),
                         sanitizeCSSValue(ctx.mozCurrentTransform[3]),
-                        sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[4], 0) : ctx.mozCurrentTransform[4]),
-                        sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[5], 0) : ctx.mozCurrentTransform[5])
+                        sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[4], roundingPrecission) : ctx.mozCurrentTransform[4]),
+                        sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[5], roundingPrecission) : ctx.mozCurrentTransform[5])
                     ] + ")";
                 }
 
-//                console.log("========== showText:", current, ctx.mozCurrentTransform, fontSizeScale, scale);
-
                 outerElemStyle.position = "absolute";
-                outerElemStyle.webkitTransformOrigin = "0 0";
                 outerElemStyle.fontFamily = "'" + fontName + "', " + fallbackName;
                 outerElemStyle.fontSize = (fontSize * scale / fontSizeScale) + "px";
                 outerElemStyle.color = current.fillColor;
@@ -731,8 +719,6 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                     if (typeof value === "number") {
                         // space
-//                        console.log("==========> * spacing *", value);
-
                         var spacingLength = - value * fontSize * current.textHScale * 0.001 * current.fontDirection;
 //                        if (vertical) {
 //                          current.y += spacingLength;
@@ -747,20 +733,17 @@ exports.PDF2HTML = Montage.create(Montage, {
                             j = 0;
 
                             if (vOffset === null) {
-                                vOffset = vOffset || getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px '" + fontName + "'", (scale / fontSizeScale));
-                                outerElemStyle.webkitTransformOrigin = "0 " + (roundPosition ? roundValue(vOffset / scale * -1, 0) : vOffset / scale * -1) + "px";
+                                vOffset = getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px '" + fontName + "'", fontSize * scale / fontSizeScale);
                                 ctx.scale(1/scale, 1/scale);
                                 ctx.translate(0, vOffset);
-                                console.log("scale:", scale, "fontsize:", scale / fontSizeScale);
-                                console.log("transform #3", ctx.mozCurrentTransform)
 
                                 outerElemStyle.webkitTransform = "matrix(" + [
                                     ctx.mozCurrentTransform[0],
                                     ctx.mozCurrentTransform[1],
                                     ctx.mozCurrentTransform[2],
                                     ctx.mozCurrentTransform[3],
-                                    roundPosition ? roundValue(ctx.mozCurrentTransform[4], 0) : ctx.mozCurrentTransform[4],
-                                    roundPosition ? roundValue(ctx.mozCurrentTransform[5], 0) : ctx.mozCurrentTransform[5]
+                                    roundPosition ? roundValue(ctx.mozCurrentTransform[4], roundingPrecission) : ctx.mozCurrentTransform[4],
+                                    roundPosition ? roundValue(ctx.mozCurrentTransform[5], roundingPrecission) : ctx.mozCurrentTransform[5]
                                 ] + ")";
                             }
                         } else {
@@ -795,13 +778,13 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                                 if (previousSpan) {
                                     innerElemStyle.position = "relative";
-                                    innerElemStyle.webkitTransform = "translate(" + (roundPosition ? roundValue((x - previousX) * scale, 0) : (x - previousX) * scale) + "px, 0)";
+                                    innerElemStyle.webkitTransform = "translate(" + (roundPosition ? roundValue((x - previousX) * scale, roundingPrecission) : (x - previousX) * scale) + "px, 0)";
 //                                    innerElemStyle.webkitTransform = "translate(" + (roundScaledX - previousRoundScaledX)  + "px, 0)";
                                     previousSpan.appendChild(innerElem);
                                 } else {
 //                                    innerElemStyle.backgroundColor = "rgba(128, 128, 128, 0.2)";
                                     innerElemStyle.position = "absolute";
-                                    innerElemStyle.webkitTransform = "translate(" + (roundPosition ? roundValue(x * scale, 0) : x * scale) + "px, 0)";
+                                    innerElemStyle.webkitTransform = "translate(" + (roundPosition ? roundValue(x * scale, roundingPrecission) : x * scale) + "px, 0)";
 //                                    innerElemStyle.webkitTransform = "translate(" + roundScaledX + "px, 0)";
                                     outerElem.appendChild(innerElem);
                                 }
@@ -906,7 +889,6 @@ exports.PDF2HTML = Montage.create(Montage, {
             },
 
             moveTo: function(context, x, y) {
-                console.log("----MOVETO:", this, context, x, y)
                 this.startSVG(context);
                 this.appendDataToPath("M" + x + "," + y);
             },
@@ -953,7 +935,7 @@ exports.PDF2HTML = Montage.create(Montage, {
             fill: function(context) {
                 var current = context.current;
 
-                console.log("--> graphic fill:", this._svg, this._path);
+//                console.log("--> graphic fill:", this._svg, this._path);
                 this._path.setAttribute("fill", current.fillColor);
 
                 this.endSVG();
@@ -976,7 +958,6 @@ exports.PDF2HTML = Montage.create(Montage, {
             },
 
             beginGroup: function(context, group) {
-                console.log("*** beginGroup:", group)
                 this.owner._rootNodeStack.unshift(document.createElement("div"));
             },
 
@@ -989,7 +970,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                 ctx.save();
                     ctx.scale(1.0 / this.scale, -1.0 / this.scale);
                     transform = ctx.mozCurrentTransform.slice(0, 6);
-                console.log(transform)
                     transform[4] /= this.scale;
                     transform[5] = (ctx.canvas.height - transform[5]) / this.scale;
                 ctx.restore();

@@ -87,7 +87,7 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                 deferred = Promise.defer();
 
             if (IS_IN_LUMIERES) {
-                console.log(">>> SETUP CACHE FOR", decodeURIComponent(path.substring("fs://localhost".length)), pdf.pdfInfo.fingerprint);
+//                console.log(">>> SETUP CACHE FOR", decodeURIComponent(path.substring("fs://localhost".length)), pdf.pdfInfo.fingerprint);
 
                 if (path.indexOf("fs://localhost") === 0) {
                     var fs = self.backend.get("fs");
@@ -211,8 +211,7 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
 
             if (bytes) {
                 self.writeToDisk(filePath, bytes).then(function() {
-                    console.log("--- object written to disk at", filePath);
-                    callback("fs://localhost" + filePath);
+                    callback(encodeURI("fs://localhost" + filePath));
                 }, function(error) {console.log("ERROR", error)}).fail(function(error) {
                     if (error instanceof Error) {
                         console.warn("Cannot save image to disk:", error.message, error.stack);
@@ -238,7 +237,6 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                     fontURL = encodeURI("fs://localhost" + filePath),
                     fs = self.backend.get("fs");
 
-                console.log("--font:", filePath);
                 return fs.invoke("exists", filePath).then(function(exists) {
                     if (!exists) {
                         return self.writeToDisk(filePath, font.data).then(function() {
@@ -279,7 +277,7 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                 referenceID = data[3],
                 filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name);
 
-            console.log(">>> CACHE GET OBJECT URL:", filePath, type);
+//            console.log(">>> CACHE GET OBJECT URL:", filePath, type);
 
             switch (type) {
                 case "JpegStream": filePath += ".jpeg";     break;
@@ -287,7 +285,7 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
             }
 
             fs.invoke("stat", filePath).then(function(stats) {
-                callback(stats && stats.size ? "fs://localhost" + filePath : null);
+                callback(stats && stats.size ? encodeURI("fs://localhost" + filePath) : null);
             }, function(error) {
                 callback(null);
             });
