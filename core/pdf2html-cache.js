@@ -200,7 +200,12 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                         if (typeof ImageData !== 'undefined' && objectData instanceof ImageData) {
                             imageCanvas.putImageData(objectData, 0, 0);
                         } else {
+                            if (objectData.data) {
                             putBinaryImageData(imageCanvas.getContext('2d'), objectData.data, width, height);
+                            } else {
+                                // JFD TODO: this is likely to be a mask which we do not yet support, just ignore for now...
+                                break;
+                            }
                         }
 
                         // JFD TODO: check if image requires the alpha channel!

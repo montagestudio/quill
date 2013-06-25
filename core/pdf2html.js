@@ -15,6 +15,23 @@ var xmlns = "http://www.w3.org/2000/svg";
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 
+function putBinaryImageData(ctx, data, w, h) {
+  var tmpImgData = 'createImageData' in ctx ? ctx.createImageData(w, h) :
+    ctx.getImageData(0, 0, w, h);
+
+  var tmpImgDataPixels = tmpImgData.data;
+  if ('set' in tmpImgDataPixels)
+    tmpImgDataPixels.set(data);
+  else {
+    // Copy over the imageData pixel by pixel.
+    for (var i = 0, ii = tmpImgDataPixels.length; i < ii; i++)
+      tmpImgDataPixels[i] = data[i];
+  }
+
+  ctx.putImageData(tmpImgData, 0, 0);
+}
+
+
 function blobFromDataURL(dataURL) {
   // convert base64 to raw binary data held in a string
   // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
@@ -459,11 +476,16 @@ exports.PDF2HTML = Montage.create(Montage, {
                     if (typeof ImageData !== 'undefined' && imageData instanceof ImageData) {
                         imageCtx.putImageData(imageData, 0, 0);
                     } else {
-                      context.putBinaryImageData.call(context, imageCtx, imageData);
+                        if (imageData.data) {
+                            putBinaryImageData(imageCtx, imageData.data, width, height);
+                        } else {
+                            // JFD TODO: this is likely to be a mask which we do not yet support, just ignore for now...
+                            return;
+                        }
                     }
 
                     elem = document.createElement("img");
-                    imageBlob = blobFromDataURL(imageCanvas.toDataURL("image/png"));
+                    imageBlob = blobFromDataURL(imageCanvas.toDataURL("image/jpeg"));
                 }
 
                 if (imageBlob) {
