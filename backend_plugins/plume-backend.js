@@ -164,7 +164,6 @@ console.log("--- createFromTemplate")
                     });
 
                     return Q.all(promises).then(function(results) {
-                        console.log("RESULTS:", results);
                         results.forEach(function(result) {
                             issues.push.apply(issues, result);
                         });
@@ -177,48 +176,80 @@ console.log("--- createFromTemplate")
 };
 
 exports.updateContentInfo = function(rootDirectory, options) {
-    console.log("--- updateContentInfo #1", rootDirectory);
-
     var root = PATH.join(pathFromURL(rootDirectory), "OEBPS"),
         directories = ["assets", "pages", "styles"],
         listPromises = [];
 
-    console.log("--- updateContentInfo #2", root);
-
     options = options || {};
 
     directories.map(function(directoryName) {
-        console.log("--- updateContentInfo #3", PATH.join(root, directoryName));
-//        listPromises.push(QFS.listTree(PATH.join(root, directoryName), guard(exclude)));
         listPromises.push(exports.listTree(PATH.join(root, directoryName)));
     });
 
     return Q.all(listPromises).then(function(results) {
         var manifest = [],
             spine = [],
-            pages = [];
+            pages = [],
+            pageToRead = [];
 
         results.map(function(files) {
             files.map(function(file) {
                 if (file.stat.isFile()) {
 //                    allFiles.push(PATH.relative(root, pathFromURL(file.url)));
                     var path = PATH.relative(root, pathFromURL(file.url)),
-                        name = PATH.basename(path),
-                        ext = PATH.extname(name),
+                        ext = PATH.extname(path),
+                        name = PATH.basename(path, ext ? ext : undefined),
+                        firstChar = name.charAt(0),
                         type = "application/octet-stream",
                         properties = null;
 
                     switch (ext.toLowerCase()) {
-                        case ".html":    type = "text/html";                     break;
+                        case ".html":
+                            type = "text/html";
+                            if (firstChar <= "A") {
+                                name = "page" + name;
+                            }
+                            break;
                         case ".xhtml":
                             type = "application/xhtml+xml";
+                            if (firstChar <= "A") {
+                                name = "page" + name;
+                            }
+                            // Set the SVG property for now, we will remove it later is not needed
                             properties = "svg";
-                            // JFD TODO: only add the svg property if the page actually uses svg
+                            console.log("PAGE FILE PATH:", pathFromURL(file.url))
+                            pageToRead.push({
+                                name: name,
+                                path: pathFromURL(file.url)
+                            });
                             break;
-                        case ".css":     type = "text/css";                      break;
-                        case ".jpeg":    type = "image/jpeg";                    break;
+                        case ".css":
+                            type = "text/css";
+                            if (firstChar <= "A") {
+                                name = "style" + name;
+                            }
+                            break;
+                        case ".jpeg":
+                            type = "image/jpeg";
+                            if (firstChar <= "A") {
+                                name = "image" + name;
+                            }
+                            break;
+                        case ".png":
+                            type = "image/jpeg";
+                            if (firstChar <= "A") {
+                                name = "image" + name;
+                            }
+                            break;
+                        case ".otf":
+                            type = "font/opentype";
+                            if (firstChar <= "A") {
+                                name = "font" + name;
+                            }
+                            break;
                     }
 
+                    name = name.replace(/[-_+.,;:]/g, "");
                     manifest.push('<item id="' + name + '" href="' + path + '"' + (properties !== null ? ' properties="' + properties + '"' : '') + ' media-type="' + type +'"/>');
 
                     if (path.indexOf("pages/") === 0) {
@@ -228,9 +259,10 @@ exports.updateContentInfo = function(rootDirectory, options) {
             });
         });
 
+        var prefixLength = "page".length;
         pages.sort(function(a, b) {
-            a = parseInt(a, 10);
-            b = parseInt(b, 10);
+            a = parseInt(a.substr(prefixLength), 10);
+            b = parseInt(b.substr(prefixLength), 10);
 
             if (a < b) {
                 return -1;
@@ -246,7 +278,42 @@ exports.updateContentInfo = function(rootDirectory, options) {
         options.manifest = manifest;
         options.spine = spine;
 
-        return exports.customizeFile(PATH.join(root, "content.opf"), options);
+        // We need to read every pages to check for SVG
+        var pageIndex = 0,
+            nbrPagesToRead = pageToRead.length;
+
+        var checkNextFile = function() {
+            return QFS.read(pageToRead[pageIndex].path).then(function(data) {
+                if (data.search(/<svg /i) == -1) {
+                    var i = -1;
+
+                     // this page does not contains any SVG, let's remove the svg attribute from the manifest
+                    manifest.some(function(line) {
+                        console.log("checking line:", line)
+                        i ++;
+
+                        if (line.search('<item id="' + pageToRead[pageIndex].name + '"') !== -1) {
+                            manifest[i] = line.replace(' properties="svg"', "");
+
+                            console.log("find line:", line);
+                            return true;
+                        }
+
+                        return false;
+                    });
+                }
+
+                if (++ pageIndex < nbrPagesToRead) {
+                    return checkNextFile();
+                }
+            })
+        }
+
+        return checkNextFile().then(function() {
+            return exports.customizeFile(PATH.join(root, "content.opf"), options).then(function() {
+                return exports.customizeFile(PATH.join(root, "toc.ncx"), options)
+            });
+        });
     });
 };
 
