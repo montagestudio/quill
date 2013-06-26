@@ -109,13 +109,12 @@ exports.rootURLForFileURL = function(object) {
 };
 
 exports.aboutPageInfo = function() {
-    return {url:"http://client/import-activity/index.html", width:400, height:600, canResize:false, showToolbar:false}
     return null; // return null to use default about panel
 };
 
 exports.welcomePageInfo = function() {
-//    return {url: "http://client/welcome/index.html", width:906, height:540};
-    return null;
+    return {url: "http://client/welcome/index.html", width:800, height:480};
+//    return null;
 };
 
 exports.preferencesPageInfo = function() {

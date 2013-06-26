@@ -185,6 +185,11 @@ foo = this;
                             return false;
                         });
                     }
+
+                    else if (command === "importDocument") {
+                        this.handleMenuActionImportDocument();
+                        return true;
+                    }
                 }
 
                 throw new Error("Message refused, invalid data!");

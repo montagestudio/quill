@@ -31,6 +31,14 @@
         "locations": [
             "bibliotheque/ui/main.reel/main.html"
         ]
+    },
+
+    "import_PDF": {
+        "message": "Import PDF",
+        "description": "Button to import a PDF file",
+        "locations": [
+            "welcome/ui/main.reel/main.html"
+        ]
     }
 
 }

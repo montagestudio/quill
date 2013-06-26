@@ -55,7 +55,7 @@ exports.send = function(from, to, data) {
     var deferred = Q.defer();
 
     // only accept message from a registered process or null
-    if (g_registeredProcess[from]) {
+    if (from == "anonymous" || g_registeredProcess[from]) {
         var dest = g_registeredProcess[to];
         if (dest && dest.handler) {
             var timeout = setTimeout(function() {

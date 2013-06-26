@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+    <title>Main</title>
+    <meta charset="utf-8">
+
+    <link href="main.css" rel="stylesheet" />
+
+    <script type="text/montage-serialization">
+        {
+            "localizer": {
+                "object": "montage/core/localizer[defaultLocalizer]"
+            },
+
+            "owner": {
+                "properties": {
+                    "element": {"#": "main"}
+                },
+                "listeners": [
+                    {
+                        "type": "openDocument",
+                        "listener": {"@": "owner"}
+                    }
+                ]
+            },
+
+            "importButton": {
+                "prototype": "matte/ui/button.reel",
+                "properties": {
+                    "element": {"#": "importButton"}
+                },
+                "localizations": {
+                    "label": {"key": "import_PDF"}
+                },
+                "listeners": [
+                    {
+                        "type": "action",
+                        "listener": {"@": "owner"}
+                    }
+                ]
+            },
+
+            "versionText": {
+                "prototype": "montage/ui/text.reel",
+                "properties": {
+                    "element": {"#": "versionText"}
+                },
+                "localizations": {
+                    "value": {
+                        "key": "version",
+                        "data": {
+                            "number": {"<-": "@owner.version"}
+                        }
+                    }
+                }
+            },
+
+            "introMeta": {
+                "prototype": "montage/ui/text.reel",
+                "properties": {
+                    "element": {"#": "introMeta"}
+                },
+                "localizations": {
+                    "value": {"key": "copyright"}
+                }
+            }
+        }
+    </script>
+
+</head>
+<body>
+
+    <div data-montage-id="main" class="main Welcome">
+
+        <section class="Intro">
+            <div class="Intro-logo"></div>
+            <p class="Intro-version" data-montage-id="versionText"></p>
+            <p class="Intro-meta" data-montage-id="introMeta">&copy; 2012–2013 Declarativ Inc.</p>
+        </section>
+
+        <section class="Launcher">
+            
+            <section class="Launcher-section Action">
+                <!--button data-montage-id="newAppButton" class="Action-button Action-button--new"></button-->
+                <button data-montage-id="importButton" class="Action-button Action-button--open"></button>
+            </section>
+
+            <!--section class="Launcher-section History">
+                <h2 class="Launcher-title" data-montage-id="recentTitle">Recent Projects</h2>
+                <ul class="History-list" data-montage-id="historyList">
+                    <li class="History-list-item" data-montage-id="historyListItem"></li>
+                </ul>
+            </section-->
+            
+        </section>
+        
+        
+
+    </div>
+
+</body>
+</html>
