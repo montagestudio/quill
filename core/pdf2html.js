@@ -60,7 +60,14 @@ function getBaselineOffset(font, data, fontStyle, height) {
         return _baselineOffsetCache[fontStyle];
     }
 
-    // Create a temporary canvas
+    // do we have an font.ascent?
+// JFD TODO: does not always work, I must be missing something in the equation!
+//    if (font.ascent !== undefined && font.ascent !== 0) {
+//        _baselineOffsetCache[fontStyle] = -height * font.ascent * font.fontMatrix[0];
+//        return _baselineOffsetCache[fontStyle];
+//    }
+
+    // else, let's try brute force by dawing it on a temporary canvas
     var canvas = document.createElement('canvas'),
         ctx = canvas.getContext("2d"),
         charWidth;
@@ -784,7 +791,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                                     innerElem = document.createElement("span"),
                                     innerElemStyle = innerElem.style,
                                     roundScaledX = roundValue(x * scale, 0),
-                                    character = glyph.fontChar;
+                                    character = font.remaped ? glyph.unicode : glyph.fontChar;
 
 //                                innerElemStyle.position = "absolute";
 //                                innerElemStyle.webkitTransform = "translate(" + (x * scale) + "px, 0)";
