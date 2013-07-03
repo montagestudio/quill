@@ -137,7 +137,7 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                             if (typeof bytes.subarray == "function") {
                                 chunkData = bytes.subarray(offset, offset + chunckLength);
                             } else if (typeof bytes.slice == "function") {
-                                chunkData = bytes.slice(offset, offset + chunckLength + 1);
+                                chunkData = bytes.slice(offset, offset + chunckLength);
                             } else {
                                 chunkData = [];
                                 for (i = 0, j = offset; i < chunckLength; i ++, j ++) {
