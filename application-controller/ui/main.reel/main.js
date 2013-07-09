@@ -145,7 +145,7 @@ foo = this;
                             i;
 
                         for (i = 0; i < length; i ++) {
-                            if (items[i].url === data[1].url) {
+                            if (items[i].id === parseInt(data[1].id, 10)) {
                                 console.log("--- removeItem", items[i]);
                                 if (items[i].processID) {
                                     console.log("--- removeItem", items[i].processID);
@@ -164,9 +164,9 @@ foo = this;
                     }
 
                     else if (command === "converterInfo") {
-                        console.log("*** converterInfo:", data[1].url, data[1])
+                        console.log("*** converterInfo:", data[1].url, data[1].id, data[1])
                         return this.importItems.some(function(object) {
-                            if (data[1].url === object.url) {
+                            if (parseInt(data[1].id, 10) === object.id) {
                                 object.processID = data[1].processID;
                                 object.lastContact = new Date().getTime() / 1000;
                                 return true;
@@ -177,7 +177,7 @@ foo = this;
 
                     else if (command === "itemUpdate") {
                         return this.importItems.some(function(object) {
-                            if (data[1].url === object.url) {
+                            if (parseInt(data[1].id, 10) === object.id) {
                                 self.updateItemState(object, data[1].status, data[1].currentPage, data[1].nbrPages, data[1].destination, data[1].meta)
                                 object.lastContact = new Date().getTime() / 1000;
                                 return true;
@@ -255,6 +255,7 @@ foo = this;
                             if (!importItems.some(function(object) {
                                 return item.fileUrl === object.url && object.status !== STATUS_READY;
                             })) {
+                                var currentTime = new Date();
                                 newContent.push({
                                     name: item.name,
                                     url: item.fileUrl,
@@ -263,7 +264,8 @@ foo = this;
                                     currentPage: 0,
                                     processID: null,
                                     lastContact: 0,
-                                    retries: 0
+                                    retries: 0,
+                                    id: (currentTime.getTime() % (3600 * 24)) * 1000000 + currentTime.getMilliseconds() * 1000 + Math.floor(Math.random() * 1000)
                                 });
                             }
                         });
@@ -274,7 +276,7 @@ foo = this;
                     }));
                 });
 
-                Promise.allResolved(promises).then(function() {
+                Promise.allSettled(promises).then(function() {
                     console.log("URLS:", self.importItems);
                     var windowParams = {
                         url:"http://client/import-activity/index.html",
@@ -342,13 +344,13 @@ foo = this;
 
     import: {
         value: function(item) {
-            console.log("STARTING PROCESS", item.name);
+            console.log("STARTING PROCESS", item);
 
             item.lastContact = new Date().getTime() / 1000;
             this.updateItemState(item, STATUS_IMPORTING);
 
             var windowParams = {
-                url: "http://client/pdf-converter/index.html?source=" + encodeURIComponent(item.url),
+                url: "http://client/pdf-converter/index.html?source=" + encodeURIComponent(item.url) + "&id=" + encodeURIComponent(item.id),
                 showWindow: false,
                 canResize: true
             };
@@ -357,8 +359,29 @@ foo = this;
                 windowParams.url += "&p=" + item.currentPage + "&dest=" + encodeURIComponent(item.destination);
             }
 
-            this.environmentBridge.backend.get("application").invoke("openWindow", windowParams).then(function() {
-                console.log("PDF Converter for", item.url, "launched");
+            var application = this.environmentBridge.backend.get("application");
+            application.invoke("windowList").then(function(result) {
+                var windows = result.windows,
+                    promises = [];
+
+                windows.forEach(function(url) {
+                    if (decodeURI(url).indexOf("http://client/pdf-converter/index.html") === 0) {
+                        var params = {};
+                        url.substr(url.indexOf("?") + 1).split("&").forEach(function(query) {
+                            var param = query.split("=", 2);
+                            params[param[0]] = param[1] !== undefined ? decodeURIComponent(param[1]) : null;
+                        });
+                        if (params.source === item.url) {
+                            promises.push(application.invoke("closeWindow", url));
+                        }
+                    }
+                });
+
+                return Promise.allSettled(promises).then(function() {
+                    return application.invoke("openWindow", windowParams).then(function() {
+                        console.log("PDF Converter for", windowParams.url, "launched");
+                    });
+                });
             }, function(e) {
                 console.log("ERROR:", e.message, e.stack);
             });
@@ -407,7 +430,7 @@ foo = this;
                     return ipc.invoke("send", self.processID, processID[0], ["itemUpdate", item]);
                 }
             }).fail(function(e){
-                    console.log("ERROR:", e.message, e.stack)
+//                    console.log("ERROR:", e.message, e.stack)
             }).done();
 
             if (statusChanged) {
@@ -420,7 +443,7 @@ foo = this;
         value: function() {
             var self = this;
 
-            console.log("TIME TO CHECK FOR ANY STALL IMPORT");
+//            console.log("TIME TO CHECK FOR ANY STALL IMPORT");
             var now = new Date().getTime() / 1000;
             this.importItems.map(function(item) {
                 if (item.status === STATUS_IMPORTING && item.lastContact) {
@@ -440,8 +463,11 @@ foo = this;
                                 self.updateItemState(item, STATUS_WAITING, item.currentPage, item.nbrPages, item.destination, item.meta);
                             }, 500);    // We need to give some time for the window to go away
                         }, function(e){
-                            console.log("JUMPSTART ERROR:", e.message, e.stack);
+//                            console.log("JUMPSTART ERROR:", e.message, e.stack);
                             // JFD TODO: Kill the old process
+                            item.retries = (item.retries || 0) + 1;
+                            item.lastContact = now;
+                            item.processID = 0;
                             self.updateItemState(item, STATUS_WAITING, item.currentPage, item.nbrPages, item.destination, item.meta);
                         }).done();
                     }

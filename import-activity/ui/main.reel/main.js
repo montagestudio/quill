@@ -207,7 +207,7 @@ console.log("--restoreContent")
 
                         if (item) {
                             this.contentController.content.some(function (object) {
-                                if (object.url === item.url) {
+                                if (object.id === parseInt(item.id, 10)) {
                                     object.status = item.status;
                                     object.nbrPages = item.nbrPages;
                                     object.currentPage = item.currentPage;

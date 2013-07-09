@@ -42,6 +42,10 @@ exports.Main = Montage.create(Component, {
         value: null
     },
 
+    id: {
+        value: null
+    },
+
     outputURL: {
         value: null
     },
@@ -64,6 +68,7 @@ console.log("PDF CONVERTER CREATED");
                 // add the path to the document title (for easy debugging)
                 if (this.params.source) {
                     document.title = document.title + " - " + this.params.source.substr("fs://localhost".length);
+                    this.id =  parseInt(this.params.id, 10);
                     this.url =  this.params.source;
                     this.outputURL = this.params.dest;
                 }
@@ -124,7 +129,7 @@ console.log("PDF CONVERTER CREATED");
 
                                     return self.updateState("success", options).then(function() {
 console.log("DONE!!!", success);
-//                                        lumieres.document.close(true);
+                                        lumieres.document.close(true);
                                     });
                                 });
                             });
@@ -166,7 +171,7 @@ console.log("DONE!!!", success);
                 ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
                     console.log("--- update", processID)
                     if (processID) {
-                        return ipc.invoke("send", self.processID, processID[0], ["converterInfo", {processID: self.processID, url: self.url}]);
+                        return ipc.invoke("send", self.processID, processID[0], ["converterInfo", {processID: self.processID, id: self.id}]);
                     }
                 }).fail(function(e){
                         console.log("ERROR:", e.message, e.stack)
@@ -219,7 +224,7 @@ console.log("DONE!!!", success);
             ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
                 if (processID) {
                     return ipc.invoke("send", self.processID, processID[0], ["itemUpdate", {
-                        url: self.url,
+                        id: self.id,
                         status: status,
                         currentPage: self._pageNumber,
                         nbrPages: self.numberOfPages,
