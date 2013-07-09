@@ -39,11 +39,10 @@ var exec = function(command, options) {
     var deferred = Q.defer(),
         process;
 
-    console.log("EXCEC COMMAND:", command)
     options = options || {};
     process = child_process.exec(command, options, function (error, stdout, stderr) {
-        console.log('stdout: ' + stdout);
         if (error !== null) {
+            console.log("EXCEC COMMAND:", command)
             console.log('exec error: ' + error);
             console.log('stderr: ' + stderr);
             deferred.reject(error);
@@ -133,7 +132,6 @@ exports.customizeFile = function(fileURL, options) {
 };
 
 exports.createFromTemplate = function(template, destination, options, _index) {
-console.log("--- createFromTemplate")
     var source = PATH.join(global.clientPath, template),
         dest = pathFromURL(destination);
 
@@ -217,7 +215,6 @@ exports.updateContentInfo = function(rootDirectory, options) {
                             }
                             // Set the SVG property for now, we will remove it later is not needed
                             properties = "svg";
-                            console.log("PAGE FILE PATH:", pathFromURL(file.url))
                             pageToRead.push({
                                 name: name,
                                 path: pathFromURL(file.url)
@@ -259,7 +256,10 @@ exports.updateContentInfo = function(rootDirectory, options) {
             });
         });
 
-        var prefixLength = "page".length;
+        var prefixLength = "page".length,
+            pageSpreads = ["page-spread-left", "page-spread-right"],
+            pageNumber = 0;
+
         pages.sort(function(a, b) {
             a = parseInt(a.substr(prefixLength), 10);
             b = parseInt(b.substr(prefixLength), 10);
@@ -272,7 +272,8 @@ exports.updateContentInfo = function(rootDirectory, options) {
                 return 0;
             }
         }).map(function(name) {
-            spine.push('<itemref idref="' + name + '"/>');
+            pageNumber ++;
+            spine.push('<itemref idref="' + name + '" properties="' + pageSpreads[pageNumber % 2] + '"/>');
         });
 
         options.manifest = manifest;
@@ -289,13 +290,10 @@ exports.updateContentInfo = function(rootDirectory, options) {
 
                      // this page does not contains any SVG, let's remove the svg attribute from the manifest
                     manifest.some(function(line) {
-                        console.log("checking line:", line)
                         i ++;
 
                         if (line.search('<item id="' + pageToRead[pageIndex].name + '"') !== -1) {
                             manifest[i] = line.replace(' properties="svg"', "");
-
-                            console.log("find line:", line);
                             return true;
                         }
 
@@ -330,8 +328,6 @@ exports.generateEPUB3 = function(rootDirectory, options) {
         name = name.substr(0, i);
     }
     name += ".epub";
-
-    console.log("CMD:", "zip -X '" + name + "' mimetype", root)
 
     return exec("zip -X '" + name + "' mimetype", options).then(function(stdout) {
         result += stdout;
