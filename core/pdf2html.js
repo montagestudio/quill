@@ -396,14 +396,19 @@ exports.PDF2HTML = Montage.create(Montage, {
 //        return param1 + matrix.join(", ") + param3
 //    });
 
-                            self.backend.get("plume-backend").invoke("createFromTemplate", "/pdf-converter/templates/page.xhtml", folderPath + (page.pageInfo.pageIndex + 1) + ".xhtml", {
-                                "page-width": Math.round(renderContext.viewport.width),
-                                "page-height": Math.round(renderContext.viewport.height),
-                                "page-title": "TODO: TITLE",
-                                "page-headers": "",
-                                "page-style": style,
-                                "page-content": data
-                            }).then(function() {
+                            self.backend.get("plume-backend").invoke("createFromTemplate",
+                                "/pdf-converter/templates/page.xhtml",
+                                folderPath + (page.pageInfo.pageIndex + 1) + ".xhtml",
+                                {
+                                    "page-width": Math.round(renderContext.viewport.width),
+                                    "page-height": Math.round(renderContext.viewport.height),
+                                    "page-title": "page " + (page.pageInfo.pageIndex + 1),
+                                    "page-headers": "",
+                                    "page-style": style,
+                                    "page-content": data
+                                },
+                                true
+                            ).then(function() {
                                 page.destroy();
                                 defered.resolve();
                             }, function(execption) {

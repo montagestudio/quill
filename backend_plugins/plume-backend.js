@@ -131,7 +131,7 @@ exports.customizeFile = function(fileURL, options) {
     })
 };
 
-exports.createFromTemplate = function(template, destination, options, _index) {
+exports.createFromTemplate = function(template, destination, options, replaceExisting, _index) {
     var source = PATH.join(global.clientPath, template),
         dest = pathFromURL(destination);
 
@@ -145,8 +145,12 @@ exports.createFromTemplate = function(template, destination, options, _index) {
     return QFS.makeTree(PATH.join(dest, "..")).then(function() {
         return QFS.exists(dest).then(function(exists) {
             if (exists) {
-                if (_index < 100) {
-                    return exports.createFromTemplate(template, destination, options, _index + 1);
+                if (replaceExisting) {
+                    return QFS.removeTree(dest).then(function() {
+                        return exports.createFromTemplate(template, destination, options, false);
+                    })
+                } else if (_index < 100) {
+                    return exports.createFromTemplate(template, destination, options, false, _index + 1);
                 }
                 throw new Error("destination directory already exist!");
             }
