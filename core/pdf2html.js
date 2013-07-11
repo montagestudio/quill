@@ -894,17 +894,14 @@ exports.PDF2HTML = Montage.create(Montage, {
                         this.owner._rootNodeStack[0].appendChild(this._svg);
                         rect = this._svg.getBBox();
 //                        console.log("GRAPHIC DIM-1:", this._svg.getBoundingClientRect(), this._svg.getBBox());
-//                        console.log("GRAPHIC DIM-2:", gElem, gElem.getBoundingClientRect(), gElem.getBBox());
-                        this._svg.setAttribute("width", Math.ceil(rect.width - rect.x) + 1);
-                        this._svg.setAttribute("height", Math.ceil(rect.height - rect.y) + 1);
+                        this._svg.setAttribute("width", Math.ceil(rect.width));
+                        this._svg.setAttribute("height", Math.ceil(rect.height));
 
-                        var xOffset = rect.x < 0 ? rect.x / -1 : 0,
-                            yOffset = rect.y < 0 ? rect.y / -1 : 0,
-                            transform = this._svgTransform;
+                        var transform = this._svgTransform;
 
-                        transform[4] -= xOffset * this.scale;
-                        transform[5] += yOffset * this.scale;
-                        gElem.setAttribute("transform", "translate(" + xOffset + "," + yOffset + ")");
+                        transform[4] = transform[4] ? transform[4] - (-rect.x * this.scale) : rect.x * this.scale;
+                        transform[5] -= rect.y * this.scale;
+                        gElem.setAttribute("transform", "translate(" + (-rect.x) + "," + (-rect.y) + ")");
                         this._svg.setAttribute("style", "position: absolute; -webkit-transform-origin: 0 0; -webkit-transform: matrix("+ transform.join(",") + ")");
                     }
 
