@@ -852,7 +852,9 @@ exports.PDF2HTML = Montage.create(Montage, {
         value: {
             _svg: null,
             _svgTransform: null,
-            _path: null,
+            _svgElement:null,
+            _svgHasDrawnElements: false,
+            _svgElementDrawn: false,
 
             beginLayout: function() {
                 console.log("GRAPH:beginLayout");
@@ -863,9 +865,11 @@ exports.PDF2HTML = Montage.create(Montage, {
                 this.endSVG();
             },
 
-            startSVG: function(context) {
+            startSVG: function(context, type) {
                 var ctx = context.ctx,
                     transform = ctx.mozCurrentTransform;
+
+                type = type || "path";
 
                 if (!this._svg) {
 //                    console.log("********* START SVG **********");
@@ -874,49 +878,86 @@ exports.PDF2HTML = Montage.create(Montage, {
                     this._svg = document.createElementNS(xmlns, "svg");
                     this._svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
                     this._svg.appendChild(gElem);
+                    this._svgHasDrawnElements = false;
                 }
-                if (!this._path) {
+
+//                if (this._svgElement && (this._svgElement.tagName !== type || this._svgElement.tagName == "rect")) {
+//                    // JFD TODO: how do we fill of stroke the current element?
+//                    this._svgElement = null;
+//                }
+
+                if (!this._svgElement) {
                     this._svgTransform = transform.slice(0, 6);
-                    this._path = document.createElementNS(xmlns, "path");
-                    this._path.setAttribute("fill", "none");
-                    this._path.setAttribute("stroke", "none");
-                    this._svg.firstChild.appendChild(this._path);
+                    this._svgElement = document.createElementNS(xmlns, type || "path");
+                    this._svg.firstChild.appendChild(this._svgElement);
+                    this._svgElementDrawn = false;
                 }
             },
 
-            endSVG: function() {
+            endSVG: function(context) {
                 if (this._svg) {
 //                    console.log("********* END SVG **********");
-                    var gElem = this._svg.firstChild,
+                    var current = context.current,
+                        ctx = context.ctx,
+                        gElem = this._svg.firstChild,
                         rect;
 
-                    if (gElem.childNodes.length !== 0) {
+                    if (this._svgHasDrawnElements && gElem.childNodes.length !== 0) {
+                        var transform = this._svgTransform.slice(), // make a copy as we are going to modify it
+                            xScale = Math.sqrt(transform[0] * transform[0] + transform[1] * transform[1]),
+                            yScale = Math.sqrt(transform[2] * transform[2] + transform[3] * transform[3]),
+                            xExtraSpace = 0,
+                            yExtraSpace = 0;
+
                         this.owner._rootNodeStack[0].appendChild(this._svg);
                         rect = this._svg.getBBox();
 //                        console.log("GRAPHIC DIM-1:", this._svg.getBoundingClientRect(), this._svg.getBBox());
-                        this._svg.setAttribute("width", Math.ceil(rect.width));
-                        this._svg.setAttribute("height", Math.ceil(rect.height));
 
-                        var transform = this._svgTransform;
+                        if (typeof gElem.style.stroke === "string" && gElem.style.stroke !== "" && gElem.style.stroke !== "none") {
+                             // The BBox does not account for the space of the path's stoke
 
-                        transform[4] = transform[4] ? transform[4] - (-rect.x * this.scale) : rect.x * this.scale;
-                        transform[5] -= rect.y * this.scale;
-                        gElem.setAttribute("transform", "translate(" + (-rect.x) + "," + (-rect.y) + ")");
-                        this._svg.setAttribute("style", "position: absolute; -webkit-transform-origin: 0 0; -webkit-transform: matrix("+ transform.join(",") + ")");
+                            var xLineWidth = current.lineWidth * xScale,
+                                yLineWidth = current.lineWidth * yScale;
+
+                            if (xLineWidth === 0) {
+                                xLineWidth = context.getSinglePixelWidth();
+                            }
+                            if (yLineWidth === 0) {
+                                yLineWidth = context.getSinglePixelWidth();
+                            }
+                            xExtraSpace = Math.ceil(Math.max(xLineWidth / 2, ctx.miterLimit * xScale));
+                            yExtraSpace = Math.ceil(Math.max(yLineWidth / 2, ctx.miterLimit * yScale));
+                        }
+
+                        this._svg.style.width = Math.ceil(rect.width + xExtraSpace) + "px";
+                        this._svg.style.height = Math.ceil(rect.height + yExtraSpace) + "px";
+
+                        transform[4] = roundValue(transform[4] ? transform[4] - (-rect.x * this.scale) - (xExtraSpace / 2) : (rect.x * this.scale) - (xExtraSpace / 2), 2);
+                        transform[5] = roundValue(transform[5] - (rect.y * this.scale) + (yExtraSpace / 2), 2);
+
+                        this._svg.style.position = "absolute";
+                        this._svg.style.webkitTransformOrigin = "0 0";
+                        this._svg.style.webkitTransform = "matrix(" + transform.join(",") + ")";
+
+                        xExtraSpace /= xScale * 2;
+                        yExtraSpace /= yScale * -2;
+                        gElem.style.webkitTransform = "translate(" + roundValue(-rect.x + xExtraSpace, 2) + "px, " + roundValue(-rect.y - yExtraSpace, 2) + "px)";
+
+                        console.log(this._svg);
                     }
 
                     this._svg = null;
-                    this._path = null;
+                    this._svgElement = null;
                 }
             },
 
             appendDataToPath: function(data) {
                 var d = "";
 
-                if (this._path.hasAttribute("d")) {
-                    d = this._path.getAttribute("d");
+                if (this._svgElement.hasAttribute("d")) {
+                    d = this._svgElement.getAttribute("d");
                 }
-                this._path.setAttribute("d", d + data);
+                this._svgElement.setAttribute("d", d + data);
             },
 
             moveTo: function(context, x, y) {
@@ -950,34 +991,112 @@ exports.PDF2HTML = Montage.create(Montage, {
             },
 
             rectangle: function(context, x, y, width, height) {
-                // JFD TODO: write me!
-                // rectangle are mostly used for clipping, in that case we should not create a SVG and therefore we need to filter them out!
-
                 this.startSVG(context);
+                // We cannot use an SVG rect has the current patch might not be completed yet, instead, draw the rect as a path
+                this.appendDataToPath("M" + x + "," + y + "L" + (x + width) + "," + y + "L" + (x + width) + "," + (y + height) +
+                    "L" + x + "," + (y + height) + "L" + x + "," + y);
+            },
+
+            fill: function(context, consumePath, fillRule) {
+                // fill must be called before stroke!
+                var current = context.current,
+                    ctx = context.ctx,
+                    gElem = this._svgElement.parentNode;
+
+                if (consumePath === undefined) {
+                    consumePath = true;
+                }
+
+                gElem.style.fill = current.fillColor;
+                gElem.style.stoke = "none";             // In case we do not call stoke after calling fill
+                if (fillRule !== undefined) {
+                    gElem.style.fileRule = fillRule;
+                }
+                this._svgHasDrawnElements = true;
+                this._svgElementDrawn = true;
+
+                if (consumePath === true) {
+                    this.endSVG(context);
+                }
             },
 
             stroke: function(context) {
-                var current = context.current;
+                 // fill must be called before stroke!
+                var current = context.current,
+                    ctx = context.ctx,
+                    gElem = this._svgElement.parentNode,
+                    lineWidth = current.lineWidth;
 
-                this._path.setAttribute("stroke", current.strokeColor);
-                this.endSVG();
+                if (lineWidth === 0) {
+                    lineWidth = context.getSinglePixelWidth();
+                }
+
+                if (gElem.style.fill === undefined || gElem.style.fill === "") {
+                    gElem.style.fill = "none";
+                }
+
+                gElem.style.stroke = current.strokeColor;
+                gElem.style.strokeWidth = lineWidth;
+                gElem.style.strokeLinecap = ctx.lineCap;
+                gElem.style.strokeLinejoin = ctx.lineJoin;
+                gElem.style.strokeMiterlimit = ctx.miterLimit;
+
+                this._svgHasDrawnElements = true;
+                this._svgElementDrawn = true;
+                this.endSVG(context);
             },
 
-            fill: function(context) {
-                var current = context.current;
+            closeStroke: function(context) {
+                this.startSVG(context);
+                this.appendDataToPath("Z");
+                this.stroke(context);
+            },
 
-//                console.log("--> graphic fill:", this._svg, this._path);
-                this._path.setAttribute("fill", current.fillColor);
+            eoFill: function(context) {
+                this.fill(context, true, "evenodd");
+            },
 
-                this.endSVG();
+            closeFill: function(context) {
+                this.startSVG(context);
+                this.appendDataToPath("Z");
+                this.fill(context, true);
+            },
+
+            fillStroke: function(context, fillRule) {
+                this.fill(context, false, fillRule);
+                this.stroke(context);
+            },
+
+            eoFillStroke: function(context) {
+                this.fillStroke(context, "evenodd");
+            },
+
+            closeFillStroke: function(context) {
+                this.startSVG(context);
+                this.appendDataToPath("Z");
+                this.fillStroke(context);
+            },
+
+            eoCloseFillStroke: function(context) {
+                this.fillStroke(context, "evenodd");
+            },
+
+            clip: function(context, clipRule) {
+                console.log("--> graphic clipping not yet supported");
+                this.endSVG(context);
+            },
+
+            eoClip: function(context) {
+                this.clip(context, "evenodd");
             },
 
             endPath: function(context) {
-                // Remove empty path
-                if (!this._path.hasAttribute("d")) {
-                    this._path.parentNode.removeChild(this._path);
+                if (this._svgElement) {
+                    if (!this._svgHasDrawnElements) {
+                        this._svgElement.parentNode.removeChild(this._svgElement);
+                    }
+                    this._svgElement = null;
                 }
-                this._path = null;
             },
 
             showText: function(context, str) {
