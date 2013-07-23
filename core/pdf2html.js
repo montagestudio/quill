@@ -304,11 +304,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                 renderContext,
                 ctx = canvas.getContext('2d');
 
-             //reset the canvas
-//            ctx.setTransform(1,0,0,1,0,0);
-//            ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-//            ctx.save();
-
             renderContext = {
                 canvasContext: ctx,
                 viewport: page.getViewport(scale)
@@ -486,7 +481,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                 console.log("  IMG:appendImage", object);
 
                 var context = object.context,
-//                    canvasHeight = context.ctx.canvas.height,
                     transform = context.ctx.mozCurrentTransform,
                     position,
                     elem,
@@ -540,137 +534,12 @@ exports.PDF2HTML = Montage.create(Montage, {
 
     _textLayer: {
         value: {
-//            beginLayout: function() {
-//                console.log("TEXT:beginLayout")
-//            },
-//            endLayout: function() {
-//                console.log("TEXT:endLayout")
-//            },
-//            appendText: function(object, text, fontObject, fontStyle) {
-//                if (renderingMode !== 1) return;
-//
-//                console.log("  TEXT:appendText", text, fontObject, fontStyle);
-//
-//                var fontName = object.fontName;
-//                if (this.owner._pdf.cssFonts[fontName] == undefined) {
-//                    this.owner._pdf.cssFonts[fontName] = this.page.commonObjs.getData(fontName).bindDOM();
-////  console.log("*** FONT:", fontName, this.page.commonObjs.getData(fontName))
-//
-//                    var style = document.createElement("style");
-//                    style.type = "text/css";
-//                    style.innerText = this.owner._pdf.cssFonts[fontName];
-//                    this.owner._rootNodeStack[0].insertBefore(style, this.owner._rootNodeStack[0].firstChild);
-//                }
-//
-//                var isSpacedText = Array.isArray(text);
-//
-//                var outerElem = document.createElement("span"),
-//                    style = outerElem.style,
-//                    fontsize = object.fontSize * object.hScale;
-////                    fontsize = object.fontSize * object.transform[0];
-//
-////                console.log("*** appendText:", object, text, object.transform);
-//                style.position = "absolute";
-//                style.fontFamily = object.fontName;
-//                style.fontSize = fontsize + "px";
-//                style.color = fontStyle.color;
-//
-//                var glyphs = fontObject.charsToGlyphs(text);
-//                var vOffset = 0;
-//try {
-//                vOffset = getBaselineOffset(/*isSpacedText ? text: text.join("")*/glyphs, "normal normal " + style.fontSize + " " + object.fontName, fontsize, this.owner._rootNodeStack[0]);
-//} catch(ex) {console.log("### ERROR GETTING BASELINE:", ex)}
-//                style.top = (object.y + vOffset) + "px";     // JFD: What about the correct base line!
-//                style.left = object.x + "px";
-//
-//
-////                style.color = "rgb(241, 9, 9)";
-////                style.fontSize = object.fontSize + "px";
-////                style.webkitTransformOrigin + "0 0";
-////                style.webkitTransform = "matrix(" + sanitizeCSSValue(transform[0]) + ", " + sanitizeCSSValue(transform[1]) + ", " +
-////                    sanitizeCSSValue(transform[2]) + ", " + sanitizeCSSValue(transform[3]) + ", " + sanitizeCSSValue(transform[4]) + ", " + sanitizeCSSValue(transform[5]) + ")";
-//
-////                if (isSpacedText) {
-////                    this.owner._rootNodeStack[0].appendChild(outerElem);
-////
-////                    var spacing = 0;
-////                    for (var i in text) {
-////                        var data = text[i];
-////                        if (typeof data === "string") {
-////                            var innerElem = document.createElement("span");
-////
-////                            var glyphs = fontObject.charsToGlyphs(data);
-////                            console.log("glyphs=", glyphs);
-////
-////                            data = ""
-////                            for (i in glyphs) {
-////                                if (glyphs[i]) {
-////                                    data += glyphs[i].fontChar;
-////                                }
-////                            }
-////
-////                            innerElem.innerHTML = data.replace(/ /g, "&nbsp;");
-////                            var roundedSpacing = Math.round(spacing);
-////                            if (roundedSpacing != 0) {
-////                                innerElem.style.marginLeft = roundedSpacing + "px";
-////                                spacing -= roundedSpacing;
-////                                spacing = 0;
-////                            }
-////                            outerElem.appendChild(innerElem);
-////                        } else if (typeof data === "number") {
-////                            spacing += - data * object.fontSize * object.textHScale * this.scale;   //JFD TODO: the scale factor should be applied by the BE
-////                        }
-////                    }
-////                } else {
-////                    var glyphs = fontObject.charsToGlyphs(text);
-//
-//                    text = ""
-//                    for (i in glyphs) {
-//                        if (glyphs[i]) {
-//                            text += glyphs[i].fontChar;
-//                        }
-//                    }
-//
-//                    outerElem.innerHTML = text.replace(/ /g, "&nbsp;");
-//                    this.owner._rootNodeStack[0].appendChild(outerElem);
-//                    console.log(outerElem)
-////                }
-//            },
-//
-//            appendCharacter: function(character, geometry, offsetX, offsetY, params) {
-//                if (renderingMode !== 2) return;
-//
-//                console.log("append char:", character, geometry, geometry.x, offsetX, params)
-//
-//                var fontName = geometry.fontName;
-//                if (this.owner._pdf.cssFonts[fontName] == undefined) {
-//                    this.owner._pdf.cssFonts[fontName] = this.page.commonObjs.getData(fontName).bindDOM();
-//
-//                    var style = document.createElement("style");
-//                    style.type = "text/css";
-//                    style.innerText = this.owner._pdf.cssFonts[fontName];
-//                    this.owner._rootNodeStack[0].insertBefore(style, this.owner._rootNodeStack[0].firstChild);
-//                }
-//
-//                var outerElem = document.createElement("span"),
-//                    style = outerElem.style,
-//                    fontsize = geometry.fontSize * geometry.hScale;
-//
-//                style.position = "absolute";
-//                style.fontFamily = geometry.fontName;
-//                style.fontSize = fontsize + "px";
-//                style.color = params.color;
-//
-//                var vOffset = 0;
-//                try {
-//                    vOffset = getBaselineOffset(character, "normal normal " + style.fontSize + " " + geometry.fontName, fontsize, this.owner._rootNodeStack[0]);
-//                } catch(ex) {console.log("### ERROR GETTING BASELINE:", ex)}
-//                style.top = (/*geometry.y + */offsetY + vOffset) + "px";
-//                style.left = (/*geometry.x + */offsetX) + "px";
-//
-//                outerElem.innerHTML = character.replace(/ /g, "&nbsp;");
-//                this.owner._rootNodeStack[0].appendChild(outerElem);
-//            },
+            beginLayout: function() {
+                console.log("TEXT:beginLayout")
+            },
+            endLayout: function() {
+                console.log("TEXT:endLayout")
+            },
 
             showText: function(context, text) {
                 if (renderingMode < 3) return;
