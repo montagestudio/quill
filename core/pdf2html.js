@@ -15,6 +15,19 @@ var xmlns = "http://www.w3.org/2000/svg";
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 
+function setVendorStyleAttribute(style, name, value) {
+    // While this method does set the vendor attribute for all 3 major vendors, this is only useful at runtime!
+    // When we will serialize the dom, we will only see the attribute for the current vendor, we will have to
+    // add back the other vendors
+
+    style[name] = value;
+
+    name = name[0].toUpperCase() + name.substr(1);
+    style["webkit" + name] = value;
+    style["moz" + name] = value;
+    style["ms" + name] = value;
+}
+
 function putBinaryImageData(ctx, data, w, h) {
   var tmpImgData = 'createImageData' in ctx ? ctx.createImageData(w, h) :
     ctx.getImageData(0, 0, w, h);
@@ -396,6 +409,18 @@ exports.PDF2HTML = Montage.create(Montage, {
 //        return param1 + matrix.join(", ") + param3
 //    });
 
+                            //add extra vendor CSS properties
+                            data = data.replace(/\<[a-z]* [^>]*(-webkit-[a-z0-9\-]*:[^;>]*)[^>]*>/gi, function(match) {
+                                return match.replace(/-webkit-[a-z0-9\-]*:[^;>]*/gi, function(match) {
+                                    var rule = match.substr("-webkit-".length);
+
+                                    match += "; -moz-" + rule +
+                                             "; -ms-" + rule +
+                                             "; " + rule;
+                                    return match;
+                                })
+                            });
+
                             self.backend.get("plume-backend").invoke("createFromTemplate",
                                 "/pdf-converter/templates/page.xhtml",
                                 folderPath + (page.pageInfo.pageIndex + 1) + ".xhtml",
@@ -491,6 +516,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                         if (imageData.data) {
                             putBinaryImageData(imageCtx, imageData.data, width, height);
                         } else {
+                            console.log("======== MASK:", typeof Element, imageData.tagName)
                             // JFD TODO: this is likely to be a mask which we do not yet support, just ignore for now...
                             return;
                         }
@@ -503,12 +529,11 @@ exports.PDF2HTML = Montage.create(Montage, {
                 if (imageBlob) {
                     elem.src = URL.createObjectURL(imageBlob);
                 }
-                elem.style.position = "absolute";
-                elem.style.webkitTransformOrigin = "0 0";
-                elem.style.webkitTransform = "matrix(" + sanitizeCSSValue(transform[0]) + ", " + sanitizeCSSValue(transform[1]) + ", " +
-                    sanitizeCSSValue(transform[2]) + ", " + sanitizeCSSValue(transform[3]) + ", " + sanitizeCSSValue(transform[4]) + ", " + sanitizeCSSValue(transform[5]) + ")";
+                setVendorStyleAttribute(elem.style, "transform", "matrix(" + sanitizeCSSValue(transform[0]) + ", " + sanitizeCSSValue(transform[1]) + ", " +
+                    sanitizeCSSValue(transform[2]) + ", " + sanitizeCSSValue(transform[3]) + ", " + sanitizeCSSValue(transform[4]) + ", " + sanitizeCSSValue(transform[5]) + ")");
 
                 this.owner._rootNodeStack[0].appendChild(elem);
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\n"));
             }
         }
     },
@@ -732,17 +757,16 @@ exports.PDF2HTML = Montage.create(Montage, {
                     ctx.scale(1/scale, 1/scale);
                     ctx.translate(0, vOffset);
 
-                    outerElemStyle.webkitTransform = "matrix(" + [
+                    setVendorStyleAttribute(outerElemStyle, "transform", "matrix(" + [
                         sanitizeCSSValue(ctx.mozCurrentTransform[0]),
                         sanitizeCSSValue(ctx.mozCurrentTransform[1]),
                         sanitizeCSSValue(ctx.mozCurrentTransform[2]),
                         sanitizeCSSValue(ctx.mozCurrentTransform[3]),
                         sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[4], roundingPrecission) : ctx.mozCurrentTransform[4]),
                         sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[5], roundingPrecission) : ctx.mozCurrentTransform[5])
-                    ] + ")";
+                    ] + ")");
                 }
 
-                outerElemStyle.position = "absolute";
                 outerElemStyle.fontFamily = "'" + fontName + "', " + fallbackName;
                 outerElemStyle.fontSize = (fontSize * scale / fontSizeScale) + "px";
                 outerElemStyle.color = current.fillColor;
@@ -771,14 +795,14 @@ exports.PDF2HTML = Montage.create(Montage, {
                                 ctx.scale(1/scale, 1/scale);
                                 ctx.translate(0, vOffset);
 
-                                outerElemStyle.webkitTransform = "matrix(" + [
+                                setVendorStyleAttribute(outerElemStyle, "transform", "matrix(" + [
                                     ctx.mozCurrentTransform[0],
                                     ctx.mozCurrentTransform[1],
                                     ctx.mozCurrentTransform[2],
                                     ctx.mozCurrentTransform[3],
                                     roundPosition ? roundValue(ctx.mozCurrentTransform[4], roundingPrecission) : ctx.mozCurrentTransform[4],
                                     roundPosition ? roundValue(ctx.mozCurrentTransform[5], roundingPrecission) : ctx.mozCurrentTransform[5]
-                                ] + ")";
+                                ] + ")");
                             }
                         } else {
                             j = i;
@@ -798,8 +822,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                                     roundScaledX = roundValue(x * scale, 0),
                                     character = font.remaped ? glyph.unicode : glyph.fontChar;
 
-//                                innerElemStyle.position = "absolute";
-//                                innerElemStyle.webkitTransform = "translate(" + (x * scale) + "px, 0)";
                                 if (character === ' ' || character.charCodeAt(0) === 0) {
                                     innerElem.innerHTML = "&nbsp;";
                                 } else {
@@ -812,14 +834,10 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                                 if (previousSpan) {
                                     innerElemStyle.position = "relative";
-                                    innerElemStyle.webkitTransform = "translate(" + (roundPosition ? roundValue((x - previousX) * scale, roundingPrecission) : (x - previousX) * scale) + "px, 0)";
-//                                    innerElemStyle.webkitTransform = "translate(" + (roundScaledX - previousRoundScaledX)  + "px, 0)";
+                                    setVendorStyleAttribute(innerElemStyle, "transform", "translate(" + (roundPosition ? roundValue((x - previousX) * scale, roundingPrecission) : (x - previousX) * scale) + "px, 0)");
                                     previousSpan.appendChild(innerElem);
                                 } else {
-//                                    innerElemStyle.backgroundColor = "rgba(128, 128, 128, 0.2)";
-                                    innerElemStyle.position = "absolute";
-                                    innerElemStyle.webkitTransform = "translate(" + (roundPosition ? roundValue(x * scale, roundingPrecission) : x * scale) + "px, 0)";
-//                                    innerElemStyle.webkitTransform = "translate(" + roundScaledX + "px, 0)";
+                                    setVendorStyleAttribute(innerElemStyle, "transform", "translate(" + (roundPosition ? roundValue(x * scale, roundingPrecission) : x * scale) + "px, 0)");
                                     outerElem.appendChild(innerElem);
                                 }
 //                                previousSpan = innerElem;
@@ -838,6 +856,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                 }
 
                 this.owner._rootNodeStack[0].appendChild(outerElem);
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\n"));
 
                 } catch (ex) {
                     console.log("========== showText ERROR:", ex.message, ex.stack);
@@ -910,6 +929,8 @@ exports.PDF2HTML = Montage.create(Montage, {
                             yExtraSpace = 0;
 
                         this.owner._rootNodeStack[0].appendChild(this._svg);
+                        this.owner._rootNodeStack[0].appendChild(document.createTextNode("\n"));
+
                         rect = this._svg.getBBox();
 //                        console.log("GRAPHIC DIM-1:", this._svg.getBoundingClientRect(), this._svg.getBBox());
 
@@ -932,16 +953,19 @@ exports.PDF2HTML = Montage.create(Montage, {
                         this._svg.style.width = Math.ceil(rect.width + xExtraSpace) + "px";
                         this._svg.style.height = Math.ceil(rect.height + yExtraSpace) + "px";
 
-                        transform[4] = roundValue(transform[4] ? transform[4] - (-rect.x * this.scale) - (xExtraSpace / 2) : (rect.x * this.scale) - (xExtraSpace / 2), 2);
-                        transform[5] = roundValue(transform[5] - (rect.y * this.scale) + (yExtraSpace / 2), 2);
+                        transform[0] = sanitizeCSSValue(transform[0]);
+                        transform[1] = sanitizeCSSValue(transform[1]);
+                        transform[2] = sanitizeCSSValue(transform[2]);
+                        transform[3] = sanitizeCSSValue(transform[3]);
+                        transform[4] = sanitizeCSSValue(roundValue(transform[4] ? transform[4] - (-rect.x * this.scale) - (xExtraSpace / 2) : (rect.x * this.scale) - (xExtraSpace / 2), 2));
+                        transform[5] = sanitizeCSSValue(roundValue(transform[5] - (rect.y * this.scale) + (yExtraSpace / 2), 2));
 
-                        this._svg.style.position = "absolute";
-                        this._svg.style.webkitTransformOrigin = "0 0";
-                        this._svg.style.webkitTransform = "matrix(" + transform.join(",") + ")";
+                        setVendorStyleAttribute(this._svg.style, "transform", "matrix(" + transform.join(",") + ")");
 
                         xExtraSpace /= xScale * 2;
                         yExtraSpace /= yScale * -2;
-                        gElem.style.webkitTransform = "translate(" + roundValue(-rect.x + xExtraSpace, 2) + "px, " + roundValue(-rect.y - yExtraSpace, 2) + "px)";
+                        setVendorStyleAttribute(gElem.style, "transform", "translate(" + sanitizeCSSValue(roundValue(-rect.x + xExtraSpace, 2)) + "px, " +
+                            sanitizeCSSValue(roundValue(-rect.y - yExtraSpace, 2)) + "px)");
 
                         console.log(this._svg);
                     }
@@ -1112,6 +1136,7 @@ exports.PDF2HTML = Montage.create(Montage, {
             },
 
             endGroup: function(context, group) {
+                // JFD TODO: the positionning of the div seems to be bogus (check farm.pdf, page 3)
                 var groupElem = this.owner._rootNodeStack.shift(),
                     groupElemStyle = groupElem.style,
                     ctx = context.groupStack[context.groupStack.length - 1],
@@ -1124,18 +1149,19 @@ exports.PDF2HTML = Montage.create(Montage, {
                     transform[5] = (ctx.canvas.height - transform[5]) / this.scale;
                 ctx.restore();
 
-                groupElemStyle.position = "absolute"
-                groupElemStyle.webkitTransformOrigin = "0 0";
-                groupElemStyle.webkitTransform = "matrix(" + [
+                groupElem.classList.add("group");
+                setVendorStyleAttribute(groupElemStyle, "transform", "matrix(" + [
                     sanitizeCSSValue(transform[0]),
                     sanitizeCSSValue(transform[1]),
                     sanitizeCSSValue(transform[2]),
                     sanitizeCSSValue(transform[3]),
                     sanitizeCSSValue(roundValue(transform[4], 0)),
                     sanitizeCSSValue(roundValue(transform[5], 0))
-                ] + ")";
+                ] + ")");
 
                 this.owner._rootNodeStack[0].appendChild(groupElem);
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\n"));
+                console.log("---INSERTING NEW GROUP:", groupElem)
             }
         }
     }

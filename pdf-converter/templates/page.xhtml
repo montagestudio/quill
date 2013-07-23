@@ -7,12 +7,14 @@
         <meta charset="utf-8"/>
 		<title>{{page-title}}</title>
         {{page-headers}}
+
+        <link rel="stylesheet" type="text/css" href="../assets/style.css" />
         <style type="text/css">
             {{page-style}}
         </style>
 	</head>
-    <body style="margin: 0">
-        <div style="position: relative; overflow: hidden; width: {{page-width}}px; height: {{page-height}}px">
+    <body>
+        <div class="page" style="width: {{page-width}}px; height: {{page-height}}px">
             {{page-content}}
         </div>
     </body>
