@@ -44,6 +44,12 @@ svg {
     -webkit-transform-origin: 0 0;
     -moz-transform-origin: 0 0;
     -ms-transform-origin: 0 0;
+}
 
-    pointer-events: none;
+/* SVG sub-elements*/
+text, tspan, image {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text
 }
