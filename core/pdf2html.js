@@ -8,12 +8,17 @@ var Montage = require("montage/core/core").Montage,
 var origin_time = new Date().getTime();
 var timestamp = function() {return "[" + ((new Date().getTime() - origin_time) % 600000) / 1000 + "] "};
 
-var renderingMode = 4;
+//var renderingMode = 3;  // DOM + SVG
+//var renderingMode = 4;  // DOM + SVG (with Rounding)
+var renderingMode = 5;  // PURE SVG
 
-var xmlns = "http://www.w3.org/2000/svg";
+var xmlns = "http://www.w3.org/2000/svg",
+    xmlns_xlink = "http://www.w3.org/1999/xlink"
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
+var LINE_CAP_STYLES = ['butt', 'round', 'square'];
+var LINE_JOIN_STYLES = ['miter', 'round', 'bevel'];
 
 function setVendorStyleAttribute(style, name, value) {
     // While this method does set the vendor attribute for all 3 major vendors, this is only useful at runtime!
@@ -319,25 +324,34 @@ exports.PDF2HTML = Montage.create(Montage, {
                     }
                 })
                 rootNode.innerHTML = "";
-                this._imageLayer.owner = this;
-                this._imageLayer.page = page;
-                this._imageLayer.scale = scale;
-                renderContext.imageLayer = this._imageLayer;
+                if (renderingMode < 5) {
+                    // Emit DOM + SVG
+                    this._imageLayer.owner = this;
+                    this._imageLayer.page = page;
+                    this._imageLayer.scale = scale;
+                    renderContext.imageLayer = this._imageLayer;
 
-                this._textLayer.owner = this;
-                this._textLayer.page = page;
-                this._textLayer.scale = scale;
-//                renderContext.textLayer = this._textLayer;
+                    this._textLayer.owner = this;
+                    this._textLayer.page = page;
+                    this._textLayer.scale = scale;
 
-                this._preProcessor.owner = this,
-                this._preProcessor.page = page;
-                this._preProcessor.scale = scale;
-                renderContext.preProcessor = this._preProcessor;
+                    this._preProcessor_DOM.owner = this,
+                    this._preProcessor_DOM.page = page;
+                    this._preProcessor_DOM.scale = scale;
+                    renderContext.preProcessor = this._preProcessor_DOM;
+                } else {
+                    // Emit SVG
+                    this._preProcessor_SVG.owner = this,
+                    this._preProcessor_SVG.page = page;
+                    this._preProcessor_SVG.scale = scale;
+                    renderContext.preProcessor = this._preProcessor_SVG;
+                }
             }
 
             renderContext.continueCallback = function(callback) {
                 console.log("  >>> next");
-                self._preProcessor.endSVG();
+                if (renderContext.preProcessor === self._preProcessor_DOM)
+                self._preProcessor_DOM.endSVG();
                 callback();
             }
 
@@ -470,7 +484,7 @@ exports.PDF2HTML = Montage.create(Montage, {
     _imageLayer: {
         value: {
             beginLayout: function() {
-                console.log("IMG:beginLayout")
+                console.log("IMG:beginLayout", this.owner)
             },
 
             endLayout: function() {
@@ -527,7 +541,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     sanitizeCSSValue(transform[2]) + ", " + sanitizeCSSValue(transform[3]) + ", " + sanitizeCSSValue(transform[4]) + ", " + sanitizeCSSValue(transform[5]) + ")");
 
                 this.owner._rootNodeStack[0].appendChild(elem);
-                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\n"));
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
             }
         }
     },
@@ -535,7 +549,7 @@ exports.PDF2HTML = Montage.create(Montage, {
     _textLayer: {
         value: {
             beginLayout: function() {
-                console.log("TEXT:beginLayout")
+                console.log("TEXT:beginLayout", this.owner)
             },
             endLayout: function() {
                 console.log("TEXT:endLayout")
@@ -550,7 +564,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     ctx = context.ctx,
                     font = current.font,
                     fontName = /*font.name || */font.loadedName,
-                    fallbackName;
+                    fallbackName,
                     fontSize = current.fontSize,
                     fontSizeScale = /*current.fontSizeScale*/ 1.0,
                     charSpacing = current.charSpacing,
@@ -570,7 +584,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                     roundingPrecission = 2,
                     i;
 
-                console.log("========== showText:", data, fontSize);
 
                 try {
 
@@ -635,6 +648,8 @@ exports.PDF2HTML = Montage.create(Montage, {
                         sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[5], roundingPrecission) : ctx.mozCurrentTransform[5])
                     ] + ")");
                 }
+console.log("========== showText[DOM]:", data, fontSize, charSpacing, wordSpacing, fontDirection, current.textHScale);
+console.log("====== scale:", scale)
 
                 outerElemStyle.fontFamily = "'" + fontName + "', " + fallbackName;
                 outerElemStyle.fontSize = (fontSize * scale / fontSizeScale) + "px";
@@ -725,7 +740,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                 }
 
                 this.owner._rootNodeStack[0].appendChild(outerElem);
-                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\n"));
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
 
                 } catch (ex) {
                     console.log("========== showText ERROR:", ex.message, ex.stack);
@@ -736,7 +751,582 @@ exports.PDF2HTML = Montage.create(Montage, {
         }
     },
 
-    _preProcessor: {
+    _preProcessor_SVG: {
+        value : {
+            log: function() {
+                var args = [].slice.call(arguments);
+                args.unshift("•••SVG•••");
+                console.log.apply(console, args);
+            },
+
+            _svgStates: [],
+            _svgSubpath: null,
+
+            beginLayout: function() {
+                this.log("beginLayout:", self._svgStates);
+                var view = this.page.pageInfo.view.slice(),
+                    scale = this.scale;
+
+//                view[2] = roundValue(view[2] - view[0], 0);
+//                view[3] = roundValue(view[3] - view[1], 0);;
+//                view[0] = view[1] = 0;
+                console.log("PAGE:", (view[2] - view[0]) * scale, (view[3] - view[1]) * scale);
+
+                // save the viewBox height, will be needed to flip the coordinate
+                this.viewBoxHeight = view[3] - view[1];
+
+                // Initialize the SVG state and save it...
+                var initialSVGState = {
+                    transform: [1, 0, 0, 1, 0, 0],
+                    clippingPath: null,
+                    clippingPathMode: null,
+                    fill: "#000000",
+                    fillAlpha: 1.0,
+                    stroke: "#000000",
+                    strokeAlpha: 1.0,
+                    flatness: 1,                        // ignored at this point
+                    lineWidth: 1,
+                    lineCap: LINE_CAP_STYLES[0],
+                    lineJoin: LINE_JOIN_STYLES[0],
+                    miterLimit: 10,
+                    lineDash: "",
+                    lineDashOffset: 0,
+
+                    //Text States
+                    x: 0,
+                    y: 0,
+                    lineX: 0,
+                    lineY: 0,
+                    charSpacing: 0,
+                    wordSpacing: 0,
+                    textHScale: 1,
+                    textRenderingMode: "fill",
+                    textRise: 0,
+                    leading: 0,
+                    font: null,
+                    fontSize: 0,
+                    fontSizeScale: 1,
+                    textMatrix: IDENTITY_MATRIX,            // defined in pdf.js/src/utils.js
+                    fontMatrix: FONT_IDENTITY_MATRIX,       // defined in pdf.js/src/font.js,
+                    fontDirection: 1,
+                    rule: ""
+                };
+                this._svgStates = [initialSVGState];
+                this._svgSubpath = null;
+
+
+                // Insert an SVG element and set is at the top group
+                var svgElem = document.createElementNS(xmlns, "svg");
+                svgElem.setAttribute("xmlns", xmlns);
+                svgElem.setAttribute("xmlns:xlink", xmlns_xlink);
+                svgElem.setAttribute("width", roundValue((view[2] - view[0]) * scale, 0));
+                svgElem.setAttribute("height", roundValue((view[3] - view[1]) * scale, 0));
+                svgElem.setAttribute("viewBox", [0, 0, view[2] - view[0], view[3] - view[1]].join(" "));
+
+                var gElem = document.createElementNS(xmlns, "g");
+                gElem.setAttribute("id", "layer_main");
+
+                if (view[0] !== 0 || view[1] !== 0) {
+                    gElem.setAttribute("transform", "translate(" + (-view[0]) + "," + view[1] + ")");
+                }
+
+                svgElem.appendChild(gElem);
+
+                this.owner._rootNodeStack[0].appendChild(svgElem);
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+                this.owner._rootNodeStack.unshift(gElem);
+            },
+
+            endLayout: function() {
+                this.log("endLayout:");
+            },
+
+            beginMarkedContentProps: function(context, tag, properties) {
+                this.log("beginMarkedContentProps", tag, properties);
+            },
+
+            endMarkedContentProps: function(context) {
+                this.log("endMarkedContentProps");
+            },
+
+
+            // Graphics state
+            save: function() {
+                var currentState = this._svgStates[0],
+                    newState = {};
+
+                this._svgStates.unshift(Object.create(currentState));
+
+//                var prefix = "STATE:";
+//                this._svgStates.forEach(function(state) {
+//                    console.log(prefix, state.transform ? state.transform.join(", ") : "--none--");
+//                    prefix += "  ";
+//                })
+            },
+
+            restore: function() {
+                if (this._svgStates.length) {
+                    this._svgStates.splice(0, 1);
+                }
+
+//                var prefix = "STATE:";
+//                this._svgStates.forEach(function(state) {
+//                    console.log(prefix, state.transform ? state.transform.join(", ") : "--none--");
+//                    prefix += "  ";
+//                })
+            },
+
+            transform: function(context, a, b, c, d, e, f) {
+                var currentState = this._svgStates[0];
+                currentState.transform = [a, b, c, d, e, f];
+            },
+
+            setFlatness: function(context, value) {
+                this._svgStates[0].flatness = value;
+            },
+
+            setLineWidth: function(context, value) {
+                this._svgStates[0].lineWidth = value;
+            },
+
+            setLineCap: function(context, value) {
+                this._svgStates[0].lineCap = LINE_CAP_STYLES[value];
+            },
+
+            setLineJoin: function(context, value) {
+                this._svgStates[0].lineJoin = LINE_JOIN_STYLES[value];
+            },
+
+            setMiterLimit: function(context, value) {
+                this._svgStates[0].miterLimit = value;
+            },
+            setDash: function(context, dashArray, dashPhase) {
+                this._svgStates[0].lineDas = dashArray.join(",");
+                this._svgStates[0].lineDashOffset = dashPhase;
+            },
+
+            setGState: function(context, states) {
+                var self = this;
+
+                states.forEach(function(state) {
+                    var key = state[0],
+                        value = state[1];
+
+                    switch (key) {
+                        case 'LW': self.setLineWidth(context, value);                   break;
+                        case 'LC': self.setLineCap(context, value);                     break;
+                        case 'LJ': self.setLineJoin(context, value);                    break;
+                        case 'ML': self.setMiterLimit(context, value);                  break;
+                        case 'D': self.setDash(context, value[0], value[1]);            break;
+                        case 'RI': self.setRenderingIntent(context, value);             break;
+                        case 'FL': self.setFlatness(context, value);                    break;
+                        case 'Font': self.setFont(context, state[1], state[2]);         break;
+                        case 'CA': self._svgStates[0].strokeAlpha = state[1];           break;
+                        case 'ca': self._svgStates[0].fillAlpha = state[1];             break;
+                        case 'BM':
+                            if (value && value.name && (value.name !== 'Normal')) {
+                                var mode = value.name.replace(/([A-Z])/g, function(c) {
+                                    return '-' + c.toLowerCase();
+                                }).substring(1);
+//                                self.ctx.globalCompositeOperation = mode;
+//                                if (self.ctx.globalCompositeOperation !== mode) {
+                                    warn('globalCompositeOperation "' + mode + '" is not supported');
+//                                }
+                            } else {
+//                                self.ctx.globalCompositeOperation = 'source-over';
+                            }
+                            break;
+                    }
+                });
+            },
+
+
+            // Images drawing
+
+            _paintImage: function(url, width, height) {
+                var currentState = this._svgStates[0],
+                    scaleX = 1 / width,
+                    scaleY = 1 / height,
+                    transform = currentState.transform.slice(),     // Make a copy, so that we can alter it
+                    geometry,
+                    imageElem = document.createElementNS(xmlns, "image");
+
+                // scale transform to reflect image display size (rather that using an 1x1 image size like provided by PDF)
+                transform[0] *= scaleX;
+                transform[1] *= scaleX;
+                transform[2] *= scaleY;
+                transform[3] *= scaleY;
+
+                geometry = this.getGeometry.apply(null, transform)
+
+                // Flip Y origin and adjust x origin (PDF rotate image from the bottom-left corner while SVG does it from the bottom-left
+                transform[1] *= -1;
+                transform[2] *= -1;
+                transform[4] += Math.tan(geometry.rotateX) * height * geometry.scaleY;
+                transform[5] = this.viewBoxHeight - transform[5] - (height * geometry.scaleY);
+
+
+                imageElem.setAttributeNS(xmlns_xlink, "xlink:href", url);
+                imageElem.setAttribute("x", 0);
+                imageElem.setAttribute("y", 0);
+                imageElem.setAttribute("width", width);
+                imageElem.setAttribute("height", height);
+                imageElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+                imageElem.setAttribute("preserveAspectRatio", "none");
+
+                this.owner._rootNodeStack[0].appendChild(imageElem);
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+            },
+
+            paintJpegXObject: function(context, objId, w, h) {
+                var object = context.objs.get(objId);
+
+                if (!object) {
+                    error('Dependent image isn\'t ready yet');
+                }
+                this._paintImage(object.src, w, h);
+            },
+
+            paintImageXObject: function(context, objId, w, h) {
+                var object = context.objs.get(objId);
+
+                if (!object) {
+                    error('Dependent image isn\'t ready yet');
+                }
+
+                if (object instanceof Image) {
+                    return this.paintJpegXObject(context, objId, w, h);
+                } else {
+                    this.paintInlineImageXObject(context, object);
+                }
+            },
+
+            paintInlineImageXObject: function(context, object) {
+                var imageData = object.data,
+                    width = object.width,
+                    height = object.height,
+                    imageCanvas = createScratchCanvas(width, height),
+                    imageCtx = imageCanvas.getContext('2d'),
+                    imageBlob;
+
+                putBinaryImageData(imageCtx, imageData, width, height);
+                imageBlob = blobFromDataURL(imageCanvas.toDataURL("image/jpeg", 0.6));
+
+                this._paintImage(URL.createObjectURL(imageBlob), width, height);
+            },
+
+            // Text Drawing
+            beginText: function(context) {
+                // Reset the text metrics
+                var current = this._svgStates[0];
+
+                current.textMatrix = IDENTITY_MATRIX;
+                current.x = current.lineX = 0;
+                current.y = current.lineY = 0;
+            },
+
+            endText: function(context) {
+            },
+
+            showText: function(context, text) {
+                return this.showSpacedText(context, [text]);
+            },
+
+            showSpacedText: function(context, data) {
+                var current = this._svgStates[0],
+                    font = current.font,
+                    fontName = font.loadedName,
+                    fontSize = current.fontSize,
+                    charSpacing = current.charSpacing,
+                    wordSpacing = current.wordSpacing,
+                    textHScale = current.textHScale,
+                    fontDirection = current.fontDirection,
+                    glyphs,
+                    textElem = document.createElementNS(xmlns, "text"),
+                    transform,
+                    textMatrix = current.textMatrix.slice(),
+                    geometry,
+                    scaleFactor,
+                    needTransform;
+
+                // Export the font
+                if (this.owner._pdf.cssFonts[fontName] == undefined) {
+                    if (font.url) {
+                        this.owner._pdf.cssFonts[fontName] = {
+                            style: '@font-face {font-family: "' + fontName + '"; src: url(\'' + font.url + '\');}',
+                            loadedFontName: font.loadedName,
+                            fontName: font.name
+                        };
+                    } else {
+                        var fontStyle = font.bindDOM();
+                        this.owner._pdf.cssFonts[fontName] = {
+                            style: fontStyle
+                        }
+                    }
+                }
+
+                // Compute the text matrix into the current transform
+                geometry = this.getGeometry.apply(null, textMatrix);
+                scaleFactor = geometry.scaleY;
+                fontSize *= scaleFactor;
+
+//if (data[0].indexOf("Here") == 0)
+//    debugger;
+
+//                this.scaleTransform(1/scaleFactor, 1/scaleFactor, textMatrix);       // Adjust the scaling to reflect the new computed fontsize
+                console.log("========== showText[SVG]:", data, fontSize, "(" + current.fontSize + ")", charSpacing, wordSpacing, fontDirection, textHScale, textMatrix);
+
+                transform = this.applyTextMatrix(current, textMatrix, this._svgStates[0].transform);
+                this.scaleTransform(1/scaleFactor, 1/scaleFactor, transform);       // Adjust the scaling to reflect the new computed fontsize
+
+                // Flip Y origin and adjust x origin (PDF rotate image from the bottom-left corner while SVG does it from the bottom-left
+                geometry = this.getGeometry.apply(null, transform)
+                transform[1] *= -1;
+                transform[2] *= -1;
+                transform[5] = this.viewBoxHeight - transform[5];
+
+                needTransform = !(geometry.rotateX == 0 && geometry.rotateY == 0 && geometry.scaleX == geometry.scaleY);
+
+                var text = "",
+                    index = 0,
+                    offsets = [0];
+
+                data.forEach(function(item) {
+                    if (typeof item == "number") {
+                        // Spacer
+                        offsets[index] += - item * current.fontMatrix[0] * fontSize * textHScale;
+                        current.x += - item * current.fontMatrix[0] * textHScale;
+                    } else if (typeof item == "string") {
+                        glyphs = font.charsToGlyphs(item);
+                        if (glyphs) {
+                            glyphs.forEach(function(glyph) {
+                                if (glyph === null) {
+                                    //Word delimiter
+                                    offsets[index] += wordSpacing * scaleFactor * textHScale;
+                                    current.x += wordSpacing * textHScale;
+                                } else {
+                                    var vmetric = glyph.vmetric || font.defaultVMetrics,
+                                        width = vmetric ? -vmetric[0] : glyph.width,
+                                        charWidth = (width * current.fontMatrix[0] * fontSize) + (charSpacing * scaleFactor),
+                                        character = font.remaped ? glyph.unicode : glyph.fontChar;
+
+                                    if (glyph.disabled) {
+                                        // JFD TODO: do we care, what should we do in that case?
+                                        console.warn("disabled glyph!")
+                                    }
+                                    text += character;
+                                    offsets[++ index] = charWidth * textHScale;
+                                    current.x += charWidth * textHScale / fontSize;
+                                }
+                            });
+                        }
+                    } else {
+                        console.error("unknown spacetext type:", typeof item, item)
+                    }
+                });
+
+                // Replace the leading and trailing space characters by a nbsp as SVG will ignore them by default
+                text = text.replace(/^ | $/g, "\xA0")   // &nbsp == 0xA0
+                // If the string contains continous white spaces, convert them to nbsp, else SVG will concat them
+                if (text.indexOf("  ") !== -1) {
+                    text = text.replace(/ /g, "\xA0")   // &nbsp == 0xA0
+                }
+
+                var dx = "",
+                    delimiter = "",
+                    xPos = needTransform ? 0 : transform[4];
+
+                offsets.pop();     // no need for the last offset
+
+                offsets.forEach(function(offset) {
+                    xPos += offset;
+                    dx += delimiter + roundValue(xPos, 3);
+                    delimiter = ",";
+                });
+                textElem.setAttribute("x", dx);
+                textElem.style.font = current.rule;
+                textElem.style.fontSize = fontSize;
+
+                if (needTransform) {
+                    textElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+                } else {
+//                    textElem.setAttribute("x", transform[4]);
+                    textElem.setAttribute("y", transform[5]);
+                }
+
+                textElem.appendChild(document.createTextNode(text));    // JFD TODO: we need to translate to unicode the text
+
+                this.owner._rootNodeStack[0].appendChild(textElem);
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+            },
+
+            moveText: function(context, x, y) {
+                var current  = this._svgStates[0];
+
+                current.x = current.lineX += x;
+                current.y = current.lineY += y;
+            },
+
+            nextLine: function(context) {
+                var current  = this._svgStates[0];
+
+                this.moveText(context, 0, current.leading);
+            },
+
+            setCharSpacing: function(context, spacing) {
+                var current  = this._svgStates[0];
+                current.charSpacing = spacing;
+            },
+            setWordSpacing: function(context, spacing) {
+                var current  = this._svgStates[0];
+
+                current.wordSpacing = spacing;
+            },
+            setHScale: function(context, scale) {
+                var current  = this._svgStates[0];
+
+                current.textHScale = scale / 100;
+            },
+            setLeading: function(context, leading) {
+                var current  = this._svgStates[0];
+
+                current.leading = -leading;
+            },
+            setFont: function(context, fontRefName, size) {
+                var fontObj = context.commonObjs.get(fontRefName),
+                    current = this._svgStates[0];
+
+                if (!fontObj) {
+                    error('Can\'t find font for ' + fontRefName);
+                }
+
+                current.fontMatrix = fontObj.fontMatrix ? fontObj.fontMatrix : FONT_IDENTITY_MATRIX;
+
+                // A valid matrix needs all main diagonal elements to be non-zero
+                if (current.fontMatrix[0] === 0 || current.fontMatrix[3] === 0) {
+                    warn('Invalid font matrix for font ' + fontRefName);
+                }
+
+                // The spec for Tf (setFont) says that 'size' specifies the font 'scale',
+                // and in some docs this can be negative (inverted x-y axes).
+                if (size < 0) {
+                    size = -size;
+                    current.fontDirection = -1;
+                } else {
+                    current.fontDirection = 1;
+                }
+
+                current.font = fontObj;
+                current.fontSize = size;
+
+                if (fontObj.coded)
+                    return; // we don't need ctx.font for Type3 fonts
+
+                var name = fontObj.loadedName || 'sans-serif';
+                var bold = fontObj.black ? (fontObj.bold ? 'bolder' : 'bold') : (fontObj.bold ? 'bold' : 'normal');
+                var italic = fontObj.italic ? 'italic' : 'normal';
+                var typeface = '"' + name + '", ' + fontObj.fallbackName;
+
+//                // Some font backends cannot handle fonts below certain size.
+//                // Keeping the font at minimal size and using the fontSizeScale to change
+//                // the current transformation matrix before the fillText/strokeText.
+//                // See https://bugzilla.mozilla.org/show_bug.cgi?id=726227
+//                var browserFontSize = size >= MIN_FONT_SIZE ? size : MIN_FONT_SIZE;
+//                this._svgStates[0].fontSizeScale = browserFontSize != MIN_FONT_SIZE ? 1.0 :
+//                                           size / MIN_FONT_SIZE;
+
+                current.rule = italic + ' ' + bold + ' ' + size + 'px ' + typeface;
+            },
+            setTextRenderingMode: function(context, mode) {
+                var current  = this._svgStates[0];
+
+                current.textRenderingMode = mode;
+            },
+
+            setTextRise: function(context, rise) {
+                var current  = this._svgStates[0];
+
+                current.textRise = rise;
+            },
+
+            setLeadingMoveText: function(context, x, y) {
+                this.setLeading(context, -y);
+                this.moveText(context, x, y);
+            },
+
+            setTextMatrix: function(context, a, b, c, d, e, f) {
+                var current  = this._svgStates[0];
+
+                current.textMatrix = [a, b, c, d, e, f];
+
+                current.x = current.lineX = 0;
+                current.y = current.lineY = 0;
+            },
+
+
+            // Utilities
+
+            applyTextMatrix: function (current, textMatrix, transform) {
+                var m = transform,
+                    a = textMatrix[0], b = textMatrix[1], c = textMatrix[2], d = textMatrix[3], e = textMatrix[4], f = textMatrix[5];
+
+                // Apply text transform
+                transform = [
+                  m[0] * a + m[2] * b,
+                  m[1] * a + m[3] * b,
+                  m[0] * c + m[2] * d,
+                  m[1] * c + m[3] * d,
+                  m[0] * e + m[2] * f + m[4],
+                  m[1] * e + m[3] * f + m[5]
+                ];
+
+                // translate to current position
+                m = transform;
+                m[4] = m[0] * current.x + m[2] * (current.y + current.textRise) + m[4];
+                m[5] = m[1] * current.x + m[3] * (current.y + current.textRise) + m[5];
+
+                // Adjust for text direction
+                if (current.fontDirection > 0) {
+                    m[0] = m[0] * current.textHScale;
+                    m[1] = m[1] * current.textHScale;
+//                    m[2] = m[2] * -1;
+//                    m[3] = m[3] * -1;
+                } else {
+                    m[0] = m[0] * -current.textHScale;
+                    m[1] = m[1] * -current.textHScale;
+//                    m[2] = m[2] * 1;
+//                    m[3] = m[3] * 1;
+                }
+console.log("APPLIED TRANSFORM RESULT:", transform)
+                return transform;
+            },
+
+            getGeometry: function(a, b, c, d, e, f) {
+                var geometry = {};
+
+                geometry.translateX = e;
+                geometry.translateY = f;
+                geometry.rotateX = Math.atan(c / d);
+                geometry.rotateY = Math.atan(-b / a);
+//                geometry.rotateXdeg = result.rotateX * 180 / Math.PI;
+//                geometry.rotateYdeg = result.rotateY * 180 / Math.PI;
+                geometry.scaleX = a >= 0 ? Math.sqrt(a * a + b * b) : -Math.sqrt(a * a + b * b);
+                geometry.scaleY = d >= 0 ? Math.sqrt(c * c + d * d) : -Math.sqrt(c * c + d * d);
+
+                return geometry;
+            },
+
+            scaleTransform: function(x, y, transform) {
+              var m = transform;
+              m[0] = m[0] * x;
+              m[1] = m[1] * x;
+              m[2] = m[2] * y;
+              m[3] = m[3] * y;
+            }
+        }
+    },
+
+    _preProcessor_DOM: {
         value: {
             _svg: null,
             _svgTransform: null,
@@ -765,6 +1355,7 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                     this._svg = document.createElementNS(xmlns, "svg");
                     this._svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+                    this._svg.style.pointerEvents = "none";
                     this._svg.appendChild(gElem);
                     this._svgHasDrawnElements = false;
                 }
@@ -798,7 +1389,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                             yExtraSpace = 0;
 
                         this.owner._rootNodeStack[0].appendChild(this._svg);
-                        this.owner._rootNodeStack[0].appendChild(document.createTextNode("\n"));
+                        this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
 
                         rect = this._svg.getBBox();
 //                        console.log("GRAPHIC DIM-1:", this._svg.getBoundingClientRect(), this._svg.getBBox());
@@ -1029,7 +1620,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                 ] + ")");
 
                 this.owner._rootNodeStack[0].appendChild(groupElem);
-                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\n"));
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
                 console.log("---INSERTING NEW GROUP:", groupElem)
             }
         }
