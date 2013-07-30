@@ -20,6 +20,20 @@ var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 var LINE_CAP_STYLES = ['butt', 'round', 'square'];
 var LINE_JOIN_STYLES = ['miter', 'round', 'bevel'];
 
+var TextRenderingMode = {
+  FILL: 0,
+  STROKE: 1,
+  FILL_STROKE: 2,
+  INVISIBLE: 3,
+  FILL_ADD_TO_PATH: 4,
+  STROKE_ADD_TO_PATH: 5,
+  FILL_STROKE_ADD_TO_PATH: 6,
+  ADD_TO_PATH: 7,
+
+  FILL_STROKE_MASK: 3,
+  ADD_TO_PATH_FLAG: 4
+};
+
 function setVendorStyleAttribute(style, name, value) {
     // While this method does set the vendor attribute for all 3 major vendors, this is only useful at runtime!
     // When we will serialize the dom, we will only see the attribute for the current vendor, we will have to
@@ -477,6 +491,16 @@ exports.PDF2HTML = Montage.create(Montage, {
         value: [null]
     },
 
+    _nextElementUID: {
+        value: 1
+    },
+
+    _getNextElementUID: {
+        value: function(type) {
+            return "" + type + (this._nextElementUID ++);
+        }
+    },
+
     _pdf: {
         value: null
     },
@@ -759,8 +783,10 @@ console.log("====== scale:", scale)
                 console.log.apply(console, args);
             },
 
+            _svgElement: null,
+
             _svgStates: [],
-            _svgSubpath: null,
+            _svgPath: null,
 
             beginLayout: function() {
                 this.log("beginLayout:", self._svgStates);
@@ -774,6 +800,32 @@ console.log("====== scale:", scale)
 
                 // save the viewBox height, will be needed to flip the coordinate
                 this.viewBoxHeight = view[3] - view[1];
+
+                 // Insert an SVG element and set is at the top group
+                var svgElem = this._svgElement = document.createElementNS(xmlns, "svg");
+                svgElem.setAttribute("xmlns", xmlns);
+                svgElem.setAttribute("xmlns:xlink", xmlns_xlink);
+                svgElem.setAttribute("width", roundValue((view[2] - view[0]) * scale, 0));
+                svgElem.setAttribute("height", roundValue((view[3] - view[1]) * scale, 0));
+                svgElem.setAttribute("viewBox", [0, 0, view[2] - view[0], view[3] - view[1]].join(" "));
+
+                var gElem = document.createElementNS(xmlns, "g");
+                gElem.setAttribute("id", "layer_main");
+
+                if (view[0] !== 0 || view[1] !== 0) {
+                    gElem.setAttribute("transform", "translate(" + (-view[0]) + "," + view[1] + ")");
+                }
+
+                svgElem.appendChild(gElem);
+
+                this.owner._rootNodeStack[0].appendChild(svgElem);
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+                this.owner._rootNodeStack.unshift(gElem);
+
+                //Reset the element UID generator
+                this.owner._nextElementUID = 1;
+
+                this._svgPath = null;
 
                 // Initialize the SVG state and save it...
                 var initialSVGState = {
@@ -800,7 +852,7 @@ console.log("====== scale:", scale)
                     charSpacing: 0,
                     wordSpacing: 0,
                     textHScale: 1,
-                    textRenderingMode: "fill",
+                    textRenderingMode: TextRenderingMode.FILL,
                     textRise: 0,
                     leading: 0,
                     font: null,
@@ -809,32 +861,12 @@ console.log("====== scale:", scale)
                     textMatrix: IDENTITY_MATRIX,            // defined in pdf.js/src/utils.js
                     fontMatrix: FONT_IDENTITY_MATRIX,       // defined in pdf.js/src/font.js,
                     fontDirection: 1,
-                    rule: ""
+                    rule: "",
+
+                    // clipping
+                    rootNode: svgElem
                 };
                 this._svgStates = [initialSVGState];
-                this._svgSubpath = null;
-
-
-                // Insert an SVG element and set is at the top group
-                var svgElem = document.createElementNS(xmlns, "svg");
-                svgElem.setAttribute("xmlns", xmlns);
-                svgElem.setAttribute("xmlns:xlink", xmlns_xlink);
-                svgElem.setAttribute("width", roundValue((view[2] - view[0]) * scale, 0));
-                svgElem.setAttribute("height", roundValue((view[3] - view[1]) * scale, 0));
-                svgElem.setAttribute("viewBox", [0, 0, view[2] - view[0], view[3] - view[1]].join(" "));
-
-                var gElem = document.createElementNS(xmlns, "g");
-                gElem.setAttribute("id", "layer_main");
-
-                if (view[0] !== 0 || view[1] !== 0) {
-                    gElem.setAttribute("transform", "translate(" + (-view[0]) + "," + view[1] + ")");
-                }
-
-                svgElem.appendChild(gElem);
-
-                this.owner._rootNodeStack[0].appendChild(svgElem);
-                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
-                this.owner._rootNodeStack.unshift(gElem);
             },
 
             endLayout: function() {
@@ -852,9 +884,9 @@ console.log("====== scale:", scale)
 
             // Graphics state
             save: function() {
-                var currentState = this._svgStates[0],
-                    newState = {};
+                var currentState = this._svgStates[0];
 
+                currentState.rootNode = this.owner._rootNodeStack[0];
                 this._svgStates.unshift(Object.create(currentState));
 
 //                var prefix = "STATE:";
@@ -865,8 +897,17 @@ console.log("====== scale:", scale)
             },
 
             restore: function() {
+                var currentState,
+                    rootNodeStack = this.owner._rootNodeStack;
+
+
                 if (this._svgStates.length) {
                     this._svgStates.splice(0, 1);
+                }
+
+                currentState = this._svgStates[0];
+                while (rootNodeStack.length && rootNodeStack[0] !== this._svgElement && rootNodeStack[0] !== currentState.rootNode) {
+                    rootNodeStack.splice(0, 1);
                 }
 
 //                var prefix = "STATE:";
@@ -877,12 +918,28 @@ console.log("====== scale:", scale)
             },
 
             transform: function(context, a, b, c, d, e, f) {
-                var currentState = this._svgStates[0];
-                currentState.transform = [a, b, c, d, e, f];
+                var currentState = this._svgStates[0],
+                    m = currentState.transform;
+
+                currentState.transform = [
+                  m[0] * a + m[2] * b,
+                  m[1] * a + m[3] * b,
+                  m[0] * c + m[2] * d,
+                  m[1] * c + m[3] * d,
+                  m[0] * e + m[2] * f + m[4],
+                  m[1] * e + m[3] * f + m[5]
+                ];
+            },
+
+            setRenderingIntent: function(context, intent) {
+                console.warn("rendering intent not yet supported:", intent);
+                // TODO set rendering intent?
             },
 
             setFlatness: function(context, value) {
+                console.warn("flatness not yet supported:", value);
                 this._svgStates[0].flatness = value;
+                // TODO set flatness?
             },
 
             setLineWidth: function(context, value) {
@@ -900,8 +957,20 @@ console.log("====== scale:", scale)
             setMiterLimit: function(context, value) {
                 this._svgStates[0].miterLimit = value;
             },
+
             setDash: function(context, dashArray, dashPhase) {
-                this._svgStates[0].lineDas = dashArray.join(",");
+                var lineDash = "",
+                    delimiter = "";
+
+                // PDF can set a dash width of zero which mean to just draw a dot with a virtual null width line width and
+                // other line attribute will give the dash a visual aspect). However SVG wont draw at all a dash of width 0
+                // The trick is to set the dash with to a very small value to achieve the same result
+
+                dashArray.forEach(function(value) {
+                    lineDash += delimiter + (value === 0 ? 0.001 : value);
+                    delimiter = ",";
+                });
+                this._svgStates[0].lineDash = lineDash;
                 this._svgStates[0].lineDashOffset = dashPhase;
             },
 
@@ -941,6 +1010,50 @@ console.log("====== scale:", scale)
             },
 
 
+            // Clipping
+            clip: function(context, clipRule) {
+                var currentState = this._svgStates[0],
+                    transform = currentState.transform.slice(),     // Make a copy, so that we can alter it
+                    gElem = document.createElementNS(xmlns, "g"),
+                    clipElem = document.createElementNS(xmlns, "clipPath"),
+                    pathElem = document.createElementNS(xmlns, "path");
+
+//                clipRule = clipRule || "nonezero";
+
+                pathElem.setAttribute("d", this._svgPath);
+//                this._svgPath = 0;
+
+                // Flip Y origin and adjust x origin
+                this.scaleTransform(1, -1, transform);
+                transform[5] = this.viewBoxHeight - transform[5];
+                pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+
+                var clippingID = this.owner._getNextElementUID("clip");
+
+                clipElem.setAttribute("id", clippingID);
+                clipElem.appendChild(pathElem);
+                this.owner._rootNodeStack[0].appendChild(clipElem);
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+
+                if (typeof clipRule == "string") {
+                    gElem.setAttribute("clip-rule", clipRule);
+                }
+                gElem.setAttribute("clip-path", "url(#" + clippingID + ")");
+                this.owner._rootNodeStack[0].appendChild(gElem);
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+
+                this.owner._rootNodeStack.unshift(gElem);
+            },
+
+            eoClip: function(context) {
+                this.clip(context, "evenodd");
+           },
+
+            endPath: function(context) {
+                this._svgPath = null;
+            },
+
+
             // Images drawing
 
             _paintImage: function(url, width, height) {
@@ -952,10 +1065,11 @@ console.log("====== scale:", scale)
                     imageElem = document.createElementNS(xmlns, "image");
 
                 // scale transform to reflect image display size (rather that using an 1x1 image size like provided by PDF)
-                transform[0] *= scaleX;
-                transform[1] *= scaleX;
-                transform[2] *= scaleY;
-                transform[3] *= scaleY;
+                this.scaleTransform(scaleX, scaleY, transform);
+//                transform[0] *= scaleX;
+//                transform[1] *= scaleX;
+//                transform[2] *= scaleY;
+//                transform[3] *= scaleY;
 
                 geometry = this.getGeometry.apply(null, transform)
 
@@ -1121,13 +1235,13 @@ console.log("====== scale:", scale)
                             });
                         }
                     } else {
-                        console.error("unknown spacetext type:", typeof item, item)
+                        console.error("unknown spaced text type:", typeof item, item)
                     }
                 });
 
                 // Replace the leading and trailing space characters by a nbsp as SVG will ignore them by default
                 text = text.replace(/^ | $/g, "\xA0")   // &nbsp == 0xA0
-                // If the string contains continous white spaces, convert them to nbsp, else SVG will concat them
+                // If the string contains continous white spaces, convert them to nbsp, else SVG will concatenate them
                 if (text.indexOf("  ") !== -1) {
                     text = text.replace(/ /g, "\xA0")   // &nbsp == 0xA0
                 }
@@ -1140,12 +1254,42 @@ console.log("====== scale:", scale)
 
                 offsets.forEach(function(offset) {
                     xPos += offset;
-                    dx += delimiter + roundValue(xPos, 3);
+                    dx += delimiter + roundValue(xPos, 2);
                     delimiter = ",";
                 });
                 textElem.setAttribute("x", dx);
                 textElem.style.font = current.rule;
                 textElem.style.fontSize = fontSize;
+
+                // JFD TODO: remove dependency on canvas for color
+                // JFD TODO: add colorspace support
+                switch (current.textRenderingMode) {
+                    case TextRenderingMode.FILL:
+                        textElem.style.fill = context.current.fillColor;
+                        textElem.style.stroke = "none";
+                        break;
+                    case TextRenderingMode.STROKE:
+                        textElem.style.fill = "none";
+                        textElem.style.stroke = context.current.strokeColor;
+                        break;
+                    case TextRenderingMode.FILL_STROKE:
+                        textElem.style.fill = context.current.fillColor;
+                        textElem.style.stroke = context.current.strokeColor;
+                        break;
+                    case TextRenderingMode.INVISIBLE:
+                        textElem.style.fill = "none";
+                        textElem.style.stroke = "none";
+                        // JFD TODO: should we remove that text node all together?
+                        break;
+
+                    default:
+                        console.warn("unsuported text rendering mode:", current.textRenderingMode)
+                }
+
+                if (current.lineWidth !== 1) {
+                    console.warn("text line width not yet supported:", current.lineWidth);
+                }
+
 
                 if (needTransform) {
                     textElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
@@ -1264,6 +1408,155 @@ console.log("====== scale:", scale)
             },
 
 
+            // Vector drawing
+
+            _appendToCurrentPath: function(data) {
+                if (typeof this._svgPath !== "string") {
+                    this._svgPath = data;
+                } else {
+                    this._svgPath += data;
+                }
+            },
+
+            moveTo: function(context, x, y) {
+                this._appendToCurrentPath("M" + x + "," + y);
+            },
+
+            lineTo: function(context, x, y) {
+                this._appendToCurrentPath("L" + x + "," + y);
+            },
+
+            curveTo: function(context, x1, y1, x2, y2, x3, y3) {
+                this._appendToCurrentPath("C" + x1 + "," + y1+ "," + x2+ "," + y2+ "," + x3+ "," + y3);
+            },
+
+            curveTo2: function(context, x2, y2, x3, y3) {
+                this._appendToCurrentPath("S" + x2+ "," + y2+ "," + x3+ "," + y3);
+            },
+
+            curveTo3: function(context, x1, y1, x3, y3) {
+                this._appendToCurrentPath("Q" + x1 + "," + y1+ "," + x3+ "," + y3);
+            },
+
+            closePath: function(context) {
+                this._appendToCurrentPath("Z");
+            },
+
+            rectangle: function(context, x, y, width, height) {
+                // We cannot use an SVG rect has the current patch might not be completed yet, instead, draw the rect as a path
+                this._appendToCurrentPath("M" + x + "," + y + "L" + (x + width) + "," + y + "L" + (x + width) + "," + (y + height) +
+                    "L" + x + "," + (y + height) + "L" + x + "," + y);
+            },
+
+            _fill: function(context, consumePath, fillRule) {
+                // note: fill must be called before stroke!
+                var currentState = this._svgStates[0],
+                    transform = currentState.transform.slice(),     // Make a copy, so that we can alter it
+                    pathElem = document.createElementNS(xmlns, "path");
+
+                pathElem.setAttribute("d", this._svgPath);
+                if (consumePath) {
+                    this._svgPath = null;
+                }
+
+                // Flip Y origin and adjust x origin
+                this.scaleTransform(1, -1, transform);
+                transform[5] = this.viewBoxHeight - transform[5];
+                // JFD TODO: use transform only if needed, else use x/y attribute
+                pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+
+                if (typeof fillRule == "string") {
+                    pathElem.style.fileRule = fillRule;
+                }
+                pathElem.style.fill = context.current.fillColor;
+                pathElem.style.stoke = "none";             // In case we do not call stoke after calling fill
+
+                this.owner._rootNodeStack[0].appendChild(pathElem);
+                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+
+                return pathElem;
+            },
+
+            fill: function(context) {
+                this._fill(context, true);
+            },
+
+            stroke: function(context, pathElem) {
+                 // fill must be called before stroke!
+
+                var currentState = this._svgStates[0],
+                    needNewPathElem = (pathElem === undefined || pathElem === null),
+                    transform = currentState.transform.slice();     // Make a copy, so that we can alter it
+
+                if (needNewPathElem) {
+                    pathElem = document.createElementNS(xmlns, "path");
+                    pathElem.setAttribute("d", this._svgPath);
+                    pathElem.style.fill = "none";
+
+                    // Flip Y origin and adjust x origin
+                    this.scaleTransform(1, -1, transform);
+                    transform[5] = this.viewBoxHeight - transform[5];
+                    // JFD TODO: use transform only if needed, else use x/y attribute
+                    pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+                }
+
+                 // Consume the path
+                this._svgPath = null;
+
+                // JFD TODO: optimize attribute, only add the one that are not default!
+                pathElem.style.stroke = context.current.strokeColor;
+                pathElem.style.strokeWidth = currentState.lineWidth;
+                pathElem.style.strokeLinecap = currentState.lineCap;
+                pathElem.style.strokeLinejoin = currentState.lineJoin;
+                pathElem.style.strokeMiterlimit = currentState.miterLimit;
+
+                if (typeof currentState.lineDash == "string" && currentState.lineDash !== "") {
+                    pathElem.style.strokeDasharray = currentState.lineDash;
+                    if (currentState.lineDashOffset) {
+                        pathElem.style.strokeDashoffset = currentState.lineDashOffset;
+                    }
+                    console.log("SETTING DASH:", currentState.lineDash, "offset:", currentState.lineDashOffset)
+                }
+
+                if (needNewPathElem) {
+                    this.owner._rootNodeStack[0].appendChild(pathElem);
+                    this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+                }
+
+            },
+
+            closeStroke: function(context) {
+                this._appendToCurrentPath("Z");
+                this.stroke(context);
+            },
+
+            eoFill: function(context) {
+                this._fill(context, true, "evenodd");
+            },
+
+            closeFill: function(context) {
+                this._appendToCurrentPath("Z");
+                this._fill(context, true);
+            },
+
+            fillStroke: function(context, fillRule) {
+                this.stroke(context, this._fill(context, false, fillRule));
+            },
+
+            eoFillStroke: function(context) {
+                this.fillStroke(context, "evenodd");
+            },
+
+            closeFillStroke: function(context) {
+                this._appendToCurrentPath("Z");
+                this.fillStroke(context);
+            },
+
+            eoCloseFillStroke: function(context) {
+                this.fillStroke(context, "evenodd");
+            },
+
+
             // Utilities
 
             applyTextMatrix: function (current, textMatrix, transform) {
@@ -1297,7 +1590,7 @@ console.log("====== scale:", scale)
 //                    m[2] = m[2] * 1;
 //                    m[3] = m[3] * 1;
                 }
-console.log("APPLIED TRANSFORM RESULT:", transform)
+
                 return transform;
             },
 
