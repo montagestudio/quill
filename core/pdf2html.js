@@ -788,6 +788,9 @@ console.log("====== scale:", scale)
             _svgStates: [],
             _svgPath: null,
 
+            _viewBoxHeight: 0,
+            _viewBoxWidth: 0,
+
             beginLayout: function() {
                 this.log("beginLayout:", self._svgStates);
                 var view = this.page.pageInfo.view.slice(),
@@ -799,15 +802,16 @@ console.log("====== scale:", scale)
                 console.log("PAGE:", (view[2] - view[0]) * scale, (view[3] - view[1]) * scale);
 
                 // save the viewBox height, will be needed to flip the coordinate
-                this.viewBoxHeight = view[3] - view[1];
+                this._viewBoxWidth = view[2] - view[0];
+                this._viewBoxHeight = view[3] - view[1];
 
                  // Insert an SVG element and set is at the top group
                 var svgElem = this._svgElement = document.createElementNS(xmlns, "svg");
                 svgElem.setAttribute("xmlns", xmlns);
                 svgElem.setAttribute("xmlns:xlink", xmlns_xlink);
-                svgElem.setAttribute("width", roundValue((view[2] - view[0]) * scale, 0));
-                svgElem.setAttribute("height", roundValue((view[3] - view[1]) * scale, 0));
-                svgElem.setAttribute("viewBox", [0, 0, view[2] - view[0], view[3] - view[1]].join(" "));
+                svgElem.setAttribute("width", roundValue(this._viewBoxWidth * scale, 0));
+                svgElem.setAttribute("height", roundValue(this._viewBoxHeight * scale, 0));
+                svgElem.setAttribute("viewBox", [0, 0, this._viewBoxWidth, this._viewBoxHeight].join(" "));
 
                 var gElem = document.createElementNS(xmlns, "g");
                 gElem.setAttribute("id", "layer_main");
@@ -879,6 +883,24 @@ console.log("====== scale:", scale)
 
             endMarkedContentProps: function(context) {
                 this.log("endMarkedContentProps");
+            },
+
+
+            // Group
+
+            beginGroup: function(context, group) {
+                var gElem = document.createElementNS(xmlns, "g"),
+                    groupID = this.owner._getNextElementUID("group");
+
+                // JFD TODO: set group transform
+                gElem.setAttribute("id", groupID);
+                this.owner._rootNodeStack[0].appendChild(gElem);
+                this.owner._rootNodeStack.unshift(gElem);
+                console.log("BEGIN GROUP", group, gElem);
+            },
+
+            endGroup: function(context, group) {
+                this.owner._rootNodeStack.splice(0, 1);
             },
 
 
@@ -990,8 +1012,18 @@ console.log("====== scale:", scale)
                         case 'RI': self.setRenderingIntent(context, value);             break;
                         case 'FL': self.setFlatness(context, value);                    break;
                         case 'Font': self.setFont(context, state[1], state[2]);         break;
-                        case 'CA': self._svgStates[0].strokeAlpha = state[1];           break;
-                        case 'ca': self._svgStates[0].fillAlpha = state[1];             break;
+                        case 'CA':
+                            self._svgStates[0].strokeAlpha = state[1];
+                            if (state[1] !== 1) {
+                                console.warn("stroke alpha not yet supported")
+                            }
+                            break;
+                        case 'ca':
+                            self._svgStates[0].fillAlpha = state[1];
+                            if (state[1] !== 1) {
+                                console.warn("fill alpha not yet supported")
+                            }
+                            break;
                         case 'BM':
                             if (value && value.name && (value.name !== 'Normal')) {
                                 var mode = value.name.replace(/([A-Z])/g, function(c) {
@@ -1016,7 +1048,8 @@ console.log("====== scale:", scale)
                     transform = currentState.transform.slice(),     // Make a copy, so that we can alter it
                     gElem = document.createElementNS(xmlns, "g"),
                     clipElem = document.createElementNS(xmlns, "clipPath"),
-                    pathElem = document.createElementNS(xmlns, "path");
+                    pathElem = document.createElementNS(xmlns, "path"),
+                    clippingID = this.owner._getNextElementUID("clip");
 
 //                clipRule = clipRule || "nonezero";
 
@@ -1025,10 +1058,8 @@ console.log("====== scale:", scale)
 
                 // Flip Y origin and adjust x origin
                 this.scaleTransform(1, -1, transform);
-                transform[5] = this.viewBoxHeight - transform[5];
+                transform[5] = this._viewBoxHeight - transform[5];
                 pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
-
-                var clippingID = this.owner._getNextElementUID("clip");
 
                 clipElem.setAttribute("id", clippingID);
                 clipElem.appendChild(pathElem);
@@ -1051,6 +1082,79 @@ console.log("====== scale:", scale)
 
             endPath: function(context) {
                 this._svgPath = null;
+            },
+
+
+            // Shading
+
+            shadingFill: function(context, patternIR) {
+                console.warn("shading fill not yet supported:", patternIR);
+                var currentState = this._svgStates[0],
+                    transform = currentState.transform.slice(),     // Make a copy, so that we can alter it
+                    transformInverse,
+                    width = this._viewBoxWidth,
+                    height = this._viewBoxHeight;
+
+                // Flip Y origin and adjust x origin
+                this.scaleTransform(1, -1, transform);
+                transform[5] = this._viewBoxHeight - transform[5];
+
+                transformInverse = this.getTransformInverse(transform);
+
+                var gradElem,
+                    gradID = this.owner._getNextElementUID("grad");
+
+                if (patternIR[1] == PatternType.AXIAL) {
+                    // PDF coordinates are [(x0 y0) (x1 y1)]
+                    gradElem = document.createElementNS(xmlns, "linearGradient");
+                    gradElem.setAttribute("x1", patternIR[3][0]);
+                    gradElem.setAttribute("y1", patternIR[3][1]);
+                    gradElem.setAttribute("x2", patternIR[4][0]);
+                    gradElem.setAttribute("y2", patternIR[4][1]);
+                } else if (patternIR[1] == PatternType.RADIAL) {
+                    // PDF coordinates are [(x0 y0) r0 (x1 y1) r1] which are not quiet the same as SVG's radial gradient
+                    // Let's use the center point of the first circle and the radius of the second one to make one big circle, might not be the right assumption!
+                    gradElem = document.createElementNS(xmlns, "radialGradient");
+                    gradElem.setAttribute("cx", patternIR[3][0]);
+                    gradElem.setAttribute("cy", patternIR[3][1]);
+                    gradElem.setAttribute("r", patternIR[6] || patternIR[5]);
+                } else {
+                    console.warn("unsuported shading type:", patternIR[2]);
+                    return;
+                }
+
+                gradElem.setAttribute("id", gradID);
+                gradElem.setAttribute("gradientUnits", "userSpaceOnUse");
+
+                patternIR[2].forEach(function(stopInfo) {
+                    var stopElem = document.createElementNS(xmlns, "stop");
+                    stopElem.setAttribute("offset", stopInfo[0]);
+                    stopElem.setAttribute("stop-color", stopInfo[1]);
+                    gradElem.appendChild(stopElem);
+                });
+                this.owner._rootNodeStack[0].appendChild(gradElem);
+
+                var bl = Util.applyTransform([0, 0], transformInverse);
+                var br = Util.applyTransform([0, height], transformInverse);
+                var ul = Util.applyTransform([width, 0], transformInverse);
+                var ur = Util.applyTransform([width, height], transformInverse);
+
+                var x0 = Math.min(bl[0], br[0], ul[0], ur[0]);
+                var y0 = Math.min(bl[1], br[1], ul[1], ur[1]);
+                var x1 = Math.max(bl[0], br[0], ul[0], ur[0]);
+                var y1 = Math.max(bl[1], br[1], ul[1], ur[1]);
+
+                console.log("SHADING RECT:", "[" + x0 + ", " + y0 + "]", "[" + x1 + ", " + y1 + "]");
+
+                var rectElem = document.createElementNS(xmlns, "rect");
+                rectElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+                rectElem.setAttribute("x", x0);
+                rectElem.setAttribute("y", y0);
+                rectElem.setAttribute("width", x1 - x0);
+                rectElem.setAttribute("height", y1 - y0);
+                rectElem.setAttribute("fill","url(#" + gradID + ")");
+                rectElem.setAttribute("stroke","none");
+                this.owner._rootNodeStack[0].appendChild(rectElem);
             },
 
 
@@ -1077,7 +1181,7 @@ console.log("====== scale:", scale)
                 transform[1] *= -1;
                 transform[2] *= -1;
                 transform[4] += Math.tan(geometry.rotateX) * height * geometry.scaleY;
-                transform[5] = this.viewBoxHeight - transform[5] - (height * geometry.scaleY);
+                transform[5] = this._viewBoxHeight - transform[5] - (height * geometry.scaleY);
 
 
                 imageElem.setAttributeNS(xmlns_xlink, "xlink:href", url);
@@ -1181,23 +1285,20 @@ console.log("====== scale:", scale)
 
                 // Compute the text matrix into the current transform
                 geometry = this.getGeometry.apply(null, textMatrix);
-                scaleFactor = geometry.scaleY;
+                scaleFactor = Math.abs(geometry.scaleY);
                 fontSize *= scaleFactor;
 
-//if (data[0].indexOf("Here") == 0)
-//    debugger;
-
 //                this.scaleTransform(1/scaleFactor, 1/scaleFactor, textMatrix);       // Adjust the scaling to reflect the new computed fontsize
-                console.log("========== showText[SVG]:", data, fontSize, "(" + current.fontSize + ")", charSpacing, wordSpacing, fontDirection, textHScale, textMatrix);
+//                console.log("========== showText[SVG]:", data, fontSize, "(" + current.fontSize + ")", charSpacing, wordSpacing, fontDirection, textHScale, textMatrix);
 
                 transform = this.applyTextMatrix(current, textMatrix, this._svgStates[0].transform);
                 this.scaleTransform(1/scaleFactor, 1/scaleFactor, transform);       // Adjust the scaling to reflect the new computed fontsize
 
-                // Flip Y origin and adjust x origin (PDF rotate image from the bottom-left corner while SVG does it from the bottom-left
+                // Flip Y origin and adjust x origin
                 geometry = this.getGeometry.apply(null, transform)
-                transform[1] *= -1;
-                transform[2] *= -1;
-                transform[5] = this.viewBoxHeight - transform[5];
+                transform[1] *= -1;     // JFD TODO does not sound right, but does work!!!
+                transform[2] *= -1;     // JFD TODO does not sound right, but does work!!!
+                transform[5] = this._viewBoxHeight - transform[5];
 
                 needTransform = !(geometry.rotateX == 0 && geometry.rotateY == 0 && geometry.scaleX == geometry.scaleY);
 
@@ -1461,7 +1562,7 @@ console.log("====== scale:", scale)
 
                 // Flip Y origin and adjust x origin
                 this.scaleTransform(1, -1, transform);
-                transform[5] = this.viewBoxHeight - transform[5];
+                transform[5] = this._viewBoxHeight - transform[5];
                 // JFD TODO: use transform only if needed, else use x/y attribute
                 pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
 
@@ -1495,7 +1596,7 @@ console.log("====== scale:", scale)
 
                     // Flip Y origin and adjust x origin
                     this.scaleTransform(1, -1, transform);
-                    transform[5] = this.viewBoxHeight - transform[5];
+                    transform[5] = this._viewBoxHeight - transform[5];
                     // JFD TODO: use transform only if needed, else use x/y attribute
                     pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
                 }
@@ -1559,6 +1660,12 @@ console.log("====== scale:", scale)
 
             // Utilities
 
+            applyTransform: function(p, m) {
+              var xt = p[0] * m[0] + p[1] * m[2] + m[4];
+              var yt = p[0] * m[1] + p[1] * m[3] + m[5];
+              return [xt, yt];
+            },
+
             applyTextMatrix: function (current, textMatrix, transform) {
                 var m = transform,
                     a = textMatrix[0], b = textMatrix[1], c = textMatrix[2], d = textMatrix[3], e = textMatrix[4], f = textMatrix[5];
@@ -1585,6 +1692,7 @@ console.log("====== scale:", scale)
 //                    m[2] = m[2] * -1;
 //                    m[3] = m[3] * -1;
                 } else {
+                    console.warn("reverse font direction not tested")
                     m[0] = m[0] * -current.textHScale;
                     m[1] = m[1] * -current.textHScale;
 //                    m[2] = m[2] * 1;
@@ -1592,6 +1700,35 @@ console.log("====== scale:", scale)
                 }
 
                 return transform;
+            },
+
+            scaleTransform: function(x, y, transform) {
+              var m = transform;
+              m[0] = m[0] * x;
+              m[1] = m[1] * x;
+              m[2] = m[2] * y;
+              m[3] = m[3] * y;
+            },
+
+            getTransformInverse: function (transform) {
+              // Calculation done using WolframAlpha:
+              // http://www.wolframalpha.com/input/?
+              //   i=Inverse+{{a%2C+c%2C+e}%2C+{b%2C+d%2C+f}%2C+{0%2C+0%2C+1}}
+
+              var m = transform;
+              var a = m[0], b = m[1], c = m[2], d = m[3], e = m[4], f = m[5];
+
+              var ad_bc = a * d - b * c;
+              var bc_ad = b * c - a * d;
+
+              return [
+                d / ad_bc,
+                b / bc_ad,
+                c / bc_ad,
+                a / ad_bc,
+                (d * e - c * f) / bc_ad,
+                (b * e - a * f) / ad_bc
+              ];
             },
 
             getGeometry: function(a, b, c, d, e, f) {
@@ -1607,14 +1744,6 @@ console.log("====== scale:", scale)
                 geometry.scaleY = d >= 0 ? Math.sqrt(c * c + d * d) : -Math.sqrt(c * c + d * d);
 
                 return geometry;
-            },
-
-            scaleTransform: function(x, y, transform) {
-              var m = transform;
-              m[0] = m[0] * x;
-              m[1] = m[1] * x;
-              m[2] = m[2] * y;
-              m[3] = m[3] * y;
             }
         }
     },
