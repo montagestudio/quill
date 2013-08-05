@@ -1228,9 +1228,13 @@ console.log("====== scale:", scale)
                     imageBlob;
 
                 putBinaryImageData(imageCtx, imageData, width, height);
-                imageBlob = blobFromDataURL(imageCanvas.toDataURL("image/jpeg", 0.6));
 
-                this._paintImage(URL.createObjectURL(imageBlob), width, height);
+                // Add image as blob URL
+                // imageBlob = blobFromDataURL(imageCanvas.toDataURL("image/jpeg", 0.6));
+                // this._paintImage(URL.createObjectURL(imageBlob), width, height);
+
+                // Add image as data URL
+                this._paintImage(imageCanvas.toDataURL("image/jpeg", 0.6), width, height);
             },
 
             // Text Drawing
