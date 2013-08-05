@@ -1,21 +1,13 @@
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
-    PDF2HTMLCache = require("./pdf2html-cache.js").PDF2HTMLCache,
     adaptConnection = require("q-connection/adapt"),
     Connection = require("q-connection");
 
 
-var origin_time = new Date().getTime();
-var timestamp = function() {return "[" + ((new Date().getTime() - origin_time) % 600000) / 1000 + "] "};
-
-//var renderingMode = 3;  // DOM + SVG
-//var renderingMode = 4;  // DOM + SVG (with Rounding)
-var renderingMode = 5;  // PURE SVG
-
 var xmlns = "http://www.w3.org/2000/svg",
     xmlns_xlink = "http://www.w3.org/1999/xlink"
 
-var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
+var RENDERING_MODE = {hybrid: 4, svg: 5};
 
 var LINE_CAP_STYLES = ['butt', 'round', 'square'];
 var LINE_JOIN_STYLES = ['miter', 'round', 'bevel'];
@@ -203,14 +195,25 @@ function sanitizeCSSValue(value) {
 
 exports.PDF2HTML = Montage.create(Montage, {
 
+    RENDERING_MODE: {
+        value: RENDERING_MODE
+    },
+
+    _renderingMode: {
+        value: RENDERING_MODE.svg
+    },
+
     renderingMode: {
+        /*
+            see RENDERING_MODE for allowed values
+         */
         get: function() {
-            return renderingMode;
+            return this._renderingMode;
         },
 
         set: function(value) {
             if (typeof value === "number" && !isNaN(value)) {
-                renderingMode = value;
+                this._renderingMode = value;
             }
         }
     },
@@ -256,70 +259,60 @@ exports.PDF2HTML = Montage.create(Montage, {
     getDocument: {
         value: function(path, outputDirectory) {
             var self = this,
-                defered = Promise.defer();
+                deferred = Promise.defer();
+
+            this.rootDirectory = outputDirectory;
 
             // note: PDFJS uses it own variation of promise
             PDFJS.getDocument(path).then(
                 function(pdf) {
                     self._pdf = pdf;
                     pdf.cssFonts = {};  // Setup a cache for the fonts
-
-                    if (IS_IN_LUMIERES && outputDirectory) {
-                        self.rootDirectory = outputDirectory;
-
-                        Montage.create(PDF2HTMLCache).initialize(self.rootDirectory + "/assets/", pdf).then(function(cache) {
-                                PDFJS.objectsCache = cache;
-                                defered.resolve(pdf)
-                            }, function(error) {
-                                console.warn(error);
-                                defered.resolve(pdf)
-                            }
-                        );
-                    } else {
-                        defered.resolve(pdf)
-                    }
+                    deferred.resolve(pdf)
                 },
                 function(exception) {
-                    defered.reject(exception);
+                    deferred.reject(exception);
                 },
                 function(progress) {
-                    defered.notify(progress);
+                    deferred.notify(progress);
                 });
 
-            return defered.promise;
+            return deferred.promise;
         }
     },
 
     getPage: {
         value: function(pdf, pageNumber) {
-            var defered = Promise.defer();
+            var deferred = Promise.defer();
 
             if (!pdf || !pdf.pdfInfo) {
-                defered.reject(new Error("Invalid pdf document"));
+                deferred.reject(new Error("Invalid pdf document"));
             } else if (!pdf || pageNumber < 1 || pageNumber > pdf.pdfInfo.numPages) {
-                defered.reject(new Error("Invalid page number " + pageNumber));
+                deferred.reject(new Error("Invalid page number " + pageNumber));
             } else {
                 pdf.getPage(pageNumber).then(
                     function(page) {
-                        defered.resolve(page)
+                        deferred.resolve(page)
                     },
                     function(exception) {
-                        defered.reject(exception)
+                        deferred.reject(exception)
                     },
                     function(progress) {
                         console.log("...getPage progress:", progress);
-                        defered.notify(progress);
+                        deferred.notify(progress);
                     });
             }
 
-            return defered.promise;
+            return deferred.promise;
         }
     },
 
     renderPage: {
-        value: function(page, scale, canvas, rootNode) {
+        value: function(page, canvas, rootNode, scale, returnOutput) {
+            console.log("CORE/RENDER_PAGE")
+
             var self = this,
-                defered = Promise.defer(),
+                deferred = Promise.defer(),
                 renderContext,
                 ctx = canvas.getContext('2d');
 
@@ -338,7 +331,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     }
                 })
                 rootNode.innerHTML = "";
-                if (renderingMode < 5) {
+                if (self.renderingMode == self.RENDERING_MODE.hybrid) {
                     // Emit DOM + SVG
                     this._imageLayer.owner = this;
                     this._imageLayer.page = page;
@@ -353,19 +346,22 @@ exports.PDF2HTML = Montage.create(Montage, {
                     this._preProcessor_DOM.page = page;
                     this._preProcessor_DOM.scale = scale;
                     renderContext.preProcessor = this._preProcessor_DOM;
-                } else {
+                } else if (self.renderingMode == self.RENDERING_MODE.svg) {
                     // Emit SVG
                     this._preProcessor_SVG.owner = this,
                     this._preProcessor_SVG.page = page;
                     this._preProcessor_SVG.scale = scale;
                     renderContext.preProcessor = this._preProcessor_SVG;
+                } else {
+                    console.error("Invalid rendering mode:", self.renderingMode);
                 }
             }
 
             renderContext.continueCallback = function(callback) {
                 console.log("  >>> next");
-                if (renderContext.preProcessor === self._preProcessor_DOM)
-                self._preProcessor_DOM.endSVG();
+                if (renderContext.preProcessor === self._preProcessor_DOM) {
+                    self._preProcessor_DOM.endSVG();
+                }
                 callback();
             }
 
@@ -374,16 +370,14 @@ exports.PDF2HTML = Montage.create(Montage, {
                     function() {
                         console.log("...success");
 
-                        if (IS_IN_LUMIERES) {
-                            var fs = self.backend.get("fs"),
-                                folderPath = decodeURIComponent((self.rootDirectory + "/pages/").substring("fs://localhost".length)),
-                                data,
+                        if (returnOutput) {
+                            var data,
                                 styleNode,
                                 style;
 
                             styleNode = rootNode.getElementsByTagName("style")[0];
                             if (styleNode) {
-                                // remove the style from the body
+                                // temporary remove the style from the body
                                 styleNode.parentNode.removeChild(styleNode);
                             } else {
                                 styleNode = document.createElement("style");
@@ -395,9 +389,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                                   var fontExpr = new RegExp(property, "g");
 
                                   styleNode.appendChild(document.createTextNode(self._pdf.cssFonts[property].style + "\n"));
-
-                                  // Replace the font name everywhere
-//                                  data = data.replace(fontExpr, self._pdf.cssFonts[property].fontName);
                               }
                             }
 
@@ -405,7 +396,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                             style = styleNode.innerHTML;
                             data = rootNode.innerHTML;
 
-                            // Put the style back (needed by the viewer)
+                            // Put the style back
                             if (styleNode) {
                                 rootNode.insertBefore(styleNode, rootNode.firstChild)
                             }
@@ -444,46 +435,29 @@ exports.PDF2HTML = Montage.create(Montage, {
                                 })
                             });
 
-                            self.backend.get("plume-backend").invoke("createFromTemplate",
-                                "/pdf-converter/templates/page.xhtml",
-                                folderPath + (page.pageInfo.pageIndex + 1) + ".xhtml",
-                                {
-                                    "page-width": Math.round(renderContext.viewport.width),
-                                    "page-height": Math.round(renderContext.viewport.height),
-                                    "page-title": "page " + (page.pageInfo.pageIndex + 1),
-                                    "page-headers": "",
-                                    "page-style": style,
-                                    "page-content": data
-                                },
-                                true
-                            ).then(function() {
-                                page.destroy();
-                                defered.resolve();
-                            }, function(execption) {
-                                page.destroy();
-                                defered.reject(exception)
-                            });
+                            page.destroy();
+                            deferred.resolve({data: data, style: style});
                         } else {
                             page.destroy();
-                            defered.resolve();
+                            deferred.resolve();
                         }
                     },
                     function(exception) {
                         console.log("...error:", exception.message, exception.stack);
                         page.destroy();
-                        defered.reject(exception)
+                        deferred.reject(exception)
                     },
                     function(progress) {
                         console.log("...renderPage progress:", progress);
-                        defered.notify(progress);
+                        deferred.notify(progress);
                     });
 
             } catch(e) {
                 console.log("RENDERING ERROR:", e.message, e.stack);
-                defered.reject(e);
+                deferred.reject(e);
             }
 
-            return defered.promise;
+            return deferred.promise;
         }
     },
 
@@ -492,12 +466,15 @@ exports.PDF2HTML = Montage.create(Montage, {
     },
 
     _nextElementUID: {
-        value: 1
+        value: {}
     },
 
     _getNextElementUID: {
         value: function(type) {
-            return "" + type + (this._nextElementUID ++);
+            if (this._nextElementUID.type === undefined) {
+                this._nextElementUID.type = 1;
+            }
+            return "" + type + (this._nextElementUID.type ++);
         }
     },
 
@@ -575,8 +552,6 @@ exports.PDF2HTML = Montage.create(Montage, {
             },
 
             showText: function(context, text) {
-                if (renderingMode < 3) return;
-
                 var self = this,
                     isSpacedText = typeof text !== "string",
                     current = context.current,
@@ -599,7 +574,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     x = 0,
                     previousX = 0,
                     previousRoundScaledX = 0,
-                    roundPosition = (renderingMode === 4),
+                    roundPosition = true,
                     roundingPrecission = 2,
                     i;
 
@@ -609,9 +584,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                 ctx.save();
                 context.applyTextTransforms();
 
-
                 // Export the font
-                    // JFD TODO: write them to disk...
                 if (this.owner._pdf.cssFonts[fontName] == undefined) {
                     if (font.url) {
                         self.owner._pdf.cssFonts[fontName] = {
@@ -667,9 +640,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                         sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[5], roundingPrecission) : ctx.mozCurrentTransform[5])
                     ] + ")");
                 }
-console.log("========== showText[DOM]:", data, fontSize, charSpacing, wordSpacing, fontDirection, current.textHScale);
-console.log("====== scale:", scale)
-
                 outerElemStyle.fontFamily = "'" + fontName + "', " + fallbackName;
                 outerElemStyle.fontSize = (fontSize * scale / fontSizeScale) + "px";
                 outerElemStyle.color = current.fillColor;
@@ -1209,26 +1179,30 @@ console.log("====== scale:", scale)
                 if (object instanceof Image) {
                     return this.paintJpegXObject(context, objId, w, h);
                 } else {
-                    this.paintInlineImageXObject(context, object);
+                    this.paintInlineImageXObject(context, object, true);
                 }
             },
 
-            paintInlineImageXObject: function(context, object) {
+            paintInlineImageXObject: function(context, object, useBlobURL) {
                 var imageData = object.data,
                     width = object.width,
                     height = object.height,
                     imageCanvas = createScratchCanvas(width, height),
-                    imageCtx = imageCanvas.getContext('2d'),
-                    imageBlob;
+                    imageCtx = imageCanvas.getContext('2d');
+
+                // JFD TODO: we should recycle the canvas rather that creating a new one each time!
 
                 putBinaryImageData(imageCtx, imageData, width, height);
 
-                // Add image as blob URL
-                // imageBlob = blobFromDataURL(imageCanvas.toDataURL("image/jpeg", 0.6));
-                // this._paintImage(URL.createObjectURL(imageBlob), width, height);
+                if (useBlobURL) {
+                    // Add image as blob URL
+                    var imageBlob = blobFromDataURL(imageCanvas.toDataURL("image/jpeg", 0.6));
+                    this._paintImage(URL.createObjectURL(imageBlob), width, height);
+                } else {
+                    // Add image as data URL
+                    this._paintImage(imageCanvas.toDataURL("image/jpeg", 0.6), width, height);
+                }
 
-                // Add image as data URL
-                this._paintImage(imageCanvas.toDataURL("image/jpeg", 0.6), width, height);
             },
 
             // Text Drawing

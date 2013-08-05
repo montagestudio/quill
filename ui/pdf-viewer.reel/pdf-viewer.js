@@ -351,10 +351,8 @@ devicePixelRatio = 1; //JFD DEBUG
 
             if (typeof value === "string" && value.length) {
                 this.state = STATE_LoadingDocument;
-console.log("WILL LOAD:")
                 // Load the document
                 PDF2HTML.getDocument(this._documentPath).then(function(pdf) {
-console.log("PDF:", pdf)
                     thisRef._document = pdf;
                     thisRef.state = STATE_DocumentLoaded;
                     thisRef.numberOfPages = pdf.pdfInfo.numPages;
@@ -445,13 +443,14 @@ console.log("PDF:", pdf)
         value: function() {
             var thisRef = this;
             this.state = STATE_RenderingPage;
-            PDF2HTML.renderPage(this.page, this.scale, this.canvasView, this.htmlView).then(function(){
+
+            PDF2HTML.renderPage(this.page, this.canvasView, this.htmlView, this.scale).then(function(output){
                 thisRef.state = STATE_PageRenderred;
-                console.log("*** DONE RENDERING...:", exception);
+                console.log("*** DONE RENDERING...:");
             },
             function(exception) {
                 console.log("#ERROR:", exception.message, exception.stack);
-            });
+            }).done();
         }
     }
 
