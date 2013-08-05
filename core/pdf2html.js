@@ -1192,6 +1192,10 @@ console.log("====== scale:", scale)
                 imageElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
                 imageElem.setAttribute("preserveAspectRatio", "none");
 
+                if (currentState.fillAlpha !== 1) {
+                    imageElem.style.opacity = currentState.fillAlpha;
+                }
+
                 this.owner._rootNodeStack[0].appendChild(imageElem);
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
             },
