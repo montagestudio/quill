@@ -508,16 +508,12 @@ exports.PDF2HTML = Montage.create(Montage, {
     _imageLayer: {
         value: {
             beginLayout: function() {
-                console.log("IMG:beginLayout", this.owner)
             },
 
             endLayout: function() {
-                console.log("IMG:endLayout")
             },
 
             appendImage: function(object) {
-                console.log("  IMG:appendImage", object);
-
                 var context = object.context,
                     transform = context.ctx.mozCurrentTransform,
                     position,
@@ -540,7 +536,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                     position = context.getCanvasPosition(0, -height);
                     transform[4] = position[0];
                     transform[5] = position[1];
-
 
                     if (typeof ImageData !== 'undefined' && imageData instanceof ImageData) {
                         imageCtx.putImageData(imageData, 0, 0);
@@ -889,11 +884,17 @@ console.log("====== scale:", scale)
             // Group
 
             beginGroup: function(context, group) {
-                var gElem = document.createElementNS(xmlns, "g"),
+                var currentState = this._svgStates[0],
+                    gElem = document.createElementNS(xmlns, "g"),
                     groupID = this.owner._getNextElementUID("group");
 
                 // JFD TODO: set group transform
                 gElem.setAttribute("id", groupID);
+                if (currentState.fillAlpha !== 1) {
+                    gElem.style.opacity = currentState.fillAlpha;
+                }
+
+
                 this.owner._rootNodeStack[0].appendChild(gElem);
                 this.owner._rootNodeStack.unshift(gElem);
                 console.log("BEGIN GROUP", group, gElem);
@@ -1184,10 +1185,6 @@ console.log("====== scale:", scale)
                 imageElem.setAttribute("height", height);
                 imageElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
                 imageElem.setAttribute("preserveAspectRatio", "none");
-
-                if (currentState.fillAlpha !== 1) {
-                    imageElem.style.opacity = currentState.fillAlpha;
-                }
 
                 this.owner._rootNodeStack[0].appendChild(imageElem);
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
@@ -1907,7 +1904,6 @@ console.log("====== scale:", scale)
             fill: function(context, consumePath, fillRule) {
                 // fill must be called before stroke!
                 var current = context.current,
-                    ctx = context.ctx,
                     gElem = this._svgElement.parentNode;
 
                 if (consumePath === undefined) {
@@ -2015,21 +2011,29 @@ console.log("====== scale:", scale)
             },
 
             beginGroup: function(context, group) {
-                this.owner._rootNodeStack.unshift(document.createElement("div"));
+                var current = context.current,
+                    groupElem = document.createElement("div");
+
+                // Adjust the opacity
+                if (current.fillAlpha != 1) {
+                    groupElem.style.opacity = current.fillAlpha;
+                }
+
+                this.owner._rootNodeStack.unshift(groupElem);
             },
 
             endGroup: function(context, group) {
-                // JFD TODO: the positionning of the div seems to be bogus (check farm.pdf, page 3)
                 var groupElem = this.owner._rootNodeStack.shift(),
                     groupElemStyle = groupElem.style,
                     ctx = context.groupStack[context.groupStack.length - 1],
                     transform;
 
                 ctx.save();
-                    ctx.scale(1.0 / this.scale, -1.0 / this.scale);
+                    // Resize the group (but do not reverse the Y axis)
+                    ctx.scale(1.0 / this.scale, 1.0 / this.scale);
                     transform = ctx.mozCurrentTransform.slice(0, 6);
                     transform[4] /= this.scale;
-                    transform[5] = (ctx.canvas.height - transform[5]) / this.scale;
+                    transform[5] /= this.scale;
                 ctx.restore();
 
                 groupElem.classList.add("group");
