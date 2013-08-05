@@ -1088,7 +1088,6 @@ console.log("====== scale:", scale)
             // Shading
 
             shadingFill: function(context, patternIR) {
-                console.warn("shading fill not yet supported:", patternIR);
                 var currentState = this._svgStates[0],
                     transform = currentState.transform.slice(),     // Make a copy, so that we can alter it
                     transformInverse,
@@ -1144,8 +1143,6 @@ console.log("====== scale:", scale)
                 var x1 = Math.max(bl[0], br[0], ul[0], ur[0]);
                 var y1 = Math.max(bl[1], br[1], ul[1], ur[1]);
 
-                console.log("SHADING RECT:", "[" + x0 + ", " + y0 + "]", "[" + x1 + ", " + y1 + "]");
-
                 var rectElem = document.createElementNS(xmlns, "rect");
                 rectElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
                 rectElem.setAttribute("x", x0);
@@ -1170,10 +1167,6 @@ console.log("====== scale:", scale)
 
                 // scale transform to reflect image display size (rather that using an 1x1 image size like provided by PDF)
                 this.scaleTransform(scaleX, scaleY, transform);
-//                transform[0] *= scaleX;
-//                transform[1] *= scaleX;
-//                transform[2] *= scaleY;
-//                transform[3] *= scaleY;
 
                 geometry = this.getGeometry.apply(null, transform)
 
