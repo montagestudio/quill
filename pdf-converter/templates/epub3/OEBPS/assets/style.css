@@ -14,7 +14,7 @@ div.page {
     -ms-user-select: none
 }
 
-div.group {
+div.page div.group {
     position: absolute;
 
     transform-origin: 0 0;
@@ -23,7 +23,7 @@ div.group {
     -ms-transform-origin: 0 0;
 }
 
-span, img {
+div.page span, div.page img {
     position: absolute;
 
     transform-origin: 0 0;
@@ -37,7 +37,7 @@ span, img {
     -ms-user-select: text
 }
 
-svg {
+div.page svg {
     position: absolute;
 
     transform-origin: 0 0;
@@ -47,7 +47,7 @@ svg {
 }
 
 /* SVG sub-elements*/
-text, tspan, image {
+div.page text, div.page tspan, div.page image {
     user-select: text;
     -webkit-user-select: text;
     -moz-user-select: text;
