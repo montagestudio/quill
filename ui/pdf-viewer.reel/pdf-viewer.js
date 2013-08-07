@@ -61,6 +61,23 @@ exports.PdfViewer = Montage.create(Component, {
             if (firstTime) {
                 this._state = STATE_FirstRun;
                 this._drawState = STATE_Unknown;
+
+                document.addEventListener("keydown", this);
+            }
+        }
+    },
+
+    handleKeydown: {
+        value: function(event) {
+            if (event.keyIdentifier === "U+0034" || event.keyIdentifier === "U+0035") {
+                var mode = event.keyIdentifier === "U+0034" ? 4 : 5;
+
+                if (this.renderingMode !== mode) {
+                    this.renderingMode = mode;
+                }
+
+                event.stopPropagation();
+                event.preventDefault();
             }
         }
     },
@@ -182,18 +199,22 @@ devicePixelRatio = 1; //JFD DEBUG
     },
 
     _renderingMode: {
-        value: 3
+        value: 0
     },
 
     renderingMode: {
         get: function() {
-            return _renderingMode;
+            return this._renderingMode;
         },
 
         set: function(value) {
             this._renderingMode = parseInt(value, 10);
+console.log("SETTING RENDERING MODE:", this._renderingMode, typeof this._renderingMode)
             if (typeof this._renderingMode == "number") {
                 PDF2HTML.renderingMode = this._renderingMode;
+                if (this.state >= STATE_DocumentLoaded) {
+                    this.loadPage(this.pageNumber);
+                }
             }
         }
     },
@@ -265,7 +286,6 @@ devicePixelRatio = 1; //JFD DEBUG
             return this._showText;
         },
         set: function(value) {
-            console.log("-------- set showText to", value)
             this._showText = value;
             this.needsDraw = true;
         }

@@ -130,6 +130,33 @@ exports.Footer = Montage.create(Component, {
                 event.stopPropagation();
                 event.preventDefault();
             }
+
+            if (event.keyIdentifier === "Left" || event.keyIdentifier === "Right") {
+                this.mode = event.keyIdentifier === "Left" ? "overlay" : "aside"
+
+                event.stopPropagation();
+                event.preventDefault();
+            }
+
+            if (event.keyIdentifier === "Up" || event.keyIdentifier === "Down") {
+                if (this.mode == "overlay") {
+                    if (event.keyIdentifier === "Down") {
+                        this.opacity -= 0.25;
+                        if (this.opacity < 0) {
+                            this.opacity = 0;
+                        }
+                    } else {
+                        this.opacity += 0.25;
+                        if (this.opacity > 1) {
+                            this.opacity = 1;
+                        }
+                    }
+
+                    event.stopPropagation();
+                    event.preventDefault();
+                }
+            }
+
         }
     }
 });

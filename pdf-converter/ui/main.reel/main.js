@@ -34,7 +34,7 @@ exports.Main = Montage.create(Component, {
     },
 
     scale: {
-        value: 2.0
+        value: 1.0
     },
 
 
@@ -55,7 +55,7 @@ exports.Main = Montage.create(Component, {
             var self = this;
 
             if (IS_IN_LUMIERES) {
-                PDF2HTML.renderingMode = PDF2HTML.RENDERING_MODE.svg;
+                PDF2HTML.renderingMode = PDF2HTML.RENDERING_MODE.hybrid;
 
                 this.params = [];
                 window.location.search.substr(1).split("&").forEach(function(query) {

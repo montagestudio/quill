@@ -20,7 +20,6 @@ exports.Main = Montage.create(Component, {
 
     templateDidLoad: {
         value: function() {
-            console.log("templateDidLoad");
             foo = this;
 
             var searches = document.location.search.substr(1).split("&"),
@@ -30,7 +29,6 @@ exports.Main = Montage.create(Component, {
                 var param = searches[i].split("=");
                 this.params[decodeURIComponent(param[0])] = param.length > 1 ? decodeURIComponent(param[1]) : null;
             }
-            console.log("PATH[2]:",this.params.path);
         }
     }
 });
