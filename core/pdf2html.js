@@ -471,10 +471,10 @@ exports.PDF2HTML = Montage.create(Montage, {
 
     _getNextElementUID: {
         value: function(type) {
-            if (this._nextElementUID.type === undefined) {
-                this._nextElementUID.type = 1;
+            if (this._nextElementUID[type] === undefined) {
+                this._nextElementUID[type] = 1;
             }
-            return "" + type + (this._nextElementUID.type ++);
+            return "" + type + (this._nextElementUID[type] ++);
         }
     },
 
@@ -792,7 +792,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                 this.owner._rootNodeStack.unshift(gElem);
 
                 //Reset the element UID generator
-                this.owner._nextElementUID = 1;
+                this.owner._nextElementUID = {};
 
                 this._svgPath = null;
 
