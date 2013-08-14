@@ -309,7 +309,6 @@ exports.PDF2HTML = Montage.create(Montage, {
 
     renderPage: {
         value: function(page, canvas, rootNode, scale, returnOutput) {
-            console.log("CORE/RENDER_PAGE")
 
             var self = this,
                 deferred = Promise.defer(),
@@ -402,9 +401,47 @@ exports.PDF2HTML = Montage.create(Montage, {
                             }
 
                             // Convert URL to relative
-                            var expr = new RegExp(encodeURI(self.rootDirectory) + "/", "g");
-                            data = data.replace(expr, "../");
-                            style = style.replace(expr, "../");
+                            if (PDFJS.objectsCache) {
+                                var baseURI = self.rootDirectory,
+                                    baseLength = baseURI.length,
+                                    sourceURI = "fs://localhost" + PDFJS.objectsCache.folderPath,
+                                    sourceLength = sourceURI.length,
+                                    replacementURI = "",
+                                    searchURI,
+                                    i = 0;
+
+                                console.log("--- baseURI:", baseURI)
+                                console.log("--- sourceURI:", sourceURI)
+
+                                if (baseURI.charAt(baseLength - 1) === '/') {
+                                    baseURI = baseURI.substr(0, baseLength - 1);
+                                }
+                                if (sourceURI.charAt(sourceLength - 1) === '/') {
+                                    sourceURI = sourceURI.substr(0, sourceLength - 1);
+                                }
+
+                                baseURI = baseURI.split('/');
+                                baseLength = baseURI.length;
+
+                                sourceURI = sourceURI.split('/');
+                                sourceLength = sourceURI.length;
+
+                                while (i < baseLength && i < sourceLength) {
+                                    if (baseURI[i] !== sourceURI[i])
+                                        break;
+                                    i ++;
+                                }
+
+                                for (var j = i; j < baseLength; j ++) {
+                                    replacementURI += "../";
+                                }
+
+                                searchURI = sourceURI.slice(0, i).join('/') + '/'
+
+                                var expr = new RegExp(encodeURI(searchURI), "g");
+                                data = data.replace(expr, replacementURI);
+                                style = style.replace(expr, replacementURI);
+                            }
 
                             //replace entities (for now just the nbsp entity
                             data = data.replace(/&nbsp;/g, "&#160;");
