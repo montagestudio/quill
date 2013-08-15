@@ -884,7 +884,10 @@ exports.PDF2HTML = Montage.create(Montage, {
                     rule: "",
 
                     // clipping
-                    rootNode: svgElem
+                    rootNode: svgElem,
+
+                    // form
+                    paintFormXObjectDepth: 0
                 };
                 this._svgStates = [initialSVGState];
             },
@@ -923,6 +926,38 @@ exports.PDF2HTML = Montage.create(Montage, {
 
             endGroup: function(context, group) {
                 this.owner._rootNodeStack.splice(0, 1);
+            },
+
+
+            //Form
+
+            paintFormXObjectBegin: function(context, matrix, bbox) {
+                this.save();
+
+                this._svgStates[0].paintFormXObjectDepth ++;
+
+                if (matrix && isArray(matrix) && 6 == matrix.length) {
+                    var params = matrix.slice();
+                    params.unshift(context);
+                    this.transform.apply(this, params);
+                }
+
+                if (bbox && isArray(bbox) && 4 == bbox.length) {
+                    var width = bbox[2] - bbox[0];
+                    var height = bbox[3] - bbox[1];
+                    this.rectangle(context, bbox[0], bbox[1], width, height);
+                    this.clip(context);
+                    this.endPath(context);
+                }
+            },
+
+            paintFormXObjectEnd: function (context) {
+              var depth = this._svgStates[0].paintFormXObjectDepth;
+              do {
+                this.restore();
+                // some pdf don't close all restores inside object
+                // closing those for them
+              } while (this._svgStates[0].paintFormXObjectDepth >= depth && this._svgStates[0].length > 1);
             },
 
 
