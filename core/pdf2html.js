@@ -1392,14 +1392,29 @@ exports.PDF2HTML = Montage.create(Montage, {
                     case TextRenderingMode.FILL:
                         textElem.style.fill = context.current.fillColor;
                         textElem.style.stroke = "none";
+                        if (current.fillAlpha !== 1) {
+                            textElem.style.opacity = current.fillAlpha;
+                            // JFD TODO: should we remove that text node all together when alpha = 0?
+                        }
                         break;
                     case TextRenderingMode.STROKE:
                         textElem.style.fill = "none";
                         textElem.style.stroke = context.current.strokeColor;
+                        if (current.strokeAlpha !== 1) {
+                            textElem.style.opacity = current.strokeAlpha;
+                            // JFD TODO: should we remove that text node all together when alpha = 0?
+                        }
                         break;
                     case TextRenderingMode.FILL_STROKE:
                         textElem.style.fill = context.current.fillColor;
                         textElem.style.stroke = context.current.strokeColor;
+                        if (current.strokeAlpha !== 1) {
+                            textElem.style.strokeOpacity = current.strokeAlpha;
+                        }
+                        if (current.fillAlpha !== 1) {
+                            textElem.style.fillOpacity = current.fillAlpha;
+                        }
+                        // JFD TODO: should we remove that text node all together when alpha = 0?
                         break;
                     case TextRenderingMode.INVISIBLE:
                         textElem.style.fill = "none";
@@ -1575,8 +1590,8 @@ exports.PDF2HTML = Montage.create(Montage, {
 
             _fill: function(context, consumePath, fillRule) {
                 // note: fill must be called before stroke!
-                var currentState = this._svgStates[0],
-                    transform = currentState.transform.slice(),     // Make a copy, so that we can alter it
+                var current = this._svgStates[0],
+                    transform = current.transform.slice(),     // Make a copy, so that we can alter it
                     pathElem = document.createElementNS(xmlns, "path");
 
                 pathElem.setAttribute("d", this._svgPath);
@@ -1594,6 +1609,12 @@ exports.PDF2HTML = Montage.create(Montage, {
                     pathElem.style.fileRule = fillRule;
                 }
                 pathElem.style.fill = context.current.fillColor;
+// JFD TODO: check if the canvas color already include the alpha information!
+                if (current.fillAlpha !== 1) {
+                    pathElem.style.opacity = current.fillAlpha;
+                    // JFD TODO: should we remove that text node all together when alpha = 0?
+                    //           but we need to check for any stroke first (consumePath)
+                }
                 pathElem.style.stoke = "none";             // In case we do not call stoke after calling fill
 
                 this.owner._rootNodeStack[0].appendChild(pathElem);
