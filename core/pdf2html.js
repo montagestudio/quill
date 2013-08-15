@@ -55,6 +55,18 @@ function putBinaryImageData(ctx, data, w, h) {
   ctx.putImageData(tmpImgData, 0, 0);
 }
 
+function checkForTransparency(data) {
+    var length = data.length,
+        i;
+
+    for (i = 3; i < length; i += 4) {
+        if (data[i] !== 255) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 function blobFromDataURL(dataURL) {
   // convert base64 to raw binary data held in a string
@@ -545,7 +557,8 @@ exports.PDF2HTML = Montage.create(Montage, {
                         width = imageData.width,
                         height = imageData.height,
                         imageCanvas = createScratchCanvas(width, height),
-                        imageCtx = imageCanvas.getContext('2d');
+                        imageCtx = imageCanvas.getContext('2d'),
+                        hasTransparency = false;;
 
                     position = context.getCanvasPosition(0, -height);
                     transform[4] = position[0];
@@ -555,6 +568,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                         imageCtx.putImageData(imageData, 0, 0);
                     } else {
                         if (imageData.data) {
+                            hasTransparency = checkForTransparency(imageData.data);
                             putBinaryImageData(imageCtx, imageData.data, width, height);
                         } else {
                             console.log("======== MASK:", typeof Element, imageData.tagName)
@@ -564,7 +578,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     }
 
                     elem = document.createElement("img");
-                    imageBlob = blobFromDataURL(imageCanvas.toDataURL("image/jpeg"));
+                    imageBlob = blobFromDataURL(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", 0.6));
                 }
 
                 if (imageBlob) {
@@ -1225,21 +1239,22 @@ exports.PDF2HTML = Montage.create(Montage, {
                     width = object.width,
                     height = object.height,
                     imageCanvas = createScratchCanvas(width, height),
-                    imageCtx = imageCanvas.getContext('2d');
+                    imageCtx = imageCanvas.getContext('2d'),
+                    hasTransparency = false;
 
                 // JFD TODO: we should recycle the canvas rather that creating a new one each time!
 
                 putBinaryImageData(imageCtx, imageData, width, height);
+                hasTransparency = checkForTransparency(imageData);
 
                 if (useBlobURL) {
                     // Add image as blob URL
-                    var imageBlob = blobFromDataURL(imageCanvas.toDataURL("image/jpeg", 0.6));
+                    var imageBlob = blobFromDataURL(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", 0.6));
                     this._paintImage(URL.createObjectURL(imageBlob), width, height);
                 } else {
                     // Add image as data URL
-                    this._paintImage(imageCanvas.toDataURL("image/jpeg", 0.6), width, height);
+                    this._paintImage(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", 0.6), width, height);
                 }
-
             },
 
             // Text Drawing

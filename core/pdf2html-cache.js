@@ -41,6 +41,19 @@ function bytesFromDataURL(dataURL) {
   return bytes;
 }
 
+function checkForTransparency(data) {
+    var length = data.length,
+        i;
+
+    for (i = 3; i < length; i += 4) {
+        if (data[i] !== 255) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 exports.PDF2HTMLCache = Montage.create(Montage, {
 
     _backend: {
@@ -170,10 +183,10 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                 type = data[2],
                 objectData = data[3],
                 referenceID = data[4],
+                hasMask = data[5],
                 filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
                 bytes,
                 length;
-
 
             if (PDFJS.useExternalDiskCache) {
 //                console.log(">>> CACHE SET OBJECT", name, pageNbr, type, typeof data[3], data[3].length, data[4]);
@@ -195,21 +208,22 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                             height = objectData.height,
                             imageCanvas = createScratchCanvas(width, height);
 
-                        filePath += ".jpeg";
-
                         if (typeof ImageData !== 'undefined' && objectData instanceof ImageData) {
                             imageCanvas.putImageData(objectData, 0, 0);
                         } else {
                             if (objectData.data) {
-                            putBinaryImageData(imageCanvas.getContext('2d'), objectData.data, width, height);
+                                putBinaryImageData(imageCanvas.getContext('2d'), objectData.data, width, height);
+                                if (hasMask) {
+                                    hasMask = checkForTransparency(objectData.data);
+                                }
                             } else {
                                 // JFD TODO: this is likely to be a mask which we do not yet support, just ignore for now...
                                 break;
                             }
                         }
 
-                        // JFD TODO: check if image requires the alpha channel!
-                        bytes = bytesFromDataURL(imageCanvas.toDataURL("image/jpeg"));
+                        filePath += hasMask ? ".png" : ".jpeg";
+                        bytes = bytesFromDataURL(imageCanvas.toDataURL(hasMask ? "image/png" :"image/jpeg", 0.6));
                         break;
                 }
             }
@@ -280,17 +294,26 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                 name = data[0],
                 type = data[2],
                 referenceID = data[3],
+                hasMask = data[4],
                 filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name);
 
 //            console.log(">>> CACHE GET OBJECT URL:", filePath, type);
 
             switch (type) {
-                case "JpegStream": filePath += ".jpeg";     break;
-                case "Image": filePath += ".jpeg";           break;
+                case "JpegStream": filePath += hasMask ? ".png" : ".jpeg";     break;
+                case "Image": filePath += hasMask ? ".png" : ".jpeg";           break;
             }
 
             fs.invoke("stat", filePath).then(function(stats) {
-                callback(stats && stats.size ? encodeURI("fs://localhost" + filePath) : null);
+                if (hasMask && !(stats && stats.size)) {
+                    // check for a jpeg version of the image
+                    filePath = filePath.substr(0, filePath.length - 4) + ".jpeg";
+                    fs.invoke("stat", filePath).then(function(stats) {
+                        callback(stats && stats.size ? encodeURI("fs://localhost" + filePath) : null);
+                    });
+                } else {
+                    callback(stats && stats.size ? encodeURI("fs://localhost" + filePath) : null);
+                }
             }, function(error) {
                 callback(null);
             });
