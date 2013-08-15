@@ -918,7 +918,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                     gElem.style.opacity = currentState.fillAlpha;
                 }
 
-
                 this.owner._rootNodeStack[0].appendChild(gElem);
                 this.owner._rootNodeStack.unshift(gElem);
                 console.log("BEGIN GROUP", group, gElem);
@@ -1108,14 +1107,12 @@ exports.PDF2HTML = Montage.create(Montage, {
                     pathElem = document.createElementNS(xmlns, "path"),
                     clippingID = this.owner._getNextElementUID("clip");
 
-//                clipRule = clipRule || "nonezero";
-
                 pathElem.setAttribute("d", this._svgPath);
-//                this._svgPath = 0;
 
-                // Flip Y origin and adjust x origin
+                // Flip Y origin
                 this.scaleTransform(1, -1, transform);
                 transform[5] = this._viewBoxHeight - transform[5];
+
                 pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
 
                 clipElem.setAttribute("id", clippingID);
@@ -1151,7 +1148,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     width = this._viewBoxWidth,
                     height = this._viewBoxHeight;
 
-                // Flip Y origin and adjust x origin
+                // Flip Y origin
                 this.scaleTransform(1, -1, transform);
                 transform[5] = this._viewBoxHeight - transform[5];
 
@@ -1227,20 +1224,29 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                 geometry = this.getGeometry.apply(null, transform)
 
-                // Flip Y origin and adjust x origin (PDF rotate image from the bottom-left corner while SVG does it from the bottom-left
-                transform[1] *= -1;
-                transform[2] *= -1;
-                transform[4] += Math.tan(geometry.rotateX) * height * geometry.scaleY;
-                transform[5] = this._viewBoxHeight - transform[5] - (height * geometry.scaleY);
+                // Flip Y origin and adjust x origin (PDF rotate image from the bottom-left corner while SVG does it from the top-left
+                transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
+                this.rotateTransform(geometry.rotateX, geometry.rotateY, transform);
+                this.translateTransform(0, - height, transform);
 
-
+                // Set the image attributes
                 imageElem.setAttributeNS(xmlns_xlink, "xlink:href", url);
-                imageElem.setAttribute("x", 0);
-                imageElem.setAttribute("y", 0);
-                imageElem.setAttribute("width", width);
-                imageElem.setAttribute("height", height);
-                imageElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
                 imageElem.setAttribute("preserveAspectRatio", "none");
+
+                geometry = this.getGeometry.apply(null, transform);
+                if (roundValue(geometry.rotateX, 5) !== 0 || roundValue(geometry.rotateY, 5) !== 0 ||
+                        geometry.scaleX < 0 || geometry.scaleY < 0) {
+                    imageElem.setAttribute("x", 0);
+                    imageElem.setAttribute("y", 0);
+                    imageElem.setAttribute("width", width);
+                    imageElem.setAttribute("height", height);
+                    imageElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+                } else {
+                    imageElem.setAttribute("x", roundValue(geometry.translateX, 5));
+                    imageElem.setAttribute("y", roundValue(geometry.translateY, 5));
+                    imageElem.setAttribute("width", roundValue(width * geometry.scaleX, 5));
+                    imageElem.setAttribute("height", roundValue(height * geometry.scaleY, 5));
+                }
 
                 this.owner._rootNodeStack[0].appendChild(imageElem);
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
@@ -1353,12 +1359,10 @@ exports.PDF2HTML = Montage.create(Montage, {
                 transform = this.applyTextMatrix(current, textMatrix, this._svgStates[0].transform);
                 this.scaleTransform(1/scaleFactor, 1/scaleFactor, transform);       // Adjust the scaling to reflect the new computed fontsize
 
-                // Flip Y origin and adjust x origin
-                geometry = this.getGeometry.apply(null, transform)
-                transform[1] *= -1;     // JFD TODO does not sound right, but does work!!!
-                transform[2] *= -1;     // JFD TODO does not sound right, but does work!!!
-                transform[5] = this._viewBoxHeight - transform[5];
+                // Adjust Y origin
+                transform = this.getAdjustedTransform(transform);
 
+                geometry = this.getGeometry.apply(null, transform)
                 needTransform = !(geometry.rotateX == 0 && geometry.rotateY == 0 && geometry.scaleX == geometry.scaleY);
 
                 var text = "",
@@ -1634,9 +1638,10 @@ exports.PDF2HTML = Montage.create(Montage, {
                     this._svgPath = null;
                 }
 
-                // Flip Y origin and adjust x origin
+                // Flip Y origin
                 this.scaleTransform(1, -1, transform);
                 transform[5] = this._viewBoxHeight - transform[5];
+
                 // JFD TODO: use transform only if needed, else use x/y attribute
                 pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
 
@@ -1665,18 +1670,19 @@ exports.PDF2HTML = Montage.create(Montage, {
             stroke: function(context, pathElem) {
                  // fill must be called before stroke!
 
-                var currentState = this._svgStates[0],
+                var current = this._svgStates[0],
                     needNewPathElem = (pathElem === undefined || pathElem === null),
-                    transform = currentState.transform.slice();     // Make a copy, so that we can alter it
+                    transform = current.transform.slice();     // Make a copy, so that we can alter it
 
                 if (needNewPathElem) {
                     pathElem = document.createElementNS(xmlns, "path");
                     pathElem.setAttribute("d", this._svgPath);
                     pathElem.style.fill = "none";
 
-                    // Flip Y origin and adjust x origin
+                    // Flip Y origin
                     this.scaleTransform(1, -1, transform);
                     transform[5] = this._viewBoxHeight - transform[5];
+
                     // JFD TODO: use transform only if needed, else use x/y attribute
                     pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
                 }
@@ -1686,24 +1692,29 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                 // JFD TODO: optimize attribute, only add the one that are not default!
                 pathElem.style.stroke = context.current.strokeColor;
-                pathElem.style.strokeWidth = currentState.lineWidth;
-                pathElem.style.strokeLinecap = currentState.lineCap;
-                pathElem.style.strokeLinejoin = currentState.lineJoin;
-                pathElem.style.strokeMiterlimit = currentState.miterLimit;
+// JFD TODO: check if the canvas color already include the alpha information!
+                if (current.strokeAlpha !== 1) {
+                    pathElem.style.opacity = current.strokeAlpha;
+                    // JFD TODO: should we remove that text node all together when alpha = 0?
+                    //           but we need to check for any stroke first (consumePath)
+                }
 
-                if (typeof currentState.lineDash == "string" && currentState.lineDash !== "") {
-                    pathElem.style.strokeDasharray = currentState.lineDash;
-                    if (currentState.lineDashOffset) {
-                        pathElem.style.strokeDashoffset = currentState.lineDashOffset;
+                pathElem.style.strokeWidth = current.lineWidth;
+                pathElem.style.strokeLinecap = current.lineCap;
+                pathElem.style.strokeLinejoin = current.lineJoin;
+                pathElem.style.strokeMiterlimit = current.miterLimit;
+
+                if (typeof current.lineDash == "string" && current.lineDash !== "") {
+                    pathElem.style.strokeDasharray = current.lineDash;
+                    if (current.lineDashOffset) {
+                        pathElem.style.strokeDashoffset = current.lineDashOffset;
                     }
-                    console.log("SETTING DASH:", currentState.lineDash, "offset:", currentState.lineDashOffset)
                 }
 
                 if (needNewPathElem) {
                     this.owner._rootNodeStack[0].appendChild(pathElem);
                     this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
                 }
-
             },
 
             closeStroke: function(context) {
@@ -1783,11 +1794,35 @@ exports.PDF2HTML = Montage.create(Montage, {
             },
 
             scaleTransform: function(x, y, transform) {
-              var m = transform;
-              m[0] = m[0] * x;
-              m[1] = m[1] * x;
-              m[2] = m[2] * y;
-              m[3] = m[3] * y;
+                var m = transform;
+                m[0] = m[0] * x;
+                m[1] = m[1] * x;
+                m[2] = m[2] * y;
+                m[3] = m[3] * y;
+                return m;
+            },
+
+            rotateTransform: function (angleX, angleY, transform) {
+                // JFD TODO: figure out how to use different x and y angle!
+                var cosValue = Math.cos(angleX);
+                var sinValue = Math.sin(angleX);
+
+                var m = transform.slice();
+                transform[0] = m[0] * cosValue + m[2] * sinValue;
+                transform[1] = m[1] * cosValue + m[3] * sinValue;
+                transform[2] = m[0] * (-sinValue) + m[2] * cosValue;
+                transform[3] = m[1] * (-sinValue) + m[3] * cosValue;
+                transform[4] = m[4];
+                transform[5] = m[5];
+
+                return transform;
+            },
+
+            translateTransform: function(x, y, transform) {
+                var m = transform;
+                m[4] = m[0] * x + m[2] * y + m[4];
+                m[5] = m[1] * x + m[3] * y + m[5];
+                return m;
             },
 
             getTransformInverse: function (transform) {
@@ -1818,12 +1853,20 @@ exports.PDF2HTML = Montage.create(Montage, {
                 geometry.translateY = f;
                 geometry.rotateX = Math.atan(c / d);
                 geometry.rotateY = Math.atan(-b / a);
-//                geometry.rotateXdeg = result.rotateX * 180 / Math.PI;
-//                geometry.rotateYdeg = result.rotateY * 180 / Math.PI;
+                // geometry.rotateXdeg = result.rotateX * 180 / Math.PI;
+                // geometry.rotateYdeg = result.rotateY * 180 / Math.PI;
                 geometry.scaleX = a >= 0 ? Math.sqrt(a * a + b * b) : -Math.sqrt(a * a + b * b);
                 geometry.scaleY = d >= 0 ? Math.sqrt(c * c + d * d) : -Math.sqrt(c * c + d * d);
 
                 return geometry;
+            },
+
+            getAdjustedTransform: function(transform) {
+                var geometry = this.getGeometry.apply(null, transform);
+
+                transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
+                this.rotateTransform(geometry.rotateX, geometry.rotateY, transform);
+                return transform;
             }
         }
     },
