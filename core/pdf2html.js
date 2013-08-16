@@ -1154,16 +1154,77 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                 transformInverse = this.getTransformInverse(transform);
 
+                var bl = this.applyTransform([0, 0], transformInverse);
+                var br = this.applyTransform([0, height], transformInverse);
+                var ul = this.applyTransform([width, 0], transformInverse);
+                var ur = this.applyTransform([width, height], transformInverse);
+
+                var x0 = Math.min(bl[0], br[0], ul[0], ur[0]);
+                var y0 = Math.min(bl[1], br[1], ul[1], ur[1]);
+                var x1 = Math.max(bl[0], br[0], ul[0], ur[0]);
+                var y1 = Math.max(bl[1], br[1], ul[1], ur[1]);
+
                 var gradElem,
                     gradID = this.owner._getNextElementUID("grad");
 
+                // PDF.js does interpret the PDF shading extend parameter as per PDF specs (SECTION 4.6). However, the result is not so good with SVG. Let's just undo it...
+                if (patternIR[2].length > 11) {
+                    var stop = patternIR[2][1];
+
+                    if (stop[0] === Shadings.SMALL_NUMBER) {
+                        // remove the start stop
+                        stop[0] = 0;
+                        patternIR[2].splice(0, 1);
+                    }
+
+                    if (patternIR[2].length == 12) {
+                        // remove the end stop
+                        stop = patternIR[2][10];
+                        if (stop[0] > 0.95) {
+                            stop[0] = 1;
+                            patternIR[2].splice(11, 1);
+                        }
+                    }
+                }
+
                 if (patternIR[1] == PatternType.AXIAL) {
+                    var directionVector = [patternIR[3].slice(), patternIR[4].slice()],
+                        p1, p2;
+    
+                    if (directionVector[0][0] <= directionVector[1][0]) {
+                        p1 = directionVector[0][0];
+                        p2 = directionVector[1][0];
+                    } else {
+                        p1 = directionVector[1][0];
+                        p2 = directionVector[0][0];
+                    }
+    
+                    // Reverse the user space (must be a better way to solve this issue!)
+                    if (p1 > x1 || p2 < x0) {
+                        directionVector[0][0] *= -1;
+                        directionVector[1][0] *= -1;
+                    }
+    
+                    if (directionVector[0][1] <= directionVector[1][1]) {
+                        p1 = directionVector[0][1];
+                        p2 = directionVector[1][1];
+                    } else {
+                        p1 = directionVector[1][1];
+                        p2 = directionVector[0][1];
+                    }
+    
+                     // Reverse the user space (must be a better way to solve this issue!)
+                    if (p1 > y1 || p2 < y0) {
+                        directionVector[0][1] *= -1;
+                        directionVector[1][1] *= -1;
+                    }
+    
                     // PDF coordinates are [(x0 y0) (x1 y1)]
                     gradElem = document.createElementNS(xmlns, "linearGradient");
-                    gradElem.setAttribute("x1", patternIR[3][0]);
-                    gradElem.setAttribute("y1", patternIR[3][1]);
-                    gradElem.setAttribute("x2", patternIR[4][0]);
-                    gradElem.setAttribute("y2", patternIR[4][1]);
+                    gradElem.setAttribute("x1", directionVector[0][0]);
+                    gradElem.setAttribute("y1", directionVector[0][1]);
+                    gradElem.setAttribute("x2", directionVector[1][0]);
+                    gradElem.setAttribute("y2", directionVector[1][1]);
                 } else if (patternIR[1] == PatternType.RADIAL) {
                     // PDF coordinates are [(x0 y0) r0 (x1 y1) r1] which are not quiet the same as SVG's radial gradient
                     // Let's use the center point of the first circle and the radius of the second one to make one big circle, might not be the right assumption!
@@ -1181,28 +1242,18 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                 patternIR[2].forEach(function(stopInfo) {
                     var stopElem = document.createElementNS(xmlns, "stop");
-                    stopElem.setAttribute("offset", stopInfo[0]);
+                    stopElem.setAttribute("offset", roundValue(stopInfo[0], 3));
                     stopElem.setAttribute("stop-color", stopInfo[1]);
                     gradElem.appendChild(stopElem);
                 });
                 this.owner._rootNodeStack[0].appendChild(gradElem);
 
-                var bl = Util.applyTransform([0, 0], transformInverse);
-                var br = Util.applyTransform([0, height], transformInverse);
-                var ul = Util.applyTransform([width, 0], transformInverse);
-                var ur = Util.applyTransform([width, height], transformInverse);
-
-                var x0 = Math.min(bl[0], br[0], ul[0], ur[0]);
-                var y0 = Math.min(bl[1], br[1], ul[1], ur[1]);
-                var x1 = Math.max(bl[0], br[0], ul[0], ur[0]);
-                var y1 = Math.max(bl[1], br[1], ul[1], ur[1]);
-
                 var rectElem = document.createElementNS(xmlns, "rect");
                 rectElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
-                rectElem.setAttribute("x", x0);
-                rectElem.setAttribute("y", y0);
-                rectElem.setAttribute("width", x1 - x0);
-                rectElem.setAttribute("height", y1 - y0);
+                rectElem.setAttribute("x", roundValue(x0, 5));
+                rectElem.setAttribute("y", roundValue(y0, 5));
+                rectElem.setAttribute("width", roundValue(x1 - x0));
+                rectElem.setAttribute("height", roundValue(y1 - y0));
                 rectElem.setAttribute("fill","url(#" + gradID + ")");
                 rectElem.setAttribute("stroke","none");
                 this.owner._rootNodeStack[0].appendChild(rectElem);
