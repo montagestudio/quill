@@ -280,7 +280,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                 function(pdf) {
                     self._pdf = pdf;
                     pdf.cssFonts = {};  // Setup a cache for the fonts
-                    deferred.resolve(pdf)
+                    deferred.resolve(pdf);
                 },
                 function(exception) {
                     deferred.reject(exception);
@@ -505,6 +505,77 @@ exports.PDF2HTML = Montage.create(Montage, {
                 console.log("RENDERING ERROR:", e.message, e.stack);
                 deferred.reject(e);
             }
+
+            return deferred.promise;
+        }
+    },
+
+    getOutline: {
+        value: function(pdf) {
+            var deferred = Promise.defer();
+
+            pdf.getOutline().then(function(outline) {
+                console.log("*** OUTLINE", outline);
+                if (outline.length > 0) {
+                    pdf.getDestinations().then(function(destinations) {
+                        // Need to build the pagesRefMap
+                        var pagesRefMap = {},
+                            pagePromises = [],
+                            numPages = pdf.pdfInfo ? pdf.pdfInfo.numPages : 0,
+                            pageNum;
+
+                        for (pageNum = 1; pageNum <= numPages; ++ pageNum) {
+                            var pagePromise = pdf.getPage(pageNum);
+
+                            pagePromise.then(function(pdfPage) {
+                                var pageRef = pdfPage.ref,
+                                    refStr = pageRef.num + ' ' + pageRef.gen + ' R';
+
+                                pagesRefMap[refStr] = pdfPage.pageNumber;
+                            });
+                            pagePromises.push(pagePromise);
+                        }
+
+                        PDFJS.Promise.all(pagePromises).then(function() {
+                            var _buildOutline = function(items) {
+                                var result = [];
+
+                                items.forEach(function(item) {
+                                    var dest = item.dest,
+                                        entry = {
+                                            title: item.title,
+                                            bold: item.bold,
+                                            italic: item.italic,
+                                            color: item.color
+                                        };
+
+                                    if (typeof(dest) == "string") {
+                                        // Destination redirect
+                                        dest = destinations[dest];
+                                    }
+
+                                    if (dest instanceof Array && dest.length > 0) {
+                                        dest = dest[0].num + " " + dest[0].gen + " R";
+                                        entry.pageNumber = pagesRefMap[dest];
+                                    }
+
+                                    if (item.items && item.items.length > 0) {
+                                        entry.items = _buildOutline(item.items);
+                                    }
+
+                                    result.push(entry);
+                                });
+
+                                return result;
+                            }
+                            // Let's build the outline now that we have all the needed pieces
+                            deferred.resolve( _buildOutline(outline));
+                        });
+                    });
+                } else {
+                    deferred.resolve(null);
+                }
+            });
 
             return deferred.promise;
         }
