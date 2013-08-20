@@ -83,10 +83,11 @@ exports.Main = Montage.create(Component, {
 
                             console.log("OUTPUT DIRECTORY:", self.outputURL);
                             // Load the document
-                            return PDF2HTML.getDocument(self.url, self.outputURL + "/OEBPS").then(function(pdf) {
+                            return PDF2HTML.getDocument(self.url, self.outputURL + "/OEBPS/pages").then(function(pdf) {
                                 self._document = pdf;
                                 self.numberOfPages = pdf.pdfInfo.numPages;
-//self.numberOfPages = 60;
+self.numberOfPages = 2;
+self.params.p = 2;
                                 self._pageNumber = self.params.p || 1;
 
                                 var pad = function(number) {
@@ -128,13 +129,17 @@ exports.Main = Montage.create(Component, {
                                         options["book-id"] = self._document.pdfInfo.fingerprint;
                                         options["document-title"] = title;
 
-                                        return self.updateState("success", options).then(function() {
-                                            console.log("DONE!!!", success);
-                                            lumieres.document.close(true);
+
+                                        // Time to get the table of content
+                                        return PDF2HTML.getOutline(self._document).then(function(toc) {
+                                            options["toc"] = toc;
+                                            return self.updateState("success", options).then(function() {
+                                                console.log("DONE!!!", success);
+//                                                lumieres.document.close(true);
+                                            });
                                         });
                                     });
-                                    }
-                                );
+                                });
                             });
                         }).fail(function(error) {
                             console.error("#ERROR:", error.message, error.stack);

@@ -51,9 +51,6 @@ exports.Main = Montage.create(Component, {
 
     didCreate: {
         value: function () {
-console.log("ACTIVITY MONITOR CREATED");
-foo = this;
-
             var self = this;
             if (IS_IN_LUMIERES) {
 
@@ -400,6 +397,8 @@ foo = this;
                     item.meta = meta;
                     statusChanged = true;
 
+                    this._buildTableOfContent(meta);
+
                     // Update the content.opf - this is optional at this stage
                     this.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, meta).then(function() {
                         return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination).then(function(stdout) {
@@ -473,6 +472,44 @@ foo = this;
                     }
                 }
             });
+        }
+    },
+
+    _buildTableOfContent: {
+        value: function(meta) {
+            var toc = meta.toc;
+
+            if (!toc) {
+                meta.toc = "";
+                return;
+            }
+
+            var _generateTable = function(items, pading) {
+                var result = pading + '<ol>';
+
+                items.forEach(function(item) {
+                    var title = item.title;
+
+                    title = title.replace(/&/g, "&amp;");
+                    title = title.replace(/</g, "&lt;");
+                    title = title.replace(/>/g, "&gt;");
+
+                    result += pading + '<li>';
+                    result += pading + '\t<a href="pages/' + item.pageNumber + '.xhtml">' + title + '</a>';
+                    if (item.items && item.items.length) {
+                        result += _generateTable(item.items, pading + "\t");
+                    }
+                    result += pading + '</li>';
+                });
+
+                result += pading + "</ol>";
+                return result;
+
+            }
+
+            console.log("*** TOC:", toc);
+            meta.toc = _generateTable(toc, "\n\t\t\t");
+            console.log("-->", meta.toc);
         }
     }
 

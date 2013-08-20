@@ -313,7 +313,9 @@ exports.updateContentInfo = function(rootDirectory, options) {
 
         return checkNextFile().then(function() {
             return exports.customizeFile(PATH.join(root, "content.opf"), options).then(function() {
-                return exports.customizeFile(PATH.join(root, "toc.ncx"), options)
+                return exports.customizeFile(PATH.join(root, "toc.ncx"), options).then(function() {
+                    return exports.customizeFile(PATH.join(root, "nav.xhtml"), options);
+                });
             });
         });
     });

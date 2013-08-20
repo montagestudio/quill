@@ -515,8 +515,7 @@ exports.PDF2HTML = Montage.create(Montage, {
             var deferred = Promise.defer();
 
             pdf.getOutline().then(function(outline) {
-                console.log("*** OUTLINE", outline);
-                if (outline.length > 0) {
+                if (outline && outline.length > 0) {
                     pdf.getDestinations().then(function(destinations) {
                         // Need to build the pagesRefMap
                         var pagesRefMap = {},
