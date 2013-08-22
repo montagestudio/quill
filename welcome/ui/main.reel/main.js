@@ -102,6 +102,7 @@ exports.Main = Montage.create(Component, {
             }).then(function() {
                 delete self._isImporting;
             }, function(error) {
+                console.warn("ERROR:", error.message, error.stack)
                 delete self._isImporting;
             }).done()
         }
