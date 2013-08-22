@@ -273,7 +273,7 @@ exports.Main = Montage.create(Component, {
                     }));
                 });
 
-                Promise.allSettled(promises).then(function() {
+                Promise.allResolved(promises).then(function() {
                     console.log("URLS:", self.importItems);
                     var windowParams = {
                         url:"http://client/import-activity/index.html",
@@ -374,14 +374,14 @@ exports.Main = Montage.create(Component, {
                     }
                 });
 
-                return Promise.allSettled(promises).then(function() {
+                return Promise.allResolved(promises).then(function() {
                     return application.invoke("openWindow", windowParams).then(function() {
                         console.log("PDF Converter for", windowParams.url, "launched");
                     });
                 });
             }, function(e) {
                 console.log("ERROR:", e.message, e.stack);
-            });
+            }).done();
         }
     },
 
@@ -397,13 +397,18 @@ exports.Main = Montage.create(Component, {
                     item.meta = meta;
                     statusChanged = true;
 
+                    // JFD TODO: continue to update the status for TOC, image optimization and epub3 generation
                     this._buildTableOfContent(meta);
 
-                    // Update the content.opf - this is optional at this stage
-                    this.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, meta).then(function() {
-                        return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination).then(function(stdout) {
-                            console.log("EPUB3 generated:", stdout);
+                    this._optimizeImages(item.destination).then(function() {
+                        // Update the content.opf - this is optional at this stage
+                        self.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, meta).then(function() {
+                            return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination).then(function(stdout) {
+                                console.log("EPUB3 generated:", stdout);
+                            });
                         });
+                    }, function(e) {
+                        console.log("ERROR:", e.message, e.stack);
                     }).done();
 
                 } else if (typeof status === "number") {
@@ -442,7 +447,6 @@ exports.Main = Montage.create(Component, {
         value: function() {
             var self = this;
 
-//            console.log("TIME TO CHECK FOR ANY STALL IMPORT");
             var now = new Date().getTime() / 1000;
             this.importItems.map(function(item) {
                 if (item.status === STATUS_IMPORTING && item.lastContact) {
@@ -453,7 +457,6 @@ exports.Main = Montage.create(Component, {
                 } else if (item.status === STATUS_STALLED) {
                     if (Math.round(now - item.lastContact) >= RESTART_TIMEOUT && item.processID) {
                         // jumpstart the import...
-                        console.log("**************** jump start");
                         self.environmentBridge.backend.get("ipc").invoke("send", self.processID, item.processID, ["close"]).then(function() {
                             item.retries = (item.retries || 0) + 1;
                             item.lastContact = now;
@@ -462,7 +465,6 @@ exports.Main = Montage.create(Component, {
                                 self.updateItemState(item, STATUS_WAITING, item.currentPage, item.nbrPages, item.destination, item.meta);
                             }, 500);    // We need to give some time for the window to go away
                         }, function(e){
-//                            console.log("JUMPSTART ERROR:", e.message, e.stack);
                             // JFD TODO: Kill the old process
                             item.retries = (item.retries || 0) + 1;
                             item.lastContact = now;
@@ -480,7 +482,7 @@ exports.Main = Montage.create(Component, {
             var toc = meta.toc;
 
             if (!toc) {
-                meta.toc = "";
+                meta.toc = "<ol></ol>";
                 return;
             }
 
@@ -504,12 +506,45 @@ exports.Main = Montage.create(Component, {
 
                 result += pading + "</ol>";
                 return result;
-
             }
 
-            console.log("*** TOC:", toc);
             meta.toc = _generateTable(toc, "\n\t\t\t");
-            console.log("-->", meta.toc);
+        }
+    },
+
+    _optimizeImages: {
+        value: function(folderURL) {
+            var self = this;
+
+            return this.environmentBridge.backend.get("plume-backend").invoke("getImagesInfo", folderURL).then(function(infos) {
+                var urls = Object.keys(infos),
+                    promises = [];
+
+                urls.forEach(function(url) {
+                    var info = infos[url],
+                        maxWidth = 0,
+                        maxHeight = 0;
+
+                    info.usage.forEach(function(usage) {
+                        maxWidth = Math.max(maxWidth, usage.width);
+                        maxHeight = Math.max(maxHeight, usage.height);
+                    });
+
+                    if (maxWidth < info.width && maxHeight < info.height) {
+                        var ratio = Math.min(maxWidth / info.width, maxHeight / info.height);
+
+                        promises.push(self.environmentBridge.backend.get("plume-backend").invoke("resizeImage",
+                            url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}));
+                    }
+                });
+
+                if (promises.length) {
+                    return Promise.allResolved(promises);
+                } else {
+                    return;
+                }
+            });
+
         }
     }
 

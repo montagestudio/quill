@@ -279,6 +279,7 @@ exports.PDF2HTML = Montage.create(Montage, {
             PDFJS.getDocument(path).then(
                 function(pdf) {
                     self._pdf = pdf;
+                    pdf.imagesInfo = {};
                     pdf.cssFonts = {};  // Setup a cache for the fonts
                     deferred.resolve(pdf);
                 },
@@ -331,6 +332,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                 canvasContext: ctx,
                 viewport: page.getViewport(scale)
             };
+
 
             this._rootNodeStack = [rootNode];
             if (rootNode) {
@@ -1368,6 +1370,20 @@ exports.PDF2HTML = Montage.create(Montage, {
                     imageElem.setAttribute("width", roundValue(width * geometry.scaleX, 5));
                     imageElem.setAttribute("height", roundValue(height * geometry.scaleY, 5));
                 }
+
+                if (!this.owner._pdf.imagesInfo[url]) {
+                    this.owner._pdf.imagesInfo[url] = {
+                        width: width,
+                        height: height,
+                        usage: []
+                    }
+                }
+
+                this.owner._pdf.imagesInfo[url].usage.push({
+                    page: this.page.pageNumber,
+                    width: roundValue(Math.abs(width * geometry.scaleX * this.scale), 0),
+                    height: roundValue(Math.abs(height * geometry.scaleY * this.scale), 0)
+                })
 
                 this.owner._rootNodeStack[0].appendChild(imageElem);
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));

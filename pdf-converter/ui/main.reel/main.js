@@ -300,41 +300,46 @@ self.params.p = 2;
 
                 document.body.appendChild(output);
 
+                // Calculate the optimum scale
+                var viewPort = page.getViewport(1);
+                self.scale = 1024 / Math.min(viewPort.width, viewPort.height);       // 1024 if the output device longer side in pixel (normal resolution, image's resolution will be automatically double to fit a retina display)
+
+
                 return PDF2HTML.renderPage(page, canvas, output, self.scale, true).then(function(output) {
-                    // JFD TODO: write the output to disk
                     var viewport = page.getViewport(self.scale),
-                        folderPath = decodeURIComponent((self.outputURL + "/OEBPS/pages/").substring("fs://localhost".length));
+                        folderPath = decodeURIComponent((self.outputURL).substring("fs://localhost".length));
 
-                    console.log(output, folderPath);
-                    return self.environmentBridge.backend.get("plume-backend").invoke("createFromTemplate",
-                        "/pdf-converter/templates/page.xhtml",
-                        folderPath + (page.pageInfo.pageIndex + 1) + ".xhtml",
-                        {
-                            "page-width": Math.round(viewport.width),
-                            "page-height": Math.round(viewport.height),
-                            "page-title": "page " + (page.pageInfo.pageIndex + 1),
-                            "page-headers": "",
-                            "page-style": output.style,
-                            "page-content": output.data
-                        },
-                        true
-                    ).then(function() {
-                        if (self._pageNumber < self.numberOfPages) {
-                            self._pageNumber ++;
-                            self.params.p = self._pageNumber;
-                            self.params.dest = self.outputURL;
+                    return self.environmentBridge.backend.get("plume-backend").invoke("appendImagesInfo", folderPath, self._document.imagesInfo).then(function() {
+                        return self.environmentBridge.backend.get("plume-backend").invoke("createFromTemplate",
+                            "/pdf-converter/templates/page.xhtml",
+                            folderPath + "/OEBPS/pages/" + (page.pageInfo.pageIndex + 1) + ".xhtml",
+                            {
+                                "page-width": Math.round(viewport.width),
+                                "page-height": Math.round(viewport.height),
+                                "page-title": "page " + (page.pageInfo.pageIndex + 1),
+                                "page-headers": "",
+                                "page-style": output.style,
+                                "page-content": output.data
+                            },
+                            true
+                        ).then(function() {
+                            if (self._pageNumber < self.numberOfPages) {
+                                self._pageNumber ++;
+                                self.params.p = self._pageNumber;
+                                self.params.dest = self.outputURL;
 
-                            var newLoc = window.location.origin + window.location.pathname,
-                                sep = "?";
+                                var newLoc = window.location.origin + window.location.pathname,
+                                    sep = "?";
 
-                            for (param in self.params) {
-                                newLoc += sep + param + "=" + encodeURIComponent(self.params[param]);
-                                sep = "&";
+                                for (param in self.params) {
+                                    newLoc += sep + param + "=" + encodeURIComponent(self.params[param]);
+                                    sep = "&";
+                                }
+                                window.location.href = newLoc;
                             }
-                            window.location.href = newLoc;
-                        }
 
-                        return true;
+                            return true;
+                        });
                     });
                 });
             });

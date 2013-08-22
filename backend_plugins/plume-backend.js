@@ -237,7 +237,7 @@ exports.updateContentInfo = function(rootDirectory, options) {
                             }
                             break;
                         case ".png":
-                            type = "image/jpeg";
+                            type = "image/png";
                             if (firstChar <= "A") {
                                 name = "image" + name;
                             }
@@ -344,4 +344,73 @@ exports.generateEPUB3 = function(rootDirectory, options) {
             });
         });
     });
-}
+};
+
+exports.appendImagesInfo = function(rootDirectory, info) {
+    var root = pathFromURL(rootDirectory);
+
+    QFS.append(PATH.join(root, "image-index.txt"), JSON.stringify(info) + "\n");
+    return true;
+};
+
+exports.getImagesInfo = function(rootDirectory) {
+    var root = pathFromURL(rootDirectory);
+
+    return QFS.read(PATH.join(root, "image-index.txt")).then(function(data) {
+        var imagesInfo = {};
+
+        data.split("\n").forEach(function(line) {
+            try {
+                var info = JSON.parse(line),
+                    key;
+
+                for (key in info) {
+                    if (info.hasOwnProperty(key)) {
+                        if (imagesInfo[key]) {
+                            // merge usages
+                            imagesInfo[key].usage.push.apply(imagesInfo[key].usage, info[key].usage);
+                        } else {
+                            imagesInfo[key] = info[key];
+                        }
+                    }
+                }
+            } catch(ex) {}
+        });
+
+        return imagesInfo;
+    });
+};
+
+exports.resizeImage = function(fileURL, imageSize) {
+    var imageMagickRoot = PATH.resolve(__dirname, 'ImageMagick'),
+        filePath = pathFromURL(fileURL).replace(/ /g, "\\ "),
+        options = {
+            cwd: PATH.join(imageMagickRoot, "bin"),
+            env: {
+                MAGICK_HOME: imageMagickRoot,
+                DYLD_LIBRARY_PATH: PATH.join(imageMagickRoot, "lib/")
+            }
+        };
+
+    return exec('./identify -format \'{"width":%w, "height":%h, "size":"%b"}\' ' + filePath, options).then(function(result) {
+        var info = JSON.parse(result);
+        info.size = parseInt(info.size, 10);
+
+        if (info.width !== imageSize.width || info.height !== imageSize.height) {
+//            var unsharp = "0x0.75+0.75+0.008";
+            var unsharp = "0x1.0+1.0+0.004";
+
+            return exec('./convert ' + filePath + ' -filter spline -resize ' + imageSize.width + 'x' + imageSize.height + ' -unsharp ' + unsharp + ' ' + filePath, options).then(function(){
+//            return exec('./convert ' + filePath + ' -adaptive-resize ' + imageSize.width + 'x' + imageSize.height + ' ' + filePath, options).then(function(){
+                return exec('./identify -format \'{"width":%w, "height":%h, "size":"%b"}\' ' + filePath, options).then(function(result) {
+                    var newInfo = JSON.parse(result);
+                    newInfo.size = parseInt(newInfo.size, 10);
+
+                    return newInfo;
+                });
+            });
+        } else {
+            return info;
+        }
+    });
+};
