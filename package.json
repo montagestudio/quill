@@ -1,43 +1,42 @@
 {
-    "name": "plume",
-    "version": "0.1.0",
-    "private": true,
-    "repository": {
-        "type": "git",
-        "url": "git@github.com:declarativ/plume.git"
-    },
-    "dependencies": {
-        "montage": "git://github.com/montagejs/montage.git#6096b96573e7f1ea35761d38cd9c5d8b8f6cf36f",
-        "matte": "0.1.1",
-        "native": "0.1.1",
-        "mousse": "0.1.2",
-        "q": "0.9.3",
-        "q-connection": "0.5.3",
-        "q-io": "1.7",
-        "qs": "0.5.2",
-        "mop": "git+ssh://git@github.com:montagejs/mop.git#edge",
-        "npm": "1.1.70",
-        "minit": "0.3.1",
-        "minimatch": "0.2.9",
-        "pdf.js": "git+ssh://git@github.com:ducarroz/pdf.js.git#master"
-
-    },
-    "devDependencies": {
-        "jasmine-node": "1.2.2",
-        "sandboxed-module": "0.1.4",
-        "montage-testing": "git+ssh://git@github.com:montagejs/montage-testing.git#edge",
-        "shelljs": "0.1.2",
-        "jshint": "1.1.0"
-    },
-    "mappings": {
-        "filament-extension": {
-            "name": "filament-extension",
-            "location": "filament-extension"
-        }
-    },
-    "scripts": {
-        "test": "node test/run.js",
-        "lint": "node test/lint.js"
-    },
-    "manifest": true
+  "name": "plume",
+  "version": "0.1.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:declarativ/plume.git"
+  },
+  "dependencies": {
+    "montage": "git://github.com/montagejs/montage.git#6096b96573e7f1ea35761d38cd9c5d8b8f6cf36f",
+    "matte": "0.1.1",
+    "native": "0.1.1",
+    "mousse": "0.1.2",
+    "q": "0.9.5",
+    "q-connection": "0.5.3",
+    "q-io": "~1.9.3",
+    "qs": "0.5.2",
+    "mop": "git+ssh://git@github.com:montagejs/mop.git#edge",
+    "npm": "1.1.70",
+    "minit": "0.3.1",
+    "minimatch": "0.2.9",
+    "pdf.js": "git+ssh://git@github.com:ducarroz/pdf.js.git#master"
+  },
+  "devDependencies": {
+    "jasmine-node": "1.2.2",
+    "sandboxed-module": "0.1.4",
+    "montage-testing": "git+ssh://git@github.com:montagejs/montage-testing.git#edge",
+    "shelljs": "0.1.2",
+    "jshint": "1.1.0"
+  },
+  "mappings": {
+    "filament-extension": {
+      "name": "filament-extension",
+      "location": "filament-extension"
+    }
+  },
+  "scripts": {
+    "test": "node test/run.js",
+    "lint": "node test/lint.js"
+  },
+  "manifest": true
 }
