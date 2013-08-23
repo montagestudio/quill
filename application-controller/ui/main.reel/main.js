@@ -9,11 +9,14 @@ var Montage = require("montage/core/core").Montage,
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 // Constants
-// Constants (must match STATUS in import-activity/ui/main.reel/main.js)
+// Constants (must match STATUS in import-activity/ui/activity-list-item.reel/activity-list-item.js)
 
 var STATUS_WAITING = 0,
     STATUS_IMPORTING = 1,
     STATUS_STALLED = 2,
+    STATUS_IMPORT_COMPLETED = 3,
+    STATUS_OPTIMIZING = 4,
+    STATUS_GENERATING_EPUB = 5,
     STATUS_READY = 10,
 
     MAX_CHILDPROCESS = 2;
@@ -126,7 +129,6 @@ exports.Main = Montage.create(Component, {
             var self = this;
 
             to = parseInt(to, 10);
-//            console.log("---onIPCMessage", from, to, data)
 
             if (to === this.processID) {
                 if (data && data.length) {
@@ -143,9 +145,7 @@ exports.Main = Montage.create(Component, {
 
                         for (i = 0; i < length; i ++) {
                             if (items[i].id === parseInt(data[1].id, 10)) {
-                                console.log("--- removeItem", items[i]);
                                 if (items[i].processID) {
-                                    console.log("--- removeItem", items[i].processID);
                                    // Stop the import before removing the item from the list...
                                     this.environmentBridge.backend.get("ipc").invoke("send", self.processID, items[i].processID, ["close"]).fail(function(e){
                                         console.log("ERROR:", e.message, e.stack)
@@ -161,7 +161,6 @@ exports.Main = Montage.create(Component, {
                     }
 
                     else if (command === "converterInfo") {
-                        console.log("*** converterInfo:", data[1].url, data[1].id, data[1])
                         return this.importItems.some(function(object) {
                             if (parseInt(data[1].id, 10) === object.id) {
                                 object.processID = data[1].processID;
@@ -176,6 +175,28 @@ exports.Main = Montage.create(Component, {
                         return this.importItems.some(function(object) {
                             if (parseInt(data[1].id, 10) === object.id) {
                                 self.updateItemState(object, data[1].status, data[1].currentPage, data[1].nbrPages, data[1].destination, data[1].meta)
+                                object.lastContact = new Date().getTime() / 1000;
+                                return true;
+                            }
+                            return false;
+                        });
+                    }
+
+                    else if (command === "importDone") {
+                        return this.importItems.some(function(object) {
+                            if (parseInt(data[1].id, 10) === object.id) {
+                                object.meta = data[1].meta;
+
+                                self.optimize(object).then(function() {
+                                    object.lastContact = new Date().getTime() / 1000;
+                                    self.generateEpub(object).then(function() {
+                                        object.lastContact = new Date().getTime() / 1000;
+                                        return true;
+                                    }, function(e) {
+                                        console.log("ERROR:", e.message, e.stack);
+                                    }).done();
+                                });
+
                                 object.lastContact = new Date().getTime() / 1000;
                                 return true;
                             }
@@ -296,7 +317,7 @@ exports.Main = Montage.create(Component, {
     launchProcess: {
         value: function(forceRelaunch) {
             var self = this;
-            console.log("-- launchProcess", this.importItems)
+
             // Check if we have a process to launch
             var nbrProcess = 0,
                 waitings = [];
@@ -385,36 +406,37 @@ exports.Main = Montage.create(Component, {
         }
     },
 
+    optimize: {
+        value: function(item) {
+            return this._optimizeImages(item);
+        }
+    },
+
+    generateEpub: {
+        value: function(item) {
+            var self = this;
+            self.updateItemState(item, STATUS_GENERATING_EPUB);
+
+            this._buildTableOfContent(item.meta);
+
+            // Update the content.opf - this is optional at this stage
+            return self.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, item.meta).then(function() {
+                return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination).then(function(stdout) {
+                    self.updateItemState(item, STATUS_READY);
+                });
+            });
+        }
+    },
+
     updateItemState: {
         value: function(item, status, currentPage, nbrPages, destination, meta) {
             var self = this,
                 ipc = this.environmentBridge.backend.get("ipc"),
                 statusChanged = false;
 
-            if (status !== null && status !== undefined) {
-                if (status == "success") {
-                    item.status = STATUS_READY;
-                    item.meta = meta;
-                    statusChanged = true;
-
-                    // JFD TODO: continue to update the status for TOC, image optimization and epub3 generation
-                    this._buildTableOfContent(meta);
-
-                    this._optimizeImages(item.destination).then(function() {
-                        // Update the content.opf - this is optional at this stage
-                        self.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, meta).then(function() {
-                            return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination).then(function(stdout) {
-                                console.log("EPUB3 generated:", stdout);
-                            });
-                        });
-                    }, function(e) {
-                        console.log("ERROR:", e.message, e.stack);
-                    }).done();
-
-                } else if (typeof status === "number") {
+            if (typeof status === "number") {
                     item.status = status;
                     statusChanged = true;
-                }
             }
 
             if (currentPage !== null && currentPage !== undefined) {
@@ -513,12 +535,16 @@ exports.Main = Montage.create(Component, {
     },
 
     _optimizeImages: {
-        value: function(folderURL) {
-            var self = this;
+        value: function(item) {
+            var self = this,
+                folderURL = item.destination;
 
             return this.environmentBridge.backend.get("plume-backend").invoke("getImagesInfo", folderURL).then(function(infos) {
                 var urls = Object.keys(infos),
                     promises = [];
+
+                item.currentPage = 0;
+                item.nbrPages = urls.length;
 
                 urls.forEach(function(url) {
                     var info = infos[url],
@@ -534,14 +560,18 @@ exports.Main = Montage.create(Component, {
                         var ratio = Math.min(maxWidth / info.width, maxHeight / info.height);
 
                         promises.push(self.environmentBridge.backend.get("plume-backend").invoke("resizeImage",
-                            url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}));
+                            url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}).then(function() {
+                                self.updateItemState(item, STATUS_OPTIMIZING, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
+                            }));
+                    } else {
+                        item.currentPage ++;
                     }
                 });
 
+                self.updateItemState(item, STATUS_OPTIMIZING, item.currentPage, item.nbrPages, item.destination, item.meta);
+
                 if (promises.length) {
                     return Promise.allResolved(promises);
-                } else {
-                    return;
                 }
             });
 

@@ -133,9 +133,13 @@ self.params.p = 2;
                                         // Time to get the table of content
                                         return PDF2HTML.getOutline(self._document).then(function(toc) {
                                             options["toc"] = toc;
-                                            return self.updateState("success", options).then(function() {
-                                                console.log("DONE!!!", success);
-//                                                lumieres.document.close(true);
+//                                            return self.updateState("imported", options).then(function() {
+                                            return self.sendMessage("importDone", {
+                                                            id: self.id,
+                                                            destination: self.outputURL,
+                                                            meta: options
+                                            }).then(function() {
+                                                lumieres.document.close(true);
                                             });
                                         });
                                     });
@@ -216,6 +220,19 @@ self.params.p = 2;
         }
     },
 
+    sendMessage: {
+        value: function(message, data) {
+            var self = this,
+                ipc = this.environmentBridge.backend.get("ipc");
+
+            return ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
+                if (processID) {
+                    return ipc.invoke("send", self.processID, processID[0], [message, data]);
+                }
+            });
+        }
+    },
+
     updateState: {
         value: function(status, meta) {
             var self = this,
@@ -229,17 +246,13 @@ self.params.p = 2;
 
             this._pendingStatus = status;
 
-            ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
-                if (processID) {
-                    return ipc.invoke("send", self.processID, processID[0], ["itemUpdate", {
-                        id: self.id,
-                        status: status,
-                        currentPage: self._pageNumber,
-                        nbrPages: self.numberOfPages,
-                        destination: self.outputURL,
-                        meta: meta
-                    }]);
-                }
+            this.sendMessage("itemUpdate", {
+                id: self.id,
+                status: status,
+                currentPage: self._pageNumber,
+                nbrPages: self.numberOfPages,
+                destination: self.outputURL,
+                meta: meta
             }).then(function(result) {
                 self._pendingStatus = -1;
                 deferred.resolve(result);
