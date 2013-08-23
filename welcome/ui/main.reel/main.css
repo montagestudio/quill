@@ -150,22 +150,22 @@
 }
 
 
-/* New */ 
+/* Import */
 
-.Action-button--new {
+.Action-button--import {
     border-color: hsl(210,100%,56%);
     background-image: -webkit-linear-gradient(top, hsl(210,100%,72%), hsl(210,100%,62%) );
 }
 
-.Action-button--new:hover {
+.Action-button--import:hover {
     background-image: -webkit-linear-gradient(top, hsl(210,100%,76%), hsl(210,100%,64%) );
 }
 
-.Action-button--new.active {
+.Action-button--import.active {
     background-image: -webkit-linear-gradient(top, hsl(210,100%,66%), hsl(210,100%,56%) );
 }
 
-.Action-button--new:before {
+.Action-button--import:before {
     background-image: url(../../assets/images/plus.svg);
 }
 
