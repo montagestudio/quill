@@ -541,38 +541,58 @@ exports.Main = Montage.create(Component, {
 
             return this.environmentBridge.backend.get("plume-backend").invoke("getImagesInfo", folderURL).then(function(infos) {
                 var urls = Object.keys(infos),
-                    promises = [];
+                    currentImage = 0,
+                    nbrImages = urls.length;
 
                 item.currentPage = 0;
                 item.nbrPages = urls.length;
 
-                urls.forEach(function(url) {
-                    var info = infos[url],
-                        maxWidth = 0,
-                        maxHeight = 0;
+                var _optimizeNextBatch = function() {
+                    var promises = [],
+                        i = 0;
 
-                    info.usage.forEach(function(usage) {
-                        maxWidth = Math.max(maxWidth, usage.width);
-                        maxHeight = Math.max(maxHeight, usage.height);
-                    });
+                    while (currentImage < nbrImages) {
+                        var url = urls[currentImage ++],
+                            info = infos[url],
+                            maxWidth = 0,
+                            maxHeight = 0;
 
-                    if (maxWidth < info.width && maxHeight < info.height) {
-                        var ratio = Math.min(maxWidth / info.width, maxHeight / info.height);
+                        info.usage.forEach(function(usage) {
+                            maxWidth = Math.max(maxWidth, usage.width);
+                            maxHeight = Math.max(maxHeight, usage.height);
+                        });
 
-                        promises.push(self.environmentBridge.backend.get("plume-backend").invoke("resizeImage",
-                            url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}).then(function() {
-                                self.updateItemState(item, STATUS_OPTIMIZING, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
-                            }));
-                    } else {
-                        item.currentPage ++;
+                        if (maxWidth < info.width && maxHeight < info.height) {
+                            var ratio = Math.min(maxWidth / info.width, maxHeight / info.height);
+
+                            promises.push(self.environmentBridge.backend.get("plume-backend").invoke("resizeImage",
+                                url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}).then(function() {
+                                    self.updateItemState(item, STATUS_OPTIMIZING, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
+                                }));
+                        } else {
+                            item.currentPage ++;
+                        }
+
+                        if (++ i > 4) {
+                            break;
+                        }
+                    }
+
+                    self.updateItemState(item, STATUS_OPTIMIZING, item.currentPage, item.nbrPages, item.destination, item.meta);
+
+                    if (promises.length) {
+                        return Promise.allResolved(promises);
+                    }
+
+                    return null;
+                }
+
+                return Promise.when(_optimizeNextBatch(), function() {
+                    if (currentImage < nbrImages) {
+                        return _optimizeNextBatch();
                     }
                 });
 
-                self.updateItemState(item, STATUS_OPTIMIZING, item.currentPage, item.nbrPages, item.destination, item.meta);
-
-                if (promises.length) {
-                    return Promise.allResolved(promises);
-                }
             });
 
         }
