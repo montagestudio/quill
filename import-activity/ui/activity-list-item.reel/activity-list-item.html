@@ -11,13 +11,35 @@
         "properties": {
             "element": {
                 "#": "activityListItem"
-            }
+            },
+            "progress": {"@": "progress"},
+            "openButton": {"@": "openButton"},
+            "closeButton": {"@": "closeButton"}
         },
         "bindings": {
             "status": {"<-": "@owner.item.status"},
             "currentPage": {"<-": "@owner.item.currentPage"},
             "nbrPages": {"<-": "@owner.item.nbrPages"}
         }
+    },
+    "openButton": {
+        "prototype": "matte/ui/button.reel",
+        "properties": {
+            "element": {
+                "#": "open-button"
+            },
+            "enabled": true
+        },
+        "listeners": [
+            {
+                "type": "action",
+                "listener": {"@": "owner"}
+            }
+        ],
+        "bindings": {
+            "detail.get('associatedObject')": {"<-": "@owner.item"}
+        }
+
     },
     "closeButton": {
         "prototype": "matte/ui/button.reel",
@@ -85,20 +107,20 @@
 }</script></head>
 <body>
 
-<div data-montage-id="activityListItem" class="Activity-box">
-    <section>
-        <span data-montage-id="name" class="Activity-name"></span>
-        <span>&nbsp;</span>
+<div data-montage-id="activityListItem" class="Activity-item">
+    <section class="Activity-item--left">
+        <div class="Activity-item--icon"></div>
     </section>
-    <section>
+    <section class="Activity-item--center">
+        <div><span data-montage-id="name" class="Activity-name"></span><span>&nbsp;</span></div>
         <progress data-montage-id="progress" class="Activity-progress"></progress>
-        <button data-montage-id="close-button" class="Activity-close-button">x</button>
+        <div><span data-montage-id="status" class="Activity-status">Waiting...</span><span>&nbsp;</span></div>
     </section>
-    <section>
-        <span data-montage-id="status" class="Activity-status">Waiting...</span>
-        <span>&nbsp;</span>
-        <!--input type="button" data-montage-id="action-button"-->
+    <section class="Activity-item--right">
+        <button data-montage-id="open-button" class="Action-button Activity-item--open Activity-hide">Open</button>
+        <button data-montage-id="close-button" class="Activity-item--close">x</button>
     </section>
+
 </div>
 
 

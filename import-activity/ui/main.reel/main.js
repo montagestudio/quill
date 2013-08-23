@@ -47,8 +47,6 @@ exports.Main = Montage.create(Component, {
 
     constructor: {
         value: function Main() {
-console.log("ACTIVITY MONITOR CREATED");
-foo = this;
             var self = this;
             if (IS_IN_LUMIERES) {
 
@@ -159,6 +157,29 @@ console.log("--restoreContent")
                 var self = this,
                     ipc = this.environmentBridge.backend.get("ipc");
 
+                ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
+                    return ipc.invoke("send", self.processID, processID, ["removeItem", item]);
+                }).then(function(removed) {
+                    if (removed) {
+                        self.contentController.delete(item);
+                    }
+                }).done();
+            }
+        }
+    },
+
+    handleOpenButtonAction: {
+        value: function (event) {
+            var item = event.detail.get("associatedObject");
+            console.log("OPEN BUTTON", item)
+
+            if (item) {
+                var self = this,
+                    ipc = this.environmentBridge.backend.get("ipc"),
+                    pos = item.destination.lastIndexOf("/"),
+                    fileName = item.destination.substr(pos + 1);
+
+                alert("NYI: Open book " + fileName);
                 ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
                     return ipc.invoke("send", self.processID, processID, ["removeItem", item]);
                 }).then(function(removed) {

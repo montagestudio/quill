@@ -1,11 +1,40 @@
+.Activity-item {
+    display: -webkit-box;
+    -webkit-box-orient: horizontal;
+    width: 100%;
+}
+.Activity-item--left {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-box-pack: center;
+    -webkit-box-align: left;
+    padding: 4px 8px;
+}
+.Activity-item--center {
+    display: -webkit-box;
+    -webkit-box-flex: 1;
+    -webkit-box-orient: vertical;
+    -webkit-box-pack: center;
+    -webkit-box-align: left;
+    padding: 4px;
+    min-width: 200px;
+    overflow: hidden;
+}
+.Activity-item--right {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-box-pack: center;
+    -webkit-box-align: left;
+    padding: 4px 8px;
+}
+.Activity-item--icon {
+    width: 36px;
+    height: 36px;
 
-.Activity-box {
     background: url('../../assets/images/pdf-icon.png') no-repeat;
-    background-size:32px 32px;
+    background-size:36px 36px;
     background-repeat:no-repeat;
     background-position:left center;
-
-    padding: 0 48px;
 }
 
 .Activity-progress {
@@ -19,17 +48,50 @@
     font-size: 12px;
 }
 
-/* Add Button ---------------------------- */
+/* Action button ---------------------------- */
 
-.Activity-close-button {
+.Action-button {
+    -webkit-flex: 1;
     position: relative;
-    right: -13px;
-    top: -1px;
+    margin: 2px 0;
+    padding-left: 3.2em;
+    font-size: 13px;
+    color: hsla(0,0%,100%,1);
+    text-shadow: 0 1px 0 hsla(0,0%,0%,.1);
+    border-radius: 4px;
+    background-color: hsl(210,100%,56%);
+    box-shadow: inset 0 1px 0 hsla(0,0%,100%,.15), 0 1px 0 hsla(0,0%,100%,.6);
+}
 
+.Action-button:hover {
+    color: hsla(0,0%,100%,1);
+}
+
+.Action-button.active {
+    box-shadow: 0 1px 0 hsla(0,0%,100%,.6);
+}
+
+.Action-button:before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 2.5em;
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+    border-right: 1px solid hsla(0,0%,0%,.06);
+    background: hsla(0,0%,0%,.06) no-repeat center;
+}
+
+
+/* Close Button ---------------------------- */
+
+.Activity-item--close {
     width: 22px;
     height: 22px;
     min-width: 22px;
-    margin: 0 6px 0 0;
+    margin-top: -5px;
     padding: 0;
     line-height: 0;
     font-size: 12px;
@@ -41,12 +103,61 @@
     box-shadow: inset 0 1px 0 hsla(0,0%,100%,.6), 0 1px 2px hsla(0,0%,0%,.06);
 }
 
-.Activity-close-button:hover {
+.Activity-item--close:hover {
     border-color: hsl(0,0%,76%);
     background: -webkit-linear-gradient( hsl(120,0%,97%), hsl(120,0%,88%) );
 }
 
-.Activity-close-button.active {
+.Activity-item--close.active {
     background: hsl(0,0%,84%);
     box-shadow: 0 1px 2px hsla(0,0%,0%,.06);
 }
+
+.Activity-ready .Activity-item--close {
+    display: none;
+}
+
+
+/* Open Button ---------------------------- */
+
+.Activity-item--open {
+    display: none;
+    width: 160px;
+
+    border-color: hsl(170,80%,40%);
+    background-image: -webkit-linear-gradient(top, hsl(170,80%,48%), hsl(170,80%,42%) );
+}
+
+.Activity-item--open:hover {
+    background-image: -webkit-linear-gradient(top, hsl(170,80%,50%), hsl(170,80%,44%) );
+}
+
+.Activity-item--open.active {
+    background-image: -webkit-linear-gradient(top, hsl(170,80%,44%), hsl(170,80%,38%) );
+}
+
+.Activity-item--open:before {
+    background-image: url(../../assets/images/open.svg);
+}
+
+
+/* Activity Ready overwrites  ---------------------------- */
+
+.Activity-ready .Activity-progress {
+    display: none;
+}
+
+
+.Activity-ready .Activity-item--close {
+    display: none;
+}
+
+.Activity-ready .Activity-item--open {
+    display: block;
+}
+
+.Activity-ready .Activity-item--icon {
+    background: url('../../assets/images/epub-icon.png') no-repeat;
+    background-size:36px 36px;
+}
+

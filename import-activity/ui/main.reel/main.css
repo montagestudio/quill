@@ -54,10 +54,6 @@ body {
     background: hsl(0, 0%, 97%);
 }
 
-.Activity-list-item:active {
-    background: hsl(0, 0%, 90%);
-}
-
 .footer {
     position: absolute;
     left: 0;

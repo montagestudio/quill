@@ -5,6 +5,9 @@ var Montage = require("montage/core/core").Montage,
 var STATUS_WAITING = 0,
     STATUS_IMPORTING = 1,
     STATUS_STALLED = 2,
+    STATUS_IMPORT_COMPLETED = 3,
+    STATUS_OPTIMIZING = 4,
+    STATUS_GENERATING_EPUB = 5,
     STATUS_READY = 10;
 
 exports.ActivityListItem = Montage.create(Component, {
@@ -69,11 +72,17 @@ exports.ActivityListItem = Montage.create(Component, {
                 }
             }
 
+            else if (item.status === STATUS_OPTIMIZING) {
+                this.statusLabel = "Optimizing images";
+            }
+
             else if (item.status === STATUS_READY) {
                 var folderName =  item.destination.substring("fs://localhost".length);
                 folderName = folderName.substring(folderName.lastIndexOf("/") + 1);
                 this.statusLabel = "Your book \"" + folderName + "\" is ready!";
             }
+
+            this.needsDraw = true;
         }
     },
 
@@ -82,6 +91,26 @@ exports.ActivityListItem = Montage.create(Component, {
 //            this.dispatchEventNamed("openDocument", true, true, {
 //                url: this.historyItem.url
 //            });
+        }
+    },
+
+    draw: {
+        value: function() {
+            var item = this.item,
+                className = "Activity-hide";
+
+            if (item.status === STATUS_READY) {
+                this.element.classList.add("Activity-ready");
+                console.log("READY STATE:", this.openButton.element.classList)
+//                this.progress.element.classList.add(className);
+//                this.openButton.element.classList.remove(className);
+//                this.closeButton.element.classList.add(className);
+            } else {
+                this.element.classList.remove("Activity-ready");
+//                this.progress.element.classList.remove(className);
+//                this.openButton.element.classList.add(className);
+//                this.closeButton.element.classList.remove(className);
+            }
         }
     }
 
