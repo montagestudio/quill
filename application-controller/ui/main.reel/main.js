@@ -564,7 +564,6 @@ exports.Main = Montage.create(Component, {
 
                         if (maxWidth < info.width && maxHeight < info.height) {
                             var ratio = Math.min(maxWidth / info.width, maxHeight / info.height);
-
                             promises.push(self.environmentBridge.backend.get("plume-backend").invoke("resizeImage",
                                 url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}).then(function() {
                                     self.updateItemState(item, STATUS_OPTIMIZING, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
@@ -581,20 +580,19 @@ exports.Main = Montage.create(Component, {
                     self.updateItemState(item, STATUS_OPTIMIZING, item.currentPage, item.nbrPages, item.destination, item.meta);
 
                     if (promises.length) {
-                        return Promise.allResolved(promises);
+                        return Promise.allResolved(promises).then(function() {
+                            if (currentImage < nbrImages) {
+                                return _optimizeNextBatch();
+                            }
+                        });
                     }
 
                     return null;
                 }
 
-                return Promise.when(_optimizeNextBatch(), function() {
-                    if (currentImage < nbrImages) {
-                        return _optimizeNextBatch();
-                    }
-                });
+                return Promise.when(_optimizeNextBatch());
 
             });
-
         }
     }
 
