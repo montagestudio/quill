@@ -4,6 +4,7 @@ var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
     RangeController = require("montage/core/range-controller").RangeController;
 
+var STATUS_READY = 10;
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
@@ -188,6 +189,31 @@ console.log("--restoreContent")
                     }
                 }).done();
             }
+        }
+    },
+
+    handleClearButtonAction: {
+        value: function (event) {
+            var self = this,
+                ipc = this.environmentBridge.backend.get("ipc"),
+                itemsToDelete = [];
+
+            this.contentController.content.forEach(function(item) {
+                if (item.status === STATUS_READY) {
+                    itemsToDelete.push(item);
+                }
+            });
+
+            ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
+                itemsToDelete.forEach(function(item) {
+                    ipc.invoke("send", self.processID, processID, ["removeItem", item]).then(function(removed) {
+                        if (removed) {
+                            self.contentController.delete(item);
+                        }
+                    }).done();
+                });
+            }).done();
+
         }
     },
 

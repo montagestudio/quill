@@ -53,22 +53,22 @@
 .Action-button {
     -webkit-flex: 1;
     position: relative;
-    margin: 2px 0;
-    padding-left: 3.2em;
-    font-size: 13px;
+    margin: 2px 0 !important;
+    padding-left: 3.2em !important;
+    font-size: 13px !important;
     color: hsla(0,0%,100%,1);
     text-shadow: 0 1px 0 hsla(0,0%,0%,.1);
-    border-radius: 4px;
-    background-color: hsl(210,100%,56%);
+    border-radius: 4px !important;
+    background-color: hsl(210,100%,56%) !important;
     box-shadow: inset 0 1px 0 hsla(0,0%,100%,.15), 0 1px 0 hsla(0,0%,100%,.6);
 }
 
 .Action-button:hover {
-    color: hsla(0,0%,100%,1);
+    color: hsla(0,0%,100%,1) !important;
 }
 
 .Action-button.active {
-    box-shadow: 0 1px 0 hsla(0,0%,100%,.6);
+    box-shadow: 0 1px 0 hsla(0,0%,100%,.6) !important;
 }
 
 .Action-button:before {
@@ -89,28 +89,28 @@
 
 .Activity-item--close {
     width: 22px;
-    height: 22px;
-    min-width: 22px;
-    margin-top: -5px;
-    padding: 0;
+    height: 22px !important;
+    min-width: 22px !important;
+    margin-top: -5px !important;
+    padding: 0 !important;
     line-height: 0;
-    font-size: 12px;
-    color: hsl(0,0%,60%);
+    font-size: 12px !important;
+    color: hsl(0,0%,60%) !important;
     text-shadow: 0 1px hsla(0,0%,100%,0.4);
-    border-radius: 11px;
-    border-color: hsl(0,0%,80%);
-    background: -webkit-linear-gradient( hsl(120,0%,96%), hsl(120,0%,86%) );
+    border-radius: 11px !important;
+    border-color: hsl(0,0%,80%) !important;
+    background: -webkit-linear-gradient( hsl(120,0%,96%), hsl(120,0%,86%) ) !important;
     box-shadow: inset 0 1px 0 hsla(0,0%,100%,.6), 0 1px 2px hsla(0,0%,0%,.06);
 }
 
 .Activity-item--close:hover {
-    border-color: hsl(0,0%,76%);
-    background: -webkit-linear-gradient( hsl(120,0%,97%), hsl(120,0%,88%) );
+    border-color: hsl(0,0%,76%) !important;
+    background: -webkit-linear-gradient( hsl(120,0%,97%), hsl(120,0%,88%) ) !important;
 }
 
 .Activity-item--close.active {
-    background: hsl(0,0%,84%);
-    box-shadow: 0 1px 2px hsla(0,0%,0%,.06);
+    background: hsl(0,0%,84%) !important;
+    box-shadow: 0 1px 2px hsla(0,0%,0%,.06) !important;
 }
 
 .Activity-ready .Activity-item--close {
@@ -124,16 +124,16 @@
     display: none;
     width: 160px;
 
-    border-color: hsl(170,80%,40%);
-    background-image: -webkit-linear-gradient(top, hsl(170,80%,48%), hsl(170,80%,42%) );
+    border-color: hsl(170,80%,40%) !important;
+    background-image: -webkit-linear-gradient(top, hsl(170,80%,48%), hsl(170,80%,42%) ) !important;
 }
 
 .Activity-item--open:hover {
-    background-image: -webkit-linear-gradient(top, hsl(170,80%,50%), hsl(170,80%,44%) );
+    background-image: -webkit-linear-gradient(top, hsl(170,80%,50%), hsl(170,80%,44%) ) !important;
 }
 
 .Activity-item--open.active {
-    background-image: -webkit-linear-gradient(top, hsl(170,80%,44%), hsl(170,80%,38%) );
+    background-image: -webkit-linear-gradient(top, hsl(170,80%,44%), hsl(170,80%,38%) ) !important;
 }
 
 .Activity-item--open:before {

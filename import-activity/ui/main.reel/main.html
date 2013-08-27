@@ -10,7 +10,8 @@
             "properties": {
                 "element": {
                     "#": "main"
-                }
+                },
+                "clearButton": {"#": "clear-button"}
             },
             "listeners": [
                 {
@@ -59,6 +60,22 @@
            }
         },
 
+        "clearButton": {
+            "prototype": "matte/ui/button.reel",
+            "properties": {
+                "element": {
+                    "#": "clear-button"
+                },
+                "enabled": true
+            },
+            "listeners": [
+                {
+                    "type": "action",
+                    "listener": {"@": "owner"}
+                }
+            ]
+        },
+
         "activity": {
             "prototype": "import-activity/ui/activity-list-item.reel",
             "properties": {
@@ -81,9 +98,11 @@
                 </li>
             </ul>
         </section>
-        <section class="footer">Importing documents into <span data-montage-id="destination"></span></section>
+        <section class="footer">
+            <span>Importing documents into&nbsp;</span>
+            <span data-montage-id="destination"></span>
+            <button data-montage-id="clear-button" class="Activity-list--clear"></button>
+        </section>
     </div>
-
-
 
 </body></html>
