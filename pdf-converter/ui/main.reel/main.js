@@ -33,6 +33,10 @@ exports.Main = Montage.create(Component, {
         value: []
     },
 
+    maxResolution: {
+        value: 2048
+    },
+
     scale: {
         value: 1.0
     },
@@ -314,10 +318,9 @@ self.params.p = 2;
 
                 document.body.appendChild(output);
 
-                // Calculate the optimum scale
+                // Calculate the optimum scale to fit the maxResolution
                 var viewPort = page.getViewport(1);
-                self.scale = 1024 / Math.min(viewPort.width, viewPort.height);       // 1024 if the output device longer side in pixel (normal resolution, image's resolution will be automatically double to fit a retina display)
-
+                self.scale = self.maxResolution / Math.min(viewPort.width, viewPort.height);
 
                 return PDF2HTML.renderPage(page, canvas, output, self.scale, true).then(function(output) {
                     var viewport = page.getViewport(self.scale),
