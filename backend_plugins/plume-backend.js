@@ -133,11 +133,16 @@ exports.customizeFile = function(fileURL, options) {
 
 exports.createFromTemplate = function(template, destination, options, replaceExisting, _index) {
     var source = PATH.join(global.clientPath, template),
-        dest = pathFromURL(destination);
+        dest = pathFromURL(destination),
+        ext = PATH.extname(dest);
 
+    if (ext.length) {
+        dest = dest.substr(0, dest.length - ext.length);
+    }
     if (_index !== undefined) {
-        dest += " " + _index;
+        dest += " " + _index + ext;
     } else {
+        dest += ext;
         _index = 0;
     }
 
