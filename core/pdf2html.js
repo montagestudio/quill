@@ -1984,7 +1984,8 @@ exports.PDF2HTML = Montage.create(Montage, {
             },
 
             getGeometry: function(a, b, c, d, e, f) {
-                var geometry = {};
+                var geometry = {},
+                    pi = Math.PI;
 
                 geometry.translateX = e;
                 geometry.translateY = f;
@@ -1992,15 +1993,20 @@ exports.PDF2HTML = Montage.create(Montage, {
                 geometry.rotateY = Math.atan(-b / a);
                 // geometry.rotateXdeg = result.rotateX * 180 / Math.PI;
                 // geometry.rotateYdeg = result.rotateY * 180 / Math.PI;
-                geometry.scaleX = a >= 0 ? Math.sqrt(a * a + b * b) : -Math.sqrt(a * a + b * b);
-                geometry.scaleY = d >= 0 ? Math.sqrt(c * c + d * d) : -Math.sqrt(c * c + d * d);
+
+                if (Math.abs(geometry.rotateX) >=  pi / 2 && Math.abs(geometry.rotateX) < pi) {
+                    geometry.scaleY = a >= 0 ? Math.sqrt(a * a + b * b) : -Math.sqrt(a * a + b * b);
+                    geometry.scaleX = d >= 0 ? Math.sqrt(c * c + d * d) : -Math.sqrt(c * c + d * d);
+                } else {
+                    geometry.scaleX = a >= 0 ? Math.sqrt(a * a + b * b) : -Math.sqrt(a * a + b * b);
+                    geometry.scaleY = d >= 0 ? Math.sqrt(c * c + d * d) : -Math.sqrt(c * c + d * d);
+                }
 
                 return geometry;
             },
 
             getAdjustedTransform: function(transform) {
                 var geometry = this.getGeometry.apply(null, transform);
-
                 transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
                 this.rotateTransform(geometry.rotateX, geometry.rotateY, transform);
                 return transform;
