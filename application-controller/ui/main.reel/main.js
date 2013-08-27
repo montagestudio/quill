@@ -408,7 +408,15 @@ exports.Main = Montage.create(Component, {
 
     optimize: {
         value: function(item) {
-            return this._optimizeImages(item);
+            // JFD TODO: Add an option to bypass image optimization
+            if (0) {
+                return this._optimizeImages(item);
+            } else {
+                console.log("--- no image optimization!")
+                var deferred = Promise.defer();
+                deferred.resolve(0);
+                return deferred.promise;
+            }
         }
     },
 
@@ -562,15 +570,14 @@ exports.Main = Montage.create(Component, {
                             maxHeight = Math.max(maxHeight, usage.height);
                         });
 
+                        var ratio = 1;
                         if (maxWidth < info.width && maxHeight < info.height) {
-                            var ratio = Math.min(maxWidth / info.width, maxHeight / info.height);
-                            promises.push(self.environmentBridge.backend.get("plume-backend").invoke("resizeImage",
-                                url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}).then(function() {
-                                    self.updateItemState(item, STATUS_OPTIMIZING, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
-                                }));
-                        } else {
-                            item.currentPage ++;
+                            ratio = Math.min(maxWidth / info.width, maxHeight / info.height);
                         }
+                        promises.push(self.environmentBridge.backend.get("plume-backend").invoke("optimizeImage",
+                            url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}, 0.6).then(function() {
+                                self.updateItemState(item, STATUS_OPTIMIZING, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
+                        }));
 
                         if (++ i > 4) {
                             break;

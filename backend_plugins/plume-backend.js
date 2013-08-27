@@ -386,36 +386,46 @@ exports.getImagesInfo = function(rootDirectory) {
     });
 };
 
-exports.resizeImage = function(fileURL, imageSize) {
-    var imageMagickRoot = PATH.resolve(__dirname, 'ImageMagick'),
-        filePath = pathFromURL(fileURL).replace(/ /g, "\\ "),
-        options = {
-            cwd: PATH.join(imageMagickRoot, "bin"),
-            env: {
-                MAGICK_HOME: imageMagickRoot,
-                DYLD_LIBRARY_PATH: PATH.join(imageMagickRoot, "lib/")
-            }
-        };
+exports.optimizeImage = function(fileURL, imageSize, quality) {
+    var _USE_IMAGEMAGIK = false;
 
-    return exec('./identify -format \'{"width":%w, "height":%h, "size":"%b"}\' ' + filePath, options).then(function(result) {
-        var info = JSON.parse(result);
-        info.size = parseInt(info.size, 10);
+    if (_USE_IMAGEMAGIK) {
+        var imageMagickRoot = PATH.resolve(__dirname, 'ImageMagick'),
+            filePath = pathFromURL(fileURL).replace(/ /g, "\\ "),
+            options = {
+                cwd: PATH.join(imageMagickRoot, "bin"),
+                env: {
+                    MAGICK_HOME: imageMagickRoot,
+                    DYLD_LIBRARY_PATH: PATH.join(imageMagickRoot, "lib/")
+                }
+            };
 
-        if (info.width !== imageSize.width || info.height !== imageSize.height) {
-//            var unsharp = "0x0.75+0.75+0.008";
-            var unsharp = "0x1.0+1.0+0.004";
+        return exec('./identify -format \'{"width":%w, "height":%h, "size":"%b"}\' ' + filePath, options).then(function(result) {
+            var info = JSON.parse(result);
+            info.size = parseInt(info.size, 10);
 
-            return exec('./convert ' + filePath + ' -filter spline -resize ' + imageSize.width + 'x' + imageSize.height + ' -unsharp ' + unsharp + ' ' + filePath, options).then(function(){
-//            return exec('./convert ' + filePath + ' -adaptive-resize ' + imageSize.width + 'x' + imageSize.height + ' ' + filePath, options).then(function(){
-                return exec('./identify -format \'{"width":%w, "height":%h, "size":"%b"}\' ' + filePath, options).then(function(result) {
-                    var newInfo = JSON.parse(result);
-                    newInfo.size = parseInt(newInfo.size, 10);
+            if (info.width !== imageSize.width || info.height !== imageSize.height) {
+    //            var unsharp = "0x0.75+0.75+0.008";
+                var unsharp = "0x1.0+1.0+0.004";
 
-                    return newInfo;
+                return exec('./convert ' + filePath + ' -filter spline -resize ' + imageSize.width + 'x' + imageSize.height + ' -unsharp ' + unsharp + ' ' + filePath, options).then(function(){
+    //            return exec('./convert ' + filePath + ' -adaptive-resize ' + imageSize.width + 'x' + imageSize.height + ' ' + filePath, options).then(function(){
+                    return exec('./identify -format \'{"width":%w, "height":%h, "size":"%b"}\' ' + filePath, options).then(function(result) {
+                        var newInfo = JSON.parse(result);
+                        newInfo.size = parseInt(newInfo.size, 10);
+
+                        return newInfo;
+                    });
                 });
-            });
-        } else {
-            return info;
-        }
-    });
+            } else {
+                return info;
+            }
+        });
+    } else {
+//        return global.sendCommandToParentProcess("getImageInfo", {url: fileURL}, true).then(function(info) {
+//            if (info.width !== imageSize.width || info.height !== imageSize.height) {
+                return global.sendCommandToParentProcess("scaleImage", {sourceURL: fileURL, destinationURL: fileURL, size: imageSize, quality: quality || 0.6}, true);
+//            }
+//        });
+    }
 };
