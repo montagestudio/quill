@@ -221,9 +221,8 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
                                 break;
                             }
                         }
-
                         filePath += hasMask ? ".png" : ".jpeg";
-                        bytes = bytesFromDataURL(imageCanvas.toDataURL(hasMask ? "image/png" :"image/jpeg", 0.6));
+                        bytes = bytesFromDataURL(imageCanvas.toDataURL(hasMask ? "image/png" :"image/jpeg", PDFJS.jpegQuality));
                         break;
                 }
             }

@@ -650,7 +650,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     }
 
                     elem = document.createElement("img");
-                    imageBlob = blobFromDataURL(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", 0.6));
+                    imageBlob = blobFromDataURL(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", PDFJS.jpegQuality));
                 }
 
                 if (imageBlob) {
@@ -1427,11 +1427,11 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                 if (useBlobURL) {
                     // Add image as blob URL
-                    var imageBlob = blobFromDataURL(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", 0.6));
+                    var imageBlob = blobFromDataURL(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", PDFJS.jpegQuality));
                     this._paintImage(URL.createObjectURL(imageBlob), width, height);
                 } else {
                     // Add image as data URL
-                    this._paintImage(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", 0.6), width, height);
+                    this._paintImage(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", PDFJS.jpegQuality), width, height);
                 }
             },
 

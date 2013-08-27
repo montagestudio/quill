@@ -111,7 +111,8 @@ self.params.p = 2;
                                 }
 
                                 return Montage.create(PDF2HTMLCache).initialize(self.outputURL + "/OEBPS/assets/", pdf).then(function(cache) {
-                                        PDFJS.objectsCache = cache;
+                                     PDFJS.objectsCache = cache;
+                                        PDFJS.jpegQuality = 0.8;
 
                                     return self.convertNextPage().then(function(success) {
                                         var view = self._page.pageInfo.view,
