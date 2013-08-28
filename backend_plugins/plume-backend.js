@@ -326,15 +326,13 @@ exports.updateContentInfo = function(rootDirectory, options) {
     });
 };
 
-exports.generateEPUB3 = function(rootDirectory, options) {
+exports.generateEPUB3 = function(rootDirectory, name) {
     var root = pathFromURL(rootDirectory),
-        name,
         options = {cwd: root},
         result = "",
         i;
 
-    name = PATH.basename(rootDirectory);
-    i = name.indexOf(".ebook");
+    i = name.indexOf(".pdf");
     if (i > 0) {
         name = name.substr(0, i);
     }

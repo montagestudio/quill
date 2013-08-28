@@ -409,7 +409,7 @@ exports.Main = Montage.create(Component, {
     optimize: {
         value: function(item) {
             // JFD TODO: Add an option to bypass image optimization
-            if (0) {
+            if (1) {
                 return this._optimizeImages(item);
             } else {
                 console.log("--- no image optimization!")
@@ -429,7 +429,7 @@ exports.Main = Montage.create(Component, {
 
             // Update the content.opf - this is optional at this stage
             return self.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, item.meta).then(function() {
-                return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination).then(function(stdout) {
+                return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination, item.name).then(function(stdout) {
                     self.updateItemState(item, STATUS_READY);
                 });
             });
@@ -545,8 +545,10 @@ exports.Main = Montage.create(Component, {
     _optimizeImages: {
         value: function(item) {
             var self = this,
-                folderURL = item.destination;
+                folderURL = item.destination,
+                quality = 0.6;                  // JFD TODO: should come from a setting somewhere...
 
+            console.log("optimizeImages quality:", quality)
             return this.environmentBridge.backend.get("plume-backend").invoke("getImagesInfo", folderURL).then(function(infos) {
                 var urls = Object.keys(infos),
                     currentImage = 0,
@@ -575,7 +577,7 @@ exports.Main = Montage.create(Component, {
                             ratio = Math.min(maxWidth / info.width, maxHeight / info.height);
                         }
                         promises.push(self.environmentBridge.backend.get("plume-backend").invoke("optimizeImage",
-                            url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}, 0.6).then(function() {
+                            url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}, quality).then(function() {
                                 self.updateItemState(item, STATUS_OPTIMIZING, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
                         }));
 
