@@ -1525,9 +1525,15 @@ exports.PDF2HTML = Montage.create(Montage, {
                                         charWidth = (width * current.fontMatrix[0] * fontSize) + (charSpacing * scaleFactor),
                                         character = font.remaped ? glyph.unicode : glyph.fontChar;
 
+                                    character = font.remaped ? glyph.unicode : glyph.fontChar;
+                                    if (character.charCodeAt(0) === 0) {
+                                        character = " ";
+                                    }
+
                                     if (glyph.disabled) {
                                         // JFD TODO: do we care, what should we do in that case?
-                                        console.warn("disabled glyph!")
+                                        console.warn("disabled glyph!");
+                                        return;
                                     }
                                     text += character;
                                     offsets[++ index] = charWidth * textHScale;
