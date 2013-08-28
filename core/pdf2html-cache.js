@@ -246,14 +246,24 @@ exports.PDF2HTMLCache = Montage.create(Montage, {
 
     setFonts: {
         value: function(fonts, callback) {
+
             var self = this,
                 nbrFonts = fonts ? fonts.length : 0;
 
             var writeFontToDisk = function(fontIndex) {
                 var font = fonts[fontIndex],
-                    filePath = self.folderPath + font.name + ".otf",
-                    fontURL = encodeURI("fs://localhost" + filePath),
+                    fontName = font.name,
+                    filePath,
+                    fontURL,
                     fs = self.backend.get("fs");
+
+                // rename partial font to avoid potential name conflict
+                if (fontName.length > 7 && fontName.charAt(6) == "+") {
+                    fontName = font.loadedName.substr(2) + fontName.substr(6);
+                }
+                filePath = self.folderPath + fontName + ".otf";
+                fontURL = encodeURI("fs://localhost" + filePath);
+
 
                 return fs.invoke("exists", filePath).then(function(exists) {
                     if (!exists) {
