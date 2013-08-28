@@ -1349,7 +1349,7 @@ exports.PDF2HTML = Montage.create(Montage, {
 
                 // Flip Y origin and adjust x origin (PDF rotate image from the bottom-left corner while SVG does it from the top-left
                 transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
-                this.rotateTransform(geometry.rotateX, geometry.rotateY, transform);
+                this.rotateTransform(geometry.rotateX, transform);
                 this.translateTransform(0, - height, transform);
 
                 // Set the image attributes
@@ -1939,10 +1939,9 @@ exports.PDF2HTML = Montage.create(Montage, {
                 return m;
             },
 
-            rotateTransform: function (angleX, angleY, transform) {
-                // JFD TODO: figure out how to use different x and y angle!
-                var cosValue = Math.cos(angleX);
-                var sinValue = Math.sin(angleX);
+            rotateTransform: function (angle, transform) {
+                var cosValue = Math.cos(angle);
+                var sinValue = Math.sin(angle);
 
                 var m = transform.slice();
                 transform[0] = m[0] * cosValue + m[2] * sinValue;
@@ -2007,8 +2006,16 @@ exports.PDF2HTML = Montage.create(Montage, {
 
             getAdjustedTransform: function(transform) {
                 var geometry = this.getGeometry.apply(null, transform);
-                transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
-                this.rotateTransform(geometry.rotateX, geometry.rotateY, transform);
+
+                if (Math.abs(roundValue(geometry.rotateX, 5)) !== Math.abs(roundValue(geometry.rotateY, 5))) {
+                    transform[1] *= -1;     // JFD TODO does not sound right, but does work!!!
+                    transform[2] *= -1;     // JFD TODO does not sound right, but does work!!!
+                    transform[5] = this._viewBoxHeight - transform[5];
+
+                } else {
+                    transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
+                    this.rotateTransform(geometry.rotateX, transform);
+                }
                 return transform;
             }
         }
