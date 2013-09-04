@@ -1334,7 +1334,7 @@ exports.PDF2HTML = Montage.create(Montage, {
 
             // Images drawing
 
-            _paintImage: function(url, width, height) {
+            _paintImage: function(context, url, width, height, isAMask) {
                 var currentState = this._svgStates[0],
                     scaleX = 1 / width,
                     scaleY = 1 / height,
@@ -1357,18 +1357,51 @@ exports.PDF2HTML = Montage.create(Montage, {
                 imageElem.setAttribute("preserveAspectRatio", "none");
 
                 geometry = this.getGeometry.apply(null, transform);
-                if (roundValue(geometry.rotateX, 5) !== 0 || roundValue(geometry.rotateY, 5) !== 0 ||
-                        geometry.scaleX < 0 || geometry.scaleY < 0) {
+                if (isAMask) {
+                    var maskElem = document.createElementNS(xmlns, "mask"),
+                        rectElem = document.createElementNS(xmlns, "rect"),
+                        maskID = this.owner._getNextElementUID("mask");
+
+                    maskElem.setAttribute("id", maskID);
+                    maskElem.appendChild(imageElem);
+
                     imageElem.setAttribute("x", 0);
                     imageElem.setAttribute("y", 0);
                     imageElem.setAttribute("width", width);
                     imageElem.setAttribute("height", height);
-                    imageElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+
+                    rectElem.setAttribute("x", 0);
+                    rectElem.setAttribute("y", 0);
+                    rectElem.setAttribute("width", width);
+                    rectElem.setAttribute("height", height);
+                    rectElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+                    rectElem.setAttribute("mask", "url(#" + maskID + ")");
+                    rectElem.style.fill = context.current.fillColor;
+                    // JFD TODO: check if the canvas color already include the alpha information!
+                    if (currentState.fillAlpha !== 1) {
+                        rectElem.style.opacity = currentState.fillAlpha;
+                    }
+                    rectElem.style.stroke = "none";
+
+                    this.owner._rootNodeStack[0].appendChild(maskElem);
+                    this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+                    this.owner._rootNodeStack[0].appendChild(rectElem);
                 } else {
-                    imageElem.setAttribute("x", roundValue(geometry.translateX, 5));
-                    imageElem.setAttribute("y", roundValue(geometry.translateY, 5));
-                    imageElem.setAttribute("width", roundValue(width * geometry.scaleX, 5));
-                    imageElem.setAttribute("height", roundValue(height * geometry.scaleY, 5));
+                    if (roundValue(geometry.rotateX, 5) !== 0 || roundValue(geometry.rotateY, 5) !== 0 ||
+                            geometry.scaleX < 0 || geometry.scaleY < 0) {
+                        imageElem.setAttribute("x", 0);
+                        imageElem.setAttribute("y", 0);
+                        imageElem.setAttribute("width", width);
+                        imageElem.setAttribute("height", height);
+                        imageElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+                    } else {
+                        imageElem.setAttribute("x", roundValue(geometry.translateX, 5));
+                        imageElem.setAttribute("y", roundValue(geometry.translateY, 5));
+                        imageElem.setAttribute("width", roundValue(width * geometry.scaleX, 5));
+                        imageElem.setAttribute("height", roundValue(height * geometry.scaleY, 5));
+                    }
+
+                    this.owner._rootNodeStack[0].appendChild(imageElem);
                 }
 
                 if (!this.owner._pdf.imagesInfo[url]) {
@@ -1385,7 +1418,6 @@ exports.PDF2HTML = Montage.create(Montage, {
                     height: roundValue(Math.abs(height * geometry.scaleY * this.scale), 0)
                 })
 
-                this.owner._rootNodeStack[0].appendChild(imageElem);
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
             },
 
@@ -1395,7 +1427,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                 if (!object) {
                     error('Dependent image isn\'t ready yet');
                 }
-                this._paintImage(object.src, w, h);
+                this._paintImage(context, object.src, w, h);
             },
 
             paintImageXObject: function(context, objId, w, h) {
@@ -1406,13 +1438,13 @@ exports.PDF2HTML = Montage.create(Montage, {
                 }
 
                 if (object instanceof Image) {
-                    return this.paintJpegXObject(context, objId, w, h);
+                    this.paintJpegXObject(context, objId, w, h);
                 } else {
                     this.paintInlineImageXObject(context, object, true);
                 }
             },
 
-            paintInlineImageXObject: function(context, object, useBlobURL) {
+            paintInlineImageXObject: function(context, object, useBlobURL, isAMask) {
                 var imageData = object.data,
                     width = object.width,
                     height = object.height,
@@ -1428,10 +1460,40 @@ exports.PDF2HTML = Montage.create(Montage, {
                 if (useBlobURL) {
                     // Add image as blob URL
                     var imageBlob = blobFromDataURL(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", PDFJS.jpegQuality));
-                    this._paintImage(URL.createObjectURL(imageBlob), width, height);
+                    this._paintImage(context, URL.createObjectURL(imageBlob), width, height, isAMask);
                 } else {
                     // Add image as data URL
-                    this._paintImage(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", PDFJS.jpegQuality), width, height);
+                    this._paintImage(context, imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", PDFJS.jpegQuality), width, height, isAMask);
+                }
+            },
+
+            paintImageMaskXObject: function(context, object, w, h) {
+                if (typeof object === "string") {
+                    var object = context.objs.get(object);
+
+                   if (!object) {
+                       error('Dependent image isn\'t ready yet');
+                   }
+                }
+
+                if (object instanceof Image) {
+                    this._paintImage(context, object.src, w, h, true);
+                } else {
+                    console.log("MASK INLINE IMAGE NEED TO BE REVERSED!", object);
+                    var data = object.data,
+                        dataLength = data.length,
+                        invertedData = new Uint8Array(0),
+                        i;
+
+                    for (i = 0; i < dataLength - 4; i += 4) {
+                        invertedData[i] = 255 - data[i];
+                        invertedData[i + 1] = 255 - data[i + 1];
+                        invertedData[i + 2] = 255 - data[i + 2];
+                    }
+
+                    object.data = invertedData;
+                        this.paintInlineImageXObject(context, object, true, true);
+                    object.data = data;
                 }
             },
 
