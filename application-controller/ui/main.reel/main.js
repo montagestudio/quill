@@ -26,7 +26,7 @@ var STATUS_WAITING = 0,
     RESTART_TIMEOUT = 60;
 
 
-exports.Main = Montage.create(Component, {
+exports.Main = Component.specialize({
 
     //TODO not show ui until we have an environment bridge
     //This would be a good case of the whole "custom loading scenario" idea
@@ -52,9 +52,10 @@ exports.Main = Montage.create(Component, {
         value: null
     },
 
-    didCreate: {
-        value: function () {
             var self = this;
+    constructor: {
+        value: function applicationController() {
+            this.super();
             if (IS_IN_LUMIERES) {
 
                 require.async("core/lumieres-bridge").then(function (exported) {

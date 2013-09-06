@@ -13,7 +13,10 @@ var STATE_Unknown = 0,
     STATE_RenderingPage = 6,
     STATE_PageRenderred = 7;
 
-exports.PdfViewer = Montage.create(Component, {
+exports.PdfViewer = Component.specialize({
+    _converter: {
+        value: null
+    },
 
     _state: {
         value: STATE_Unknown
@@ -53,6 +56,14 @@ exports.PdfViewer = Montage.create(Component, {
         enumerable: false,
         get: function() {
             return this._htmlView;
+        }
+    },
+
+    constructor: {
+        value: function Viewer() {
+            this.super();
+
+            this._converter = PDF2HTML.create();
         }
     },
 
@@ -211,7 +222,7 @@ devicePixelRatio = 1; //JFD DEBUG
             this._renderingMode = parseInt(value, 10);
 console.log("SETTING RENDERING MODE:", this._renderingMode, typeof this._renderingMode)
             if (typeof this._renderingMode == "number") {
-                PDF2HTML.renderingMode = this._renderingMode;
+                this._converter.renderingMode = this._renderingMode;
                 if (this.state >= STATE_DocumentLoaded) {
                     this.loadPage(this.pageNumber);
                 }
@@ -372,7 +383,7 @@ console.log("SETTING RENDERING MODE:", this._renderingMode, typeof this._renderi
             if (typeof value === "string" && value.length) {
                 this.state = STATE_LoadingDocument;
                 // Load the document
-                PDF2HTML.getDocument(this._documentPath).then(function(pdf) {
+                this._converter.getDocument(this._documentPath).then(function(pdf) {
                     thisRef._document = pdf;
                     thisRef.state = STATE_DocumentLoaded;
                     thisRef.numberOfPages = pdf.pdfInfo.numPages;
@@ -441,7 +452,7 @@ console.log("SETTING RENDERING MODE:", this._renderingMode, typeof this._renderi
                 this._pageNumber = pageNumber;
                 console.log("Page", this.pageNumber, "of", this.numberOfPages)
 
-                PDF2HTML.getPage(this._document, this._pageNumber).then(function(page) {
+                    this._converter.getPage(this._document, this._pageNumber).then(function(page) {
                     console.log("...page", thisRef._pageNumber, "loaded")
 
                     thisRef._page = page;
@@ -464,7 +475,7 @@ console.log("SETTING RENDERING MODE:", this._renderingMode, typeof this._renderi
             var thisRef = this;
             this.state = STATE_RenderingPage;
 
-            PDF2HTML.renderPage(this.page, this.canvasView, this.htmlView, this.scale).then(function(output){
+            this._converter.renderPage(this.page, this.canvasView, this.htmlView, this.scale).then(function(output){
                 thisRef.state = STATE_PageRenderred;
                 console.log("*** DONE RENDERING...:");
             },

@@ -13,7 +13,7 @@ var STATUS_WAITING = 0,
     STATUS_STALLED = 2,
     STATUS_READY = 10;
 
-exports.Main = Montage.create(Component, {
+exports.Main = Component.specialize({
 
     environmentBridge: {
         value: null
@@ -54,9 +54,11 @@ exports.Main = Montage.create(Component, {
         value: null
     },
 
-    didCreate: {
-        value: function () {
+    constructor: {
+        value: function PDFConverter() {
             var self = this;
+
+            this.super();
 
             if (IS_IN_LUMIERES) {
                 PDF2HTML.renderingMode = PDF2HTML.RENDERING_MODE.hybrid;

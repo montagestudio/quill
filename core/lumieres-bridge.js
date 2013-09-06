@@ -9,7 +9,8 @@ var Montage = require("montage/core/core").Montage,
     FileDescriptor = require("core/file-descriptor").FileDescriptor,
     defaultLocalizer = require("montage/core/localizer").defaultLocalizer;
 
-exports.LumiereBridge = Montage.create(EnvironmentBridge, {
+
+exports.LumiereBridge = EnvironmentBridge.specialize({
 
 //    _undoMessagePromise: {
 //        value: defaultLocalizer.localize("undo_label", "Undo {label}")

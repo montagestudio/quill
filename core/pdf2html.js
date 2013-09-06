@@ -205,11 +205,7 @@ function sanitizeCSSValue(value) {
     return roundValue(value, 12);
 }
 
-exports.PDF2HTML = Montage.create(Montage, {
-
-    RENDERING_MODE: {
-        value: RENDERING_MODE
-    },
+var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
     _renderingMode: {
         value: RENDERING_MODE.svg
@@ -344,7 +340,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     }
                 })
                 rootNode.innerHTML = "";
-                if (self.renderingMode == self.RENDERING_MODE.hybrid) {
+                if (self.renderingMode == PDF2HTML.RENDERING_MODE.hybrid) {
                     // Emit DOM + SVG
                     this._imageLayer.owner = this;
                     this._imageLayer.page = page;
@@ -359,7 +355,7 @@ exports.PDF2HTML = Montage.create(Montage, {
                     this._preProcessor_DOM.page = page;
                     this._preProcessor_DOM.scale = scale;
                     renderContext.preProcessor = this._preProcessor_DOM;
-                } else if (self.renderingMode == self.RENDERING_MODE.svg) {
+                } else if (self.renderingMode == PDF2HTML.RENDERING_MODE.svg) {
                     // Emit SVG
                     this._preProcessor_SVG.owner = this,
                     this._preProcessor_SVG.page = page;
@@ -2396,4 +2392,8 @@ exports.PDF2HTML = Montage.create(Montage, {
         }
     }
 
+}, {
+    RENDERING_MODE: {
+        value: RENDERING_MODE
+    }
 });

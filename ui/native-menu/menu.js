@@ -15,7 +15,7 @@ var Montage = require("montage/core/core").Montage,
 var getMainMenu = null;
 var kListenerError = "'menuAction' listener must be installed on a component or the Application object";
 
-var Menu = exports.Menu = Montage.create(Montage, {
+var Menu = exports.Menu = Montage.specialize({
 
     _itemsToInsert: {
         value: []
@@ -94,10 +94,11 @@ var Menu = exports.Menu = Montage.create(Montage, {
         }
     },
 
-    didCreate: {
-        enumerable: false,
-        value: function() {
+    constructor: {
+        value: function NativeMenu() {
             var thisRef = this;
+
+            this.super();
 
             if (lumieres) {
                 // Replace the lumieres MenuItem object by our own Montage Equivalent

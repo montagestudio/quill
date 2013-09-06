@@ -10,7 +10,7 @@ var STATUS_WAITING = 0,
     STATUS_GENERATING_EPUB = 5,
     STATUS_READY = 10;
 
-exports.ActivityListItem = Montage.create(Component, {
+exports.ActivityListItem = Component.specialize({
 
     item: {
         value: null

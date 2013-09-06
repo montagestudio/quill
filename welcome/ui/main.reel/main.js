@@ -5,7 +5,7 @@ var Montage = require("montage/core/core").Montage,
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
-exports.Main = Montage.create(Component, {
+exports.Main = Component.specialize({
 
     version: {
         value: "X"

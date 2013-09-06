@@ -7,7 +7,7 @@ var Montage = require("montage/core/core").Montage,
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
-exports.Main = Montage.create(Component, {
+exports.Main = Component.specialize({
 
     params: {
         value: {
@@ -68,11 +68,6 @@ exports.Main = Montage.create(Component, {
             }
 
             return self._backend;
-        }
-    },
-
-    didCreate: {
-        value: function () {
         }
     },
 

@@ -54,7 +54,7 @@ function checkForTransparency(data) {
     return false;
 }
 
-exports.PDF2HTMLCache = Montage.create(Montage, {
+exports.PDF2HTMLCache = Montage.specialize({
 
     _backend: {
         value: null

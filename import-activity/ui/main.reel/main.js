@@ -12,7 +12,7 @@ var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 var MAX_CHILDPROCESS = 2;
 
 
-exports.Main = Montage.create(Component, {
+exports.Main = Component.specialize({
 
     //TODO not show ui until we have an environment bridge
     //This would be a good case of the whole "custom loading scenario" idea

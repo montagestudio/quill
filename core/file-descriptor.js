@@ -5,7 +5,7 @@ var constants = {
     S_IFMT: 61440
 };
 
-exports.FileDescriptor = Montage.create(Montage, {
+exports.FileDescriptor = Montage.specialize({
 
     initWithUrlAndStat: {
         value: function (url, stat) {
