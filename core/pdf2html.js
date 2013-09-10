@@ -955,7 +955,10 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     rootNode: svgElem,
 
                     // form
-                    paintFormXObjectDepth: 0
+                    paintFormXObjectDepth: 0,
+
+                    //path
+                    currentPoint: {x:0, y:0}
                 };
                 this._svgStates = [initialSVGState];
             },
@@ -1790,6 +1793,12 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
             // Vector drawing
 
+            _setCurrentPoint: function(x, y) {
+                var current  = this._svgStates[0];
+                current.currentPoint.x = x;
+                current.currentPoint.y = y;
+            },
+
             _appendToCurrentPath: function(data) {
                 if (typeof this._svgPath !== "string") {
                     this._svgPath = data;
@@ -1800,22 +1809,26 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
             moveTo: function(context, x, y) {
                 this._appendToCurrentPath("M" + x + "," + y);
+                this._setCurrentPoint(x, y);
             },
 
             lineTo: function(context, x, y) {
                 this._appendToCurrentPath("L" + x + "," + y);
+                this._setCurrentPoint(x, y);
             },
 
             curveTo: function(context, x1, y1, x2, y2, x3, y3) {
                 this._appendToCurrentPath("C" + x1 + "," + y1+ "," + x2+ "," + y2+ "," + x3+ "," + y3);
+                this._setCurrentPoint(x3, y3);
             },
 
             curveTo2: function(context, x2, y2, x3, y3) {
-                this._appendToCurrentPath("S" + x2+ "," + y2+ "," + x3+ "," + y3);
+                var current  = this._svgStates[0];
+                this.curveTo(context, current.currentPoint.x, current.currentPoint.y, x2, y2, x3, y3)
             },
 
             curveTo3: function(context, x1, y1, x3, y3) {
-                this._appendToCurrentPath("Q" + x1 + "," + y1+ "," + x3+ "," + y3);
+                this.curveTo(context, x1, y1, x3, y3, x3, y3)
             },
 
             closePath: function(context) {
