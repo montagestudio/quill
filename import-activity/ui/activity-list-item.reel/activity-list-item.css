@@ -28,13 +28,13 @@
     padding: 4px 8px;
 }
 .Activity-item--icon {
-    width: 36px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
 
     background: url('../../assets/images/pdf-icon.png') no-repeat;
-    background-size:36px 36px;
+    background-size: contain;
     background-repeat:no-repeat;
-    background-position:left center;
+    background-position:center center;
 }
 
 .Activity-progress {
@@ -158,6 +158,6 @@
 
 .Activity-ready .Activity-item--icon {
     background: url('../../assets/images/epub-icon.png') no-repeat;
-    background-size:36px 36px;
+    background-size: contain;
 }
 

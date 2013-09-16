@@ -2,14 +2,10 @@
 var Montage = require("montage/core/core").Montage,
     Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
-    RangeController = require("montage/core/range-controller").RangeController;
-
-var STATUS_READY = 10;
+    RangeController = require("montage/core/range-controller").RangeController,
+    IMPORT_STATES = require("core/importStates").importStates;    
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
-
-// Constants
-var MAX_CHILDPROCESS = 2;
 
 
 exports.Main = Component.specialize({
@@ -50,7 +46,6 @@ exports.Main = Component.specialize({
         value: function Main() {
             var self = this;
             if (IS_IN_LUMIERES) {
-
                 require.async("core/lumieres-bridge").then(function (exported) {
                     self.environmentBridge = exported.LumiereBridge.create();
 
@@ -58,18 +53,10 @@ exports.Main = Component.specialize({
                     var backend = self.environmentBridge.backend; // force open backend connection
 
                     self.environmentBridge.userPreferences.then(function (prefs) {
-                        console.log("PLUME PREFERENCES", prefs)
-
-//                        self.isFirstRun = prefs.firstRun;
-//                        //TODO I don't want firstrun to be set-able as an API, but this feels a little weird
-
                         self.destination = prefs.importDestinationPath.substring("fs://localhost".length);
                         self.needsDraw = true;
                     });
                 });
-
-
-
             } else {
                 alert("Plume cannot be run outside of Lumieres!");
                 return;
@@ -199,7 +186,7 @@ console.log("--restoreContent")
                 itemsToDelete = [];
 
             this.contentController.content.forEach(function(item) {
-                if (item.status === STATUS_READY) {
+                if (item.status === IMPORT_STATES.ready) {
                     itemsToDelete.push(item);
                 }
             });
@@ -225,7 +212,7 @@ console.log("--restoreContent")
             this.environmentBridge.backend.get("ipc").invoke("register", "monitor", this.processID, Promise.master(function() {
                 return self.onIPCMessage.apply(self, arguments);
             }), true).then(function(processID){
-                console.log("processID:", processID);
+                console.log("-- monitor process id:", processID);
                 self._processID = processID;
             }).done();
         }
@@ -259,6 +246,7 @@ console.log("--restoreContent")
                                     object.nbrPages = item.nbrPages;
                                     object.currentPage = item.currentPage;
                                     object.destination = item.destination;
+                                    object.error = item.error;
                                     return true;
                                 }
                                 return false;

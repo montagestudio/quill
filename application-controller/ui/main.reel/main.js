@@ -2,34 +2,29 @@
 var Montage = require("montage/core/core").Montage,
     Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
-    defaultMenu = require("ui/native-menu/menu").defaultMenu,
-    defaultEventManager = require("montage/core/event/event-manager").defaultEventManager;
+//    defaultMenu = require("ui/native-menu/menu").defaultMenu,
+    defaultEventManager = require("montage/core/event/event-manager").defaultEventManager,
+    ImportExtension = require("core/ImportExtension").ImportExtension,
+    IMPORT_STATES = require("core/importStates").importStates;
 
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 // Constants
-// Constants (must match STATUS in import-activity/ui/activity-list-item.reel/activity-list-item.js)
+var MAX_CHILDPROCESS = 2,
+    MAX_CONCURENT_FETCHES = 2;
 
-var STATUS_WAITING = 0,
-    STATUS_IMPORTING = 1,
-    STATUS_STALLED = 2,
-    STATUS_IMPORT_COMPLETED = 3,
-    STATUS_OPTIMIZING = 4,
-    STATUS_GENERATING_EPUB = 5,
-    STATUS_READY = 10,
-
-    MAX_CHILDPROCESS = 2;
-
-    CHECK_INTERVAL  = 10,
+var CHECK_INTERVAL  = 10,
     STALL_TIMEOUT = 30,
     RESTART_TIMEOUT = 60;
 
 
 exports.Main = Component.specialize({
 
-    //TODO not show ui until we have an environment bridge
-    //This would be a good case of the whole "custom loading scenario" idea
+    extension: {
+        value: null
+    },
+
     environmentBridge: {
         value: null
     },
@@ -52,11 +47,12 @@ exports.Main = Component.specialize({
         value: null
     },
 
-            var self = this;
     constructor: {
         value: function applicationController() {
             this.super();
+
             if (IS_IN_LUMIERES) {
+                var self = this;
 
                 require.async("core/lumieres-bridge").then(function (exported) {
                     self.environmentBridge = exported.LumiereBridge.create();
@@ -64,25 +60,38 @@ exports.Main = Component.specialize({
                     self.environmentBridge.connectionHandler = self;
                     var backend = self.environmentBridge.backend; // force open backend connection
 
-                    self.environmentBridge.userPreferences.then(function (prefs) {
-                        if (typeof prefs.importDestinationPath !== "string" || !prefs.importDestinationPath.length) {
-                            self.environmentBridge.backend.get("application").invoke("specialFolderURL", "documents", "user").then(function(path) {
-                                self.importDestinationPath = path.url + "/" + lumieres.applicationName;
-                                lumieres.setUserPreferences({importDestinationPath: self.importDestinationPath}, function (error, result) {
-                                    if (error) {
-                                        console.warm("Cannot set preferences")
-                                    }
-                                });
-                            }).done();
-                        } else {
-                            self.importDestinationPath = prefs.importDestinationPath;
-                        }
-                        self.needsDraw = true;
-                    }).done();
+                    // JFD TODO: we need a dynamic way to figure out which extension we want to load, for know we will default to Scholastic
+                    return require.async("extensions/scholastic-extension.js").then(function(exported) {
+                        self.extension = exported.ScholasticExtension.create();
+
+                        return self.environmentBridge.userPreferences.then(function (prefs) {
+                            if (typeof prefs.importDestinationPath !== "string" || !prefs.importDestinationPath.length) {
+                                self.environmentBridge.backend.get("application").invoke("specialFolderURL", "documents", "user").then(function(path) {
+                                    self.importDestinationPath = path.url + "/" + lumieres.applicationName;
+                                    lumieres.setUserPreferences({importDestinationPath: self.importDestinationPath}, function (error, result) {
+                                        if (error) {
+                                            console.warm("Cannot set preferences")
+                                        }
+                                    });
+                                })
+                            } else {
+                                self.importDestinationPath = prefs.importDestinationPath;
+                            }
+                        });
+                    });
+                }).done(function() {
+                    if (self.extension === null) {
+                        self.extension = ImportExtension.create();
+                    }
+
+                    self.needsDraw = true;
+
+                    window.setInterval(function() {
+                        self.checkImporters()
+                    }, CHECK_INTERVAL * 1000);
+
+                    console.log("--- application-controller running ---")
                 });
-
-                window.setInterval(function() { self.checkImporters() }, CHECK_INTERVAL * 1000);
-
             } else {
                 alert("Plume cannot be run outside of Lumieres!");
                 return;
@@ -93,7 +102,7 @@ exports.Main = Component.specialize({
     enterDocument: {
         value: function(firstTime) {
             if (firstTime) {
-                console.log("MENU:", defaultMenu.menuItemForIdentifier("importDocument"));
+//                console.log("MENU:", defaultMenu.menuItemForIdentifier("importDocument"));
                 defaultEventManager.application.addEventListener("menuAction", this);
             }
         }
@@ -107,13 +116,14 @@ exports.Main = Component.specialize({
             this.environmentBridge.backend.get("ipc").invoke("register", "app-controller", this.processID, Promise.master(function() {
                 return self.onIPCMessage.apply(self, arguments);
             }), true).then(function(processID){
-                console.log("processID:", processID);
                 self._processID = processID;
+                console.log("--- app-controller process id:", processID);
             }, function(e) {
-                    console.log("ERROR:", e.message, e.stack)
-                }).done();
+                console.log("ERROR:", e.message, e.stack)
+            }).done();
         }
     },
+
     onDisconnect: {
         value: function() {
             var self = this;
@@ -139,13 +149,28 @@ exports.Main = Component.specialize({
                         return this.importItems;
                     }
 
-                    else if (command == "removeItem") {
+                    else if (command == "getItem") {
                         var items = this.importItems,
                             length = items.length,
+                            id = parseInt(data[1], 10),
                             i;
 
                         for (i = 0; i < length; i ++) {
-                            if (items[i].id === parseInt(data[1].id, 10)) {
+                            if (items[i].id === id) {
+                                return items[i];
+                            }
+                        }
+                        return null;
+                    }
+
+                    else if (command == "removeItem") {
+                        var items = this.importItems,
+                            length = items.length,
+                            id = parseInt(data[1].id, 10),
+                            i;
+
+                        for (i = 0; i < length; i ++) {
+                            if (items[i].id === id) {
                                 if (items[i].processID) {
                                    // Stop the import before removing the item from the list...
                                     this.environmentBridge.backend.get("ipc").invoke("send", self.processID, items[i].processID, ["close"]).fail(function(e){
@@ -154,7 +179,7 @@ exports.Main = Component.specialize({
                                 }
 
                                 items.splice(i, 1);
-                                this.launchProcess();
+                                this.upgradeItemsState();
                                 return true;
                             }
                         }
@@ -162,47 +187,53 @@ exports.Main = Component.specialize({
                     }
 
                     else if (command === "converterInfo") {
-                        return this.importItems.some(function(object) {
-                            if (parseInt(data[1].id, 10) === object.id) {
-                                object.processID = data[1].processID;
-                                object.lastContact = new Date().getTime() / 1000;
-                                return true;
-                            }
-                            return false;
-                        });
+                        var item = this._importItemForID(data[1].id);
+                        if (item) {
+                            item.processID = data[1].processID;
+                            item.lastContact = new Date().getTime() / 1000;
+                            return true;
+                        }
+                        return false;
                     }
 
                     else if (command === "itemUpdate") {
-                        return this.importItems.some(function(object) {
-                            if (parseInt(data[1].id, 10) === object.id) {
-                                self.updateItemState(object, data[1].status, data[1].currentPage, data[1].nbrPages, data[1].destination, data[1].meta)
-                                object.lastContact = new Date().getTime() / 1000;
-                                return true;
-                            }
-                            return false;
-                        });
+                        var item = this._importItemForID(data[1].id);
+                        if (item) {
+                            self.updateItemState(item, data[1].status, data[1].currentPage, data[1].nbrPages, data[1].destination, data[1].meta)
+                            item.lastContact = new Date().getTime() / 1000;
+                            return true;
+                        }
+                        return false;
                     }
 
                     else if (command === "importDone") {
-                        return this.importItems.some(function(object) {
-                            if (parseInt(data[1].id, 10) === object.id) {
-                                object.meta = data[1].meta;
+                        var item = this._importItemForID(data[1].id);
+                        if (item) {
+                            item.meta = data[1].meta;
 
-                                self.optimize(object).then(function() {
-                                    object.lastContact = new Date().getTime() / 1000;
-                                    self.generateEpub(object).then(function() {
-                                        object.lastContact = new Date().getTime() / 1000;
-                                        return true;
-                                    }, function(e) {
-                                        console.log("ERROR:", e.message, e.stack);
-                                    }).done();
+                            this.extension.customizePages(self.environmentBridge.backend, item).then(function() {
+                                item.lastContact = new Date().getTime() / 1000;
+                                return self.optimize(item).then(function() {
+                                    item.lastContact = new Date().getTime() / 1000;
+                                    return self.extension.customizeAssets(self.environmentBridge.backend, item).then(function() {
+                                        item.lastContact = new Date().getTime() / 1000;
+                                        self.buildTableOfContent(item.meta);
+                                        return self.extension.customizeEbook(self.environmentBridge.backend, item).then(function() {
+                                            return self.generateEpub(item).then(function() {
+                                                item.lastContact = new Date().getTime() / 1000;
+                                                return true;
+                                            }, function(e) {
+                                                console.log("ERROR:", e.message, e.stack);
+                                            });
+                                        });
+                                    });
                                 });
+                            }).done();;
 
-                                object.lastContact = new Date().getTime() / 1000;
-                                return true;
-                            }
-                            return false;
-                        });
+                            item.lastContact = new Date().getTime() / 1000;
+                            return true;
+                        }
+                        return false;
                     }
 
                     else if (command === "importDocument") {
@@ -272,13 +303,13 @@ exports.Main = Component.specialize({
                         list.forEach(function(item) {
                             // check if not already in the queue getting imported or waiting
                             if (!importItems.some(function(object) {
-                                return item.fileUrl === object.url && object.status !== STATUS_READY;
+                                return item.fileUrl === object.url && object.status !== IMPORT_STATES.ready;
                             })) {
                                 var currentTime = new Date();
                                 newContent.push({
                                     name: item.name,
                                     url: item.fileUrl,
-                                    status: STATUS_WAITING,
+                                    status: IMPORT_STATES.unknown,
                                     nbrPages: 0,
                                     currentPage: 0,
                                     processID: null,
@@ -303,8 +334,7 @@ exports.Main = Component.specialize({
                         showToolbar:false, canOpenMultiple: false
                     };
 
-                    self.launchProcess();
-                    console.log("--- openeing window", windowParams);
+                    self.upgradeItemsState();
                     self.environmentBridge.backend.get("application").invoke("openWindow", windowParams).done();
                 }).done();
 
@@ -315,8 +345,120 @@ exports.Main = Component.specialize({
         }
     },
 
-    launchProcess: {
-        value: function(forceRelaunch) {
+    _upgradeItemsStateTimer: {
+        value: null
+    },
+
+    upgradeItemsState: {
+        value: function() {
+            var self = this;
+
+            if (this._upgradeItemsStateTimer) {
+                clearTimeout(this._upgradeItemsStateTimer);
+            }
+
+            this._upgradeItemsStateTimer = setTimeout(function() {
+                self._upgradeItemsStateTimer = null;
+                self.launchFetch();
+                self.launchImport();
+            }, 250)
+        }
+    },
+
+    launchFetch: {
+        value: function() {
+            var self = this;
+
+            // Check if we have an PDF info to fetch
+            var nbrFetches = 0,
+                sortedTable = [];
+
+            // sort the items per status and retries count
+            this.importItems.map(function(item) {
+                var status = item.status,
+                    retries = Math.floor(item.retries / 5);
+
+                if (status == IMPORT_STATES.unknown) {
+                    if (sortedTable[retries] === undefined) {
+                        sortedTable[retries] = [item];
+                    } else {
+                        sortedTable[retries].push(item);
+                    }
+                } else if (status == IMPORT_STATES.fetching) {
+                    nbrFetches ++;
+                }
+            });
+
+            if (nbrFetches < MAX_CONCURENT_FETCHES) {
+                var retries,
+                    index,
+                    item;
+
+                for (retries in sortedTable) {
+                    for (index in sortedTable[retries]) {
+                        item = sortedTable[retries][index];
+
+                        if (self.extension && typeof self.extension.getMetaData == "function") {
+                            console.log("***** START FETCHING:", item.name, item.status, item.retries);
+                            self.updateItemState(item, IMPORT_STATES.fetching)
+
+                            self.extension.getMetaData(self.environmentBridge.backend, item).then(function(response) {
+                                var id = response.id,
+                                    metadata = response.metadata;
+
+                                // let's match the metadata id with an item ID. We cannot rely on the variable item as we shared it for every items.
+                                var itemRef = self._importItemForID(id);
+                                if (itemRef) {
+                                    self.updateItemState(itemRef, IMPORT_STATES.waiting)
+                                    itemRef.metadata = itemRef.metadata || {};
+                                    for (var property in metadata) {
+                                        itemRef.metadata[property] = metadata[property];
+                                    }
+                                    return true;
+                                }
+                                return false;
+
+                                self.upgradeItemsState();
+                            }, function(e) {
+                                var itemRef = self._importItemForID(e.id);
+                                if (itemRef) {
+                                    self.updateItemState(itemRef, IMPORT_STATES.fetchError);
+                                    itemRef.retries ++;
+
+                                    if (itemRef.retries < 10 ) {
+                                        setTimeout(function() {
+                                            itemRef.status = IMPORT_STATES.unknown;
+                                            self.upgradeItemsState();
+                                        }, 30000);
+                                    } else {
+                                        itemRef.error = e.error.message;
+                                        self.updateItemState(itemRef, IMPORT_STATES.error);
+                                    }
+
+                                    self.upgradeItemsState();
+                                }
+                            });
+
+                            nbrFetches ++;
+                        } else {
+                            item.status = IMPORT_STATES.waiting;
+                        }
+
+                        if (nbrFetches >=  MAX_CONCURENT_FETCHES) {
+                            break;
+                        }
+                    }
+
+                    if (nbrFetches >=  MAX_CONCURENT_FETCHES) {
+                        break;
+                    }
+                }
+            }
+        }
+    },
+
+    launchImport: {
+        value: function() {
             var self = this;
 
             // Check if we have a process to launch
@@ -326,15 +468,15 @@ exports.Main = Component.specialize({
             // sort the processes per status and retries count
             this.importItems.map(function(item) {
                 var status = item.status,
-                    retries = item.retries;
+                    retries = Math.floor(item.retries / 5);
 
-                if (status == STATUS_WAITING) {
+                if (status == IMPORT_STATES.waiting) {
                     if (waitings[retries] === undefined) {
                         waitings[retries] = [item];
                     } else {
                         waitings[retries].push(item);
                     }
-                } else if (status == STATUS_IMPORTING || status == STATUS_STALLED) {
+                } else if (status == IMPORT_STATES.converting || status == IMPORT_STATES.stalled) {
                     nbrProcess ++;
                 }
             });
@@ -363,19 +505,21 @@ exports.Main = Component.specialize({
 
     import: {
         value: function(item) {
+            var self = this;
+
             console.log("STARTING PROCESS", item);
 
             item.lastContact = new Date().getTime() / 1000;
-            this.updateItemState(item, STATUS_IMPORTING);
+            this.updateItemState(item, IMPORT_STATES.converting);
 
             var windowParams = {
-                url: "http://client/pdf-converter/index.html?source=" + encodeURIComponent(item.url) + "&id=" + encodeURIComponent(item.id),
+                url: "http://client/pdf-converter/index.html?id=" + encodeURIComponent(item.id),
                 showWindow: false,
                 canResize: true
             };
 
             if (item.retries) {
-                windowParams.url += "&p=" + item.currentPage + "&dest=" + encodeURIComponent(item.destination);
+                windowParams.url += "&p=" + item.currentPage;
             }
 
             var application = this.environmentBridge.backend.get("application");
@@ -390,16 +534,19 @@ exports.Main = Component.specialize({
                             var param = query.split("=", 2);
                             params[param[0]] = param[1] !== undefined ? decodeURIComponent(param[1]) : null;
                         });
-                        if (params.source === item.url) {
+
+                        if (params.id === item.id) {
                             promises.push(application.invoke("closeWindow", url));
                         }
                     }
                 });
 
-                return Promise.allResolved(promises).then(function() {
+                Promise.allResolved(promises).then(function() {
                     return application.invoke("openWindow", windowParams).then(function() {
                         console.log("PDF Converter for", windowParams.url, "launched");
                     });
+                }).fail(function(e) {
+                    console.log("ERROR:", e.message, e.stack);
                 });
             }, function(e) {
                 console.log("ERROR:", e.message, e.stack);
@@ -411,7 +558,8 @@ exports.Main = Component.specialize({
         value: function(item) {
             // JFD TODO: Add an option to bypass image optimization
             if (1) {
-                return this._optimizeImages(item);
+                return this._optimizeImages(item, 0.6);             // JFD TODO: the quality should come from a setting somewhere...
+
             } else {
                 console.log("--- no image optimization!")
                 var deferred = Promise.defer();
@@ -421,94 +569,7 @@ exports.Main = Component.specialize({
         }
     },
 
-    generateEpub: {
-        value: function(item) {
-            var self = this;
-            self.updateItemState(item, STATUS_GENERATING_EPUB);
-
-            this._buildTableOfContent(item.meta);
-
-            // Update the content.opf - this is optional at this stage
-            return self.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, item.meta).then(function() {
-                return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination, item.name).then(function(stdout) {
-                    self.updateItemState(item, STATUS_READY);
-                });
-            });
-        }
-    },
-
-    updateItemState: {
-        value: function(item, status, currentPage, nbrPages, destination, meta) {
-            var self = this,
-                ipc = this.environmentBridge.backend.get("ipc"),
-                statusChanged = false;
-
-            if (typeof status === "number") {
-                    item.status = status;
-                    statusChanged = true;
-            }
-
-            if (currentPage !== null && currentPage !== undefined) {
-                item.currentPage = currentPage;
-            }
-
-            if (nbrPages !== null && nbrPages !== undefined) {
-                item.nbrPages = nbrPages;
-            }
-
-            if (destination !== null && destination !== undefined) {
-                item.destination = destination;
-            }
-
-            ipc.invoke("namedProcesses", "monitor").then(function(processID) {
-                if (processID) {
-                    return ipc.invoke("send", self.processID, processID[0], ["itemUpdate", item]);
-                }
-            }).fail(function(e){
-//                    console.log("ERROR:", e.message, e.stack)
-            }).done();
-
-            if (statusChanged) {
-                this.launchProcess();
-            }
-        }
-    },
-
-    checkImporters: {
-        value: function() {
-            var self = this;
-
-            var now = new Date().getTime() / 1000;
-            this.importItems.map(function(item) {
-                if (item.status === STATUS_IMPORTING && item.lastContact) {
-                    if (Math.round(now - item.lastContact) >= STALL_TIMEOUT) {
-                        self.updateItemState(item, STATUS_STALLED, item.currentPage, item.nbrPages, item.destination, item.meta)
-                    }
-
-                } else if (item.status === STATUS_STALLED) {
-                    if (Math.round(now - item.lastContact) >= RESTART_TIMEOUT && item.processID) {
-                        // jumpstart the import...
-                        self.environmentBridge.backend.get("ipc").invoke("send", self.processID, item.processID, ["close"]).then(function() {
-                            item.retries = (item.retries || 0) + 1;
-                            item.lastContact = now;
-                            item.processID = 0;
-                            setTimeout(function() {
-                                self.updateItemState(item, STATUS_WAITING, item.currentPage, item.nbrPages, item.destination, item.meta);
-                            }, 500);    // We need to give some time for the window to go away
-                        }, function(e){
-                            // JFD TODO: Kill the old process
-                            item.retries = (item.retries || 0) + 1;
-                            item.lastContact = now;
-                            item.processID = 0;
-                            self.updateItemState(item, STATUS_WAITING, item.currentPage, item.nbrPages, item.destination, item.meta);
-                        }).done();
-                    }
-                }
-            });
-        }
-    },
-
-    _buildTableOfContent: {
+    buildTableOfContent: {
         value: function(meta) {
             var toc = meta.toc;
 
@@ -543,66 +604,181 @@ exports.Main = Component.specialize({
         }
     },
 
-    _optimizeImages: {
+    generateEpub: {
         value: function(item) {
-            var self = this,
-                folderURL = item.destination,
-                quality = 0.6;                  // JFD TODO: should come from a setting somewhere...
+            var self = this;
 
-            console.log("optimizeImages quality:", quality)
-            return this.environmentBridge.backend.get("plume-backend").invoke("getImagesInfo", folderURL).then(function(infos) {
-                var urls = Object.keys(infos),
-                    currentImage = 0,
-                    nbrImages = urls.length;
-
-                item.currentPage = 0;
-                item.nbrPages = urls.length;
-
-                var _optimizeNextBatch = function() {
-                    var promises = [],
-                        i = 0;
-
-                    while (currentImage < nbrImages) {
-                        var url = urls[currentImage ++],
-                            info = infos[url],
-                            maxWidth = 0,
-                            maxHeight = 0;
-
-                        info.usage.forEach(function(usage) {
-                            maxWidth = Math.max(maxWidth, usage.width);
-                            maxHeight = Math.max(maxHeight, usage.height);
-                        });
-
-                        var ratio = 1;
-                        if (maxWidth < info.width && maxHeight < info.height) {
-                            ratio = Math.min(maxWidth / info.width, maxHeight / info.height);
-                        }
-                        promises.push(self.environmentBridge.backend.get("plume-backend").invoke("optimizeImage",
-                            url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}, quality).then(function() {
-                                self.updateItemState(item, STATUS_OPTIMIZING, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
-                        }));
-
-                        if (++ i > 4) {
-                            break;
-                        }
-                    }
-
-                    self.updateItemState(item, STATUS_OPTIMIZING, item.currentPage, item.nbrPages, item.destination, item.meta);
-
-                    if (promises.length) {
-                        return Promise.allResolved(promises).then(function() {
-                            if (currentImage < nbrImages) {
-                                return _optimizeNextBatch();
-                            }
-                        });
-                    }
-
-                    return null;
+            // Retrieve cover image URL
+            return self.environmentBridge.backend.get("plume-backend").invoke("getCoverImage", item.destination).then(function(coverImage) {
+                console.log("COVER IMAGE:", coverImage);
+                if (coverImage) {
+                    item.coverImage = coverImage;
                 }
 
-                return Promise.when(_optimizeNextBatch());
-
+                self.updateItemState(item, IMPORT_STATES.generating);
+                return self.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, item.meta).then(function() {
+                    return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination, item.name).then(function(stdout) {
+                        self.updateItemState(item, IMPORT_STATES.ready);
+                    });
+                });
             });
+        }
+    },
+
+    updateItemState: {
+        value: function(item, status, currentPage, nbrPages, destination) {
+            var self = this,
+                ipc = this.environmentBridge.backend.get("ipc"),
+                statusChanged = false;
+
+            if (typeof status === "number") {
+                item.status = status;
+                statusChanged = true;
+            }
+
+            if (currentPage !== null && currentPage !== undefined) {
+                item.currentPage = currentPage;
+            }
+
+            if (nbrPages !== null && nbrPages !== undefined) {
+                item.nbrPages = nbrPages;
+            }
+
+            if (destination !== null && destination !== undefined) {
+                item.destination = destination;
+            }
+
+            ipc.invoke("namedProcesses", "monitor").then(function(processID) {
+                if (processID) {
+                    return ipc.invoke("send", self.processID, processID[0], ["itemUpdate", item]);
+                }
+            }).fail(function(e){
+                console.log("ERROR:", e.message, e.stack)
+            }).done();
+
+            if (statusChanged) {
+                this.upgradeItemsState();
+            }
+        }
+    },
+
+    checkImporters: {
+        value: function() {
+            var self = this;
+
+            var now = new Date().getTime() / 1000;
+            this.importItems.map(function(item) {
+                if (item.status === IMPORT_STATES.converting && item.lastContact) {
+                    if (Math.round(now - item.lastContact) >= STALL_TIMEOUT) {
+                        self.updateItemState(item, IMPORT_STATES.stalled, item.currentPage, item.nbrPages, item.destination, item.meta)
+                    }
+
+                } else if (item.status === IMPORT_STATES.stalled) {
+                    if (Math.round(now - item.lastContact) >= RESTART_TIMEOUT && item.processID) {
+                        // jumpstart the import...
+                        self.environmentBridge.backend.get("ipc").invoke("send", self.processID, item.processID, ["close"]).then(function() {
+                            item.retries = (item.retries || 0) + 1;
+                            item.lastContact = now;
+                            item.processID = 0;
+                            setTimeout(function() {
+                                self.updateItemState(item, IMPORT_STATES.waiting, item.currentPage, item.nbrPages, item.destination, item.meta);
+                            }, 500);    // We need to give some time for the window to go away
+                        }, function(e){
+                            // JFD TODO: Kill the old process
+                            item.retries = (item.retries || 0) + 1;
+                            item.lastContact = now;
+                            item.processID = 0;
+                            self.updateItemState(item, IMPORT_STATES.waiting, item.currentPage, item.nbrPages, item.destination, item.meta);
+                        }).done();
+                    }
+                }
+            });
+        }
+    },
+
+    _optimizeImages: {
+        value: function(item, quality) {
+            var self = this,
+                folderURL = item.destination;
+
+            console.log("optimizeImages quality:", quality);
+
+            // Before optimizing the images, let's duplicate them to save the originals
+            return this.environmentBridge.backend.get("plume-backend").invoke("saveOriginalAssets", folderURL).then(function() {
+                return self.environmentBridge.backend.get("plume-backend").invoke("getImagesInfo", folderURL).then(function(infos) {
+                    var urls = Object.keys(infos),
+                        currentImage = 0,
+                        nbrImages = urls.length;
+
+                    item.currentPage = 0;
+                    item.nbrPages = urls.length;
+
+                    var _optimizeNextBatch = function() {
+                        var promises = [],
+                            i = 0;
+
+                        while (currentImage < nbrImages) {
+                            var url = urls[currentImage ++],
+                                originalURL,
+                                info = infos[url],
+                                maxWidth = 0,
+                                maxHeight = 0;
+
+                            info.usage.forEach(function(usage) {
+                                maxWidth = Math.max(maxWidth, usage.width);
+                                maxHeight = Math.max(maxHeight, usage.height);
+                            });
+
+                            var ratio = 1;
+                            if (maxWidth < info.width && maxHeight < info.height) {
+                                ratio = Math.min(maxWidth / info.width, maxHeight / info.height);
+                            }
+
+                            originalURL = url.replace("/OEBPS/assets/", "/original-assets/");
+                            promises.push(self.environmentBridge.backend.get("plume-backend").invoke("optimizeImage",
+                                originalURL, url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}, quality).then(function() {
+                                    self.updateItemState(item, IMPORT_STATES.optimizing, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
+                            }));
+
+                            if (++ i > 4) {
+                                break;
+                            }
+                        }
+
+                        self.updateItemState(item, IMPORT_STATES.optimizing, item.currentPage, item.nbrPages, item.destination, item.meta);
+
+                        if (promises.length) {
+                            return Promise.allResolved(promises).then(function() {
+                                if (currentImage < nbrImages) {
+                                    return _optimizeNextBatch();
+                                }
+                            });
+                        }
+
+                        return null;
+                    }
+
+                    return Promise.when(_optimizeNextBatch());
+
+                });
+            });
+        }
+    },
+
+    _importItemForID: {
+        value: function(itemID) {
+            var item = null,
+                id = parseInt(itemID, 10);
+
+            this.importItems.some(function(object) {
+                if (id === object.id) {
+                    item = object;
+                    return true;
+                }
+                return false;
+            });
+
+            return item;
         }
     }
 

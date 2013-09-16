@@ -3,15 +3,10 @@ var Montage = require("montage/core/core").Montage,
     Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
     PDF2HTML = require("core/pdf2html.js").PDF2HTML,
-    PDF2HTMLCache = require("core/pdf2html-cache.js").PDF2HTMLCache;
+    PDF2HTMLCache = require("core/pdf2html-cache.js").PDF2HTMLCache,
+    IMPORT_STATES = require("core/importStates").importStates;
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
-
-// Constants (must match STATUS in application-controller/ui/main.reel/main.js)
-var STATUS_WAITING = 0,
-    STATUS_IMPORTING = 1,
-    STATUS_STALLED = 2,
-    STATUS_READY = 10;
 
 exports.Main = Component.specialize({
 
@@ -29,12 +24,9 @@ exports.Main = Component.specialize({
         }
     },
 
-    childProcessIDs: {
-        value: []
-    },
-
     maxResolution: {
-        value: 2048
+//        value: 2048
+        value: 1024
     },
 
     scale: {
@@ -54,6 +46,10 @@ exports.Main = Component.specialize({
         value: null
     },
 
+    _converter: {
+        value: null
+    },
+
     constructor: {
         value: function PDFConverter() {
             var self = this;
@@ -61,7 +57,9 @@ exports.Main = Component.specialize({
             this.super();
 
             if (IS_IN_LUMIERES) {
-                PDF2HTML.renderingMode = PDF2HTML.RENDERING_MODE.hybrid;
+                this._converter = PDF2HTML.create();
+//                this._converter.renderingMode = PDF2HTML.RENDERING_MODE.hybrid;
+                this._converter.renderingMode = PDF2HTML.RENDERING_MODE.svg;
 
                 this.params = [];
                 window.location.search.substr(1).split("&").forEach(function(query) {
@@ -69,98 +67,121 @@ exports.Main = Component.specialize({
                     self.params[param[0]] = param[1] !== undefined ? decodeURIComponent(param[1]) : null;
                 });
 
-                // add the path to the document title (for easy debugging)
-                if (this.params.source) {
-                    document.title = document.title + " - " + this.params.source.substr("fs://localhost".length);
-                    this.id =  parseInt(this.params.id, 10);
-                    this.url =  this.params.source;
-                    this.outputURL = this.params.dest;
+                if (this.params.id) {
+                    this.id = parseInt(this.params.id, 10);
+//                    this.outputURL = this.params.dest;
+                } else {
+                    console.error("you must specify an item's id!")
+                    return;
                 }
 
                 require.async("core/lumieres-bridge").then(function (exported) {
                     self.environmentBridge = exported.LumiereBridge.create();
 
                     self.environmentBridge.connectionHandler = self;
-                    var backend = self.environmentBridge.backend; // force open backend connection
+                    var backend = self.environmentBridge.backend, // force open backend connection,
+                        ipc = backend.get("ipc");
 
-                    self.environmentBridge.userPreferences.then(function (prefs) {
-                        return self.createOutputDirectory(prefs.importDestinationPath).then(function(outputURL) {
-                            self.outputURL = outputURL;
+                    ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
+                        if (processID) {
+                            return ipc.invoke("send", self.processID, processID[0], ["getItem", self.id]).then(function(item) {
+                                if (item && typeof item === "object") {
+                                     // add the path to the document title (for easy debugging)
+                                    document.title = document.title + " - " + item.url.substr("fs://localhost".length);
 
-                            console.log("OUTPUT DIRECTORY:", self.outputURL);
-                            // Load the document
-                            return PDF2HTML.getDocument(self.url, self.outputURL + "/OEBPS/pages").then(function(pdf) {
-                                self._document = pdf;
-                                self.numberOfPages = pdf.pdfInfo.numPages;
-self.numberOfPages = 2;
-self.params.p = 2;
-                                self._pageNumber = self.params.p || 1;
-
-                                var pad = function(number) {
-                                    return ("00" + number).substr(-2);
+                                    self.url = item.url;
+                                    self.outputURL = item.destination || null;
+                                    self.metadata = item.metadata;
                                 }
-
-                                var now = new Date(),
-                                    options = {
-                                    "fixed-layout": "true",
-                                    "original-resolution": "500x800",       // JFD TODO: we need a real value!!!
-                                    "document-title": "Untitled",
-                                    "document-author": "Unknown",
-                                    "document-description": "This eBook has been generated by Plume",
-                                    "document-publisher": "Unknown",
-                                    "document-date": now.getUTCFullYear() + "-" + (now.getUTCMonth() + 1) + "-" + (now.getUTCDate() + 1),
-                                    "document-language": "en-us",
-                                    "book-id": "0",
-                                    "modification-date": now.getUTCFullYear() + "-" + pad(now.getUTCMonth() + 1) +
-                                        "-" + pad(now.getUTCDate() + 1) +
-                                        "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z"
-                                }
-
-                                return Montage.create(PDF2HTMLCache).initialize(self.outputURL + "/OEBPS/assets/", pdf).then(function(cache) {
-                                     PDFJS.objectsCache = cache;
-                                        PDFJS.jpegQuality = 0.8;
-
-                                    return self.convertNextPage().then(function(success) {
-                                        var view = self._page.pageInfo.view,
-                                            title = self.url.substr(self.url.lastIndexOf("/") + 1),
-                                            pos;
-
-                                        title = title.substr(0, title.toLowerCase().indexOf(".pdf"));
-                                        pos = title.indexOf("_");
-                                        if (pos > 0) {
-                                            title = title.substr(0, title.indexOf("_"));
-                                        }
-
-                                        options["original-resolution"] = Math.round((view[2] - view[0]) * self.scale) + "x" +
-                                            Math.round((view[3] - view[1]) * self.scale);
-                                        options["book-id"] = self._document.pdfInfo.fingerprint;
-                                        options["document-title"] = title;
-
-
-                                        // Time to get the table of content
-                                        return PDF2HTML.getOutline(self._document).then(function(toc) {
-                                            options["toc"] = toc;
-//                                            return self.updateState("imported", options).then(function() {
-                                            return self.sendMessage("importDone", {
-                                                            id: self.id,
-                                                            destination: self.outputURL,
-                                                            meta: options
-                                            }).then(function() {
-                                                lumieres.document.close(true);
-                                            });
-                                        });
-                                    });
-                                });
+                            }, function(error) {
+                                console.log("ERROR", error.message);
                             });
-                        }).fail(function(error) {
-                            console.error("#ERROR:", error.message, error.stack);
-                            // JFD TODO: handle error
-                        }).done();
+                        }
+                    }).done(function() {
+                        if (self.url === null) {
+                            // Invalid item, let's close the window
+                            lumieres.document.close(true);
+                            return;
+                        }
 
+                        self.environmentBridge.userPreferences.then(function (prefs) {
+                           return self.createOutputDirectory(prefs.importDestinationPath).then(function(outputURL) {
+                               self.outputURL = outputURL;
+
+                               // Load the document
+                               return self._converter.getDocument(self.url, self.outputURL + "/OEBPS/pages").then(function(pdf) {
+                                   self._document = pdf;
+                                   self.numberOfPages = pdf.pdfInfo.numPages;
+//self.numberOfPages = 2;
+//self.params.p = 2;
+
+                                   self._pageNumber = parseInt(self.params.p, 10) || 1;
+
+                                   var pad = function(number) {
+                                       return ("00" + number).substr(-2);
+                                   }
+
+                                   var now = new Date(),
+                                       options = {
+                                       "fixed-layout": "true",
+                                       "original-resolution": "500x800",       // JFD TODO: we need a real value!!!
+                                       "document-title": self.metadata ? self.metadata["document-title"] : null || "Untitled",
+                                       "document-author": self.metadata ? self.metadata["document-author"] : null || "Unknown",
+                                       "document-description": "This eBook has been generated by Plume",
+                                       "document-publisher": self.metadata ? self.metadata["document-publisher"] : null || "Unknown",
+                                       "document-date": now.getUTCFullYear() + "-" + (now.getUTCMonth() + 1) + "-" + (now.getUTCDate() + 1),
+                                       "document-language": "en-us",
+                                       "book-id": "0",
+                                       "modification-date": now.getUTCFullYear() + "-" + pad(now.getUTCMonth() + 1) +
+                                           "-" + pad(now.getUTCDate() + 1) +
+                                           "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z"
+                                   }
+
+                                   return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", pdf).then(function(cache) {
+                                       PDFJS.objectsCache = cache;
+                                       PDFJS.jpegQuality = 1.0;
+
+                                       return self.convertNextPage().then(function(success) {
+                                           var view = self._page.pageInfo.view,
+                                               title = self.url.substr(self.url.lastIndexOf("/") + 1),
+                                               pos;
+
+                                           title = title.substr(0, title.toLowerCase().indexOf(".pdf"));
+                                           pos = title.indexOf("_");
+                                           if (pos > 0) {
+                                               title = title.substr(0, title.indexOf("_"));
+                                           }
+
+                                           options["original-resolution"] = Math.round((view[2] - view[0]) * self.scale) + "x" +
+                                               Math.round((view[3] - view[1]) * self.scale);
+                                           options["book-id"] = self._document.pdfInfo.fingerprint;
+                                           options["document-title"] = title;
+
+
+                                           // Time to get the table of content
+                                           return self._converter.getOutline(self._document).then(function(toc) {
+                                               options["toc"] = toc;
+                                               return self.sendMessage("importDone", {
+                                                               id: self.id,
+                                                               destination: self.outputURL,
+                                                               meta: options
+                                               }).then(function() {
+                                                   lumieres.document.close(true);
+                                               });
+                                           });
+                                       });
+                                   });
+                               });
+                           }).fail(function(error) {
+                               console.error("#ERROR:", error.message, error.stack);
+                               // JFD TODO: handle error
+                           }).done();
+
+                       });
                     });
                 })/*.done();*/
             } else {
-                alert("Plume cannot be run outside of Lumieres!");
+                console.error("Plume cannot be run outside of Lumieres!");
                 return;
             }
         }
@@ -308,9 +329,10 @@ self.params.p = 2;
         value: function() {
             var self = this;
 
-            self.updateState(STATUS_IMPORTING, self._pageNumber, self.numberOfPages);
+            self.updateState(IMPORT_STATES.converting, self._pageNumber, self.numberOfPages);
 
-            return PDF2HTML.getPage(this._document, this._pageNumber).then(function(page) {
+            console.log("convert", this._pageNumber)
+            return self._converter.getPage(this._document, this._pageNumber).then(function(page) {
                 console.log("...page", self._pageNumber, "loaded")
 
                 self._page = page;
@@ -324,7 +346,7 @@ self.params.p = 2;
                 var viewPort = page.getViewport(1);
                 self.scale = self.maxResolution / Math.min(viewPort.width, viewPort.height);
 
-                return PDF2HTML.renderPage(page, canvas, output, self.scale, true).then(function(output) {
+                return self._converter.renderPage(page, canvas, output, self.scale, true).then(function(output) {
                     var viewport = page.getViewport(self.scale),
                         folderPath = decodeURIComponent((self.outputURL).substring("fs://localhost".length));
 
@@ -345,7 +367,6 @@ self.params.p = 2;
                             if (self._pageNumber < self.numberOfPages) {
                                 self._pageNumber ++;
                                 self.params.p = self._pageNumber;
-                                self.params.dest = self.outputURL;
 
                                 var newLoc = window.location.origin + window.location.pathname,
                                     sep = "?";

@@ -255,6 +255,12 @@ exports.updateContentInfo = function(rootDirectory, options) {
                             break;
                     }
 
+                    // Special case for the cover image
+                    if (name == "cover") {
+                        properties = "cover-image";
+                    }
+
+
                     name = name.replace(/[-_+.,;:]/g, "");
                     manifest.push('<item id="' + name + '" href="' + path + '"' + (properties !== null ? ' properties="' + properties + '"' : '') + ' media-type="' + type +'"/>');
 
@@ -349,6 +355,18 @@ exports.generateEPUB3 = function(rootDirectory, name) {
     });
 };
 
+exports.saveOriginalAssets = function(rootDirectory) {
+    var root = pathFromURL(rootDirectory),
+        source = PATH.join(root, "OEBPS", "assets"),
+        dest = PATH.join(root, "original-assets");
+
+    return QFS.exists(dest).then(function(exists) {
+        if (exists === false) {
+            return QFS.copyTree(source, dest);
+        }
+    });
+}
+
 exports.appendImagesInfo = function(rootDirectory, info) {
     var root = pathFromURL(rootDirectory);
 
@@ -384,12 +402,13 @@ exports.getImagesInfo = function(rootDirectory) {
     });
 };
 
-exports.optimizeImage = function(fileURL, imageSize, quality) {
+exports.optimizeImage = function(sourceURL, destURL, imageSize, quality) {
     var _USE_IMAGEMAGIK = false;
 
     if (_USE_IMAGEMAGIK) {
         var imageMagickRoot = PATH.resolve(__dirname, 'ImageMagick'),
-            filePath = pathFromURL(fileURL).replace(/ /g, "\\ "),
+            sourcePath = pathFromURL(sourceURL).replace(/ /g, "\\ "),
+            destPath = pathFromURL(destURL).replace(/ /g, "\\ "),
             options = {
                 cwd: PATH.join(imageMagickRoot, "bin"),
                 env: {
@@ -398,32 +417,37 @@ exports.optimizeImage = function(fileURL, imageSize, quality) {
                 }
             };
 
-        return exec('./identify -format \'{"width":%w, "height":%h, "size":"%b"}\' ' + filePath, options).then(function(result) {
+        return exec('./identify -format \'{"width":%w, "height":%h, "size":"%b"}\' ' + sourcePath, options).then(function(result) {
             var info = JSON.parse(result);
             info.size = parseInt(info.size, 10);
 
-            if (info.width !== imageSize.width || info.height !== imageSize.height) {
-    //            var unsharp = "0x0.75+0.75+0.008";
-                var unsharp = "0x1.0+1.0+0.004";
+//            var unsharp = "0x0.75+0.75+0.008";
+            var unsharp = "0x1.0+1.0+0.004";
 
-                return exec('./convert ' + filePath + ' -filter spline -resize ' + imageSize.width + 'x' + imageSize.height + ' -unsharp ' + unsharp + ' ' + filePath, options).then(function(){
-    //            return exec('./convert ' + filePath + ' -adaptive-resize ' + imageSize.width + 'x' + imageSize.height + ' ' + filePath, options).then(function(){
-                    return exec('./identify -format \'{"width":%w, "height":%h, "size":"%b"}\' ' + filePath, options).then(function(result) {
-                        var newInfo = JSON.parse(result);
-                        newInfo.size = parseInt(newInfo.size, 10);
+            return exec('./convert ' + sourcePath + ' -filter spline -resize ' + imageSize.width + 'x' + imageSize.height + ' -unsharp ' + unsharp + ' ' + destPath, options).then(function(){
+//            return exec('./convert ' + sourcePath + ' -adaptive-resize ' + imageSize.width + 'x' + imageSize.height + ' ' + destPath, options).then(function(){
+                return exec('./identify -format \'{"width":%w, "height":%h, "size":"%b"}\' ' + destPath, options).then(function(result) {
+                    var newInfo = JSON.parse(result);
+                    newInfo.size = parseInt(newInfo.size, 10);
 
-                        return newInfo;
-                    });
+                    return newInfo;
                 });
-            } else {
-                return info;
-            }
+            });
         });
     } else {
-//        return global.sendCommandToParentProcess("getImageInfo", {url: fileURL}, true).then(function(info) {
-//            if (info.width !== imageSize.width || info.height !== imageSize.height) {
-                return global.sendCommandToParentProcess("scaleImage", {sourceURL: fileURL, destinationURL: fileURL, size: imageSize, quality: quality || 0.6}, true);
-//            }
-//        });
+        return global.sendCommandToParentProcess("scaleImage", {sourceURL: sourceURL, destinationURL: destURL, size: imageSize, quality: quality || 0.6}, true);
     }
 };
+
+exports.getCoverImage = function(rootDirectory) {
+    var root = pathFromURL(rootDirectory),
+        coverImagePath = PATH.join(root, "OEBPS", "assets", "cover.jpeg");
+
+    return QFS.exists(coverImagePath).then(function(exists) {
+        if (exists) {
+            return "fs://localhost" + coverImagePath;
+        }
+
+        return null;
+    });
+}
