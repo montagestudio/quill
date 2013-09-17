@@ -53,6 +53,16 @@ exports.ActivityListItem = Component.specialize({
         }
     },
 
+    coverImage: {
+        get: function() {
+            return this.item.coverImage
+        },
+
+        set: function(value) {
+            this.setStatusLabel();
+        }
+    },
+
     setStatusLabel: {
         value: function() {
             // JFD TODO: L10n
@@ -112,22 +122,28 @@ exports.ActivityListItem = Component.specialize({
     draw: {
         value: function() {
             var item = this.item,
-                coverImage = item.coverImage;
+                coverImage = item.coverImage,
+                iconElem = this.element.getElementsByClassName("Activity-item--icon"),
+                clearBackgroundImage = true;
+
+            iconElem = iconElem && iconElem.length ? iconElem[0] : null;
 
             if (item.status === IMPORT_STATES.ready) {
                 this.element.classList.add("Activity-ready");
 
                 if (item.coverImage) {
-                    var icon = this.element.getElementsByClassName("Activity-item--icon");
-                    if (icon && icon.length) {
-                        icon[0].style.backgroundImage = "url('" + coverImage + "')";
-                        icon[0].style.backgroundPosition = "center center";
+                    if (iconElem) {
+                        iconElem.style.backgroundImage = "url('" + coverImage + "')";
+                        iconElem.style.backgroundPosition = "center center";
+                        clearBackgroundImage = false;
                     }
                 }
             } else {
                 this.element.classList.remove("Activity-ready");
-                delete this.element.style.backgroundImage;
-                delete this.element.style.backgroundPosition;
+            }
+
+            if (clearBackgroundImage && iconElem) {
+                iconElem.setAttribute("style", "");
             }
         }
     }

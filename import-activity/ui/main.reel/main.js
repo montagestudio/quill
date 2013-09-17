@@ -242,11 +242,11 @@ console.log("--restoreContent")
                         if (item) {
                             this.contentController.content.some(function (object) {
                                 if (object.id === parseInt(item.id, 10)) {
-                                    object.status = item.status;
-                                    object.nbrPages = item.nbrPages;
-                                    object.currentPage = item.currentPage;
-                                    object.destination = item.destination;
-                                    object.error = item.error;
+                                    for (property in item) {
+                                        if (item.hasOwnProperty(property) && object[property] !== item[property]) {
+                                            object[property] = item[property];
+                                        }
+                                    }
                                     return true;
                                 }
                                 return false;

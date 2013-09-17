@@ -315,6 +315,8 @@ exports.Main = Component.specialize({
                                     processID: null,
                                     lastContact: 0,
                                     retries: 0,
+                                    error: null,
+                                    coverImage: null,
                                     id: (currentTime.getTime() % (3600 * 24)) * 1000000 + currentTime.getMilliseconds() * 1000 + Math.floor(Math.random() * 1000)
                                 });
                             }
