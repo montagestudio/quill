@@ -41,6 +41,18 @@ function bytesFromDataURL(dataURL) {
   return bytes;
 }
 
+function bytesArrayToArray(bytes) {
+  var length = bytes.length,
+      array = new Array(length);
+
+  for (var i = 0; i < length; i ++) {
+      array[i] = bytes[i];
+  }
+
+  return array;
+}
+
+
 function checkForTransparency(data) {
     var length = data.length,
         i;
@@ -158,7 +170,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                                 }
                             }
 
-                            chunks.push(writer.write(chunkData, "binary"));
+                            chunks.push(writer.write(bytesArrayToArray(chunkData), "binary"));
 
                             offset += chunckLength;
                             remaining -= chunckLength;
@@ -296,6 +308,22 @@ exports.PDF2HTMLCache = Montage.specialize({
     },
 
 
+    _checkFile: {
+        value: function(filePath) {
+            var self = this,
+                deferred = Promise.defer(),
+                fs = self.backend.get("fs");
+
+            fs.invoke("stat", filePath).then(function(stats) {
+                deferred.resolve(stats && stats.size > 0);
+            }, function() {
+                deferred.resolve(false);
+            }).done();
+
+            return deferred.promise;
+        }
+    },
+
     objectUrl: {
         value: function(data, page, callback) {
             var self = this,
@@ -304,7 +332,8 @@ exports.PDF2HTMLCache = Montage.specialize({
                 type = data[2],
                 referenceID = data[3],
                 hasMask = data[4],
-                filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name);
+                filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
+                fileSize = 0;
 
 //            console.log(">>> CACHE GET OBJECT URL:", filePath, type);
 
@@ -313,18 +342,24 @@ exports.PDF2HTMLCache = Montage.specialize({
                 case "Image": filePath += hasMask ? ".png" : ".jpeg";           break;
             }
 
-            fs.invoke("stat", filePath).then(function(stats) {
-                if (hasMask && !(stats && stats.size)) {
-                    // check for a jpeg version of the image
-                    filePath = filePath.substr(0, filePath.length - 4) + ".jpeg";
-                    fs.invoke("stat", filePath).then(function(stats) {
-                        callback(stats && stats.size ? encodeURI("fs://localhost" + filePath) : null);
-                    });
+            this._checkFile(filePath).then(function(valid) {
+                if (valid) {
+                    callback(encodeURI("fs://localhost" + filePath));
                 } else {
-                    callback(stats && stats.size ? encodeURI("fs://localhost" + filePath) : null);
+                    if (hasMask) {
+                        // check for a jpeg version of the image
+                        filePath = filePath.substr(0, filePath.length - 4) + ".jpeg";
+                        self._checkFile(filePath).then(function(valid) {
+                            if (valid) {
+                                callback(encodeURI("fs://localhost" + filePath));
+                            } else {
+                                callback(null);
+                            }
+                        });
+                    } else {
+                        callback(null);
+                    }
                 }
-            }, function(error) {
-                callback(null);
             });
         }
     }
