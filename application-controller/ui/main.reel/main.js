@@ -591,7 +591,11 @@ exports.Main = Component.specialize({
                     title = title.replace(/>/g, "&gt;");
 
                     result += pading + '<li>';
-                    result += pading + '\t<a href="pages/' + item.pageNumber + '.xhtml">' + title + '</a>';
+                    if (item.pageNumber) {
+                        result += pading + '\t<a href="pages/' + item.pageNumber + '.xhtml">' + title + '</a>';
+                    } else {
+                        result += pading + '\t' + title;
+                    }
                     if (item.items && item.items.length) {
                         result += _generateTable(item.items, pading + "\t");
                     }

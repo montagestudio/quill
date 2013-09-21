@@ -551,7 +551,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                         dest = destinations[dest];
                                     }
 
-                                    if (dest instanceof Array && dest.length > 0) {
+                                    if (dest instanceof Array && dest.length > 0 && dest[0]) {
                                         dest = dest[0].num + " " + dest[0].gen + " R";
                                         entry.pageNumber = pagesRefMap[dest];
                                     }
