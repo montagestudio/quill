@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+    <title>Page View</title>
+    <meta charset="utf-8">
+
+    <link href="page-thumbnail.css" rel="stylesheet" />
+
+    <script type="text/montage-serialization">
+        {
+            "localizer": {
+                "object": "montage/core/localizer[defaultLocalizer]"
+            },
+
+            "pageView": {
+                "prototype": "ui/page-view.reel",
+                "properties": {
+                    "element": {"#": "pageView"},
+                    "viewMode": "single",
+                    "resizeWrapper": true
+                },
+                "bindings": {
+                    "pages": {"<-": "@owner.pages"},
+                    "index": {"<-": "@owner.index"}
+                }
+            },
+            "name": {
+                "prototype": "montage/ui/text.reel",
+                "properties": {
+                    "element": {
+                        "#": "name"
+                    }
+                },
+                "bindings": {
+                    "value": {
+                        "<-": "@owner.item.name"
+                    }
+                }
+            },
+
+            "owner": {
+                "properties": {
+                    "element": {"#": "pageThumbnail"}
+                }
+            }
+
+        }
+    </script>
+
+</head>
+<body>
+
+    <section data-montage-id="pageThumbnail" class="page-thumbnail">
+        <div>
+            <div data-montage-id="pageView" class="page-thumbnail-content"></div>
+            <span data-montage-id="name" class="page-thumbnail-name"></span>
+        </div>
+    </section>
+
+</body>
+</html>

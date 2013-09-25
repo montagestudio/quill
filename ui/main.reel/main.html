@@ -12,9 +12,52 @@
                 "object": "montage/core/localizer[defaultLocalizer]"
             },
 
+            "pagesList": {
+                "prototype": "montage/ui/repetition.reel",
+                "properties": {
+                    "element": {
+                        "#": "pages-list"
+                    },
+                    "isSelectionEnabled": true
+                },
+                "bindings": {
+                    "contentController": {"<-": "@owner.contentController"}
+                }
+            },
+
+            "pageThumbnail": {
+                "prototype": "ui/page-thumbnail.reel",
+                "properties": {
+                    "element": {"#": "page-list-item"}
+                },
+                "bindings": {
+                    "item": {"<-": "@pagesList.objectAtCurrentIteration"},
+                    "pages": {"<-": "@owner.pages"},
+                    "index": {"<-": "@pagesList.currentIteration.index"}
+                }
+            },
+
+
+            "pageView": {
+                "prototype": "ui/page-view.reel",
+                "properties": {
+                    "element": {"#": "pageView"},
+                    "viewMode": "dual-right"
+                },
+                "bindings": {
+                    "pages": {"<-": "@owner.pages"},
+                    "index": {"<-": "@owner.currentPageIndex"}
+                }
+            },
+
             "owner": {
                 "properties": {
-                    "element": {"#": "main"}
+                    "element": {"#": "main"},
+                    "pageView": {"@": "pageView"},
+                    "pagesList": {"@": "pagesList"}
+                },
+                "bindings": {
+                    "currentPage": {"<-": "@owner.pagesList.selection.0"}
                 }
             }
 
@@ -25,7 +68,20 @@
 <body>
 
     <div data-montage-id="main" class="main">
-        <p><nbsp></nbsp>TODO... </p>
+        <header></header>
+        <div class="content">
+            <nav class="navigation">
+                <ul data-montage-id="pages-list" class="pages-list">
+                    <li class="page-list-item">
+                        <div data-montage-id="page-list-item">
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+            <article>
+                <section data-montage-id="pageView" class="pageView"></section>
+            </article>
+        </div>
     </div>
 
 </body>

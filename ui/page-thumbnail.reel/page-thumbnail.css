@@ -1,0 +1,27 @@
+.page-thumbnail {
+    -webkit-user-select: none;
+}
+
+.page-thumbnail > div {
+    height: 100%;
+}
+
+.page-thumbnail-content {
+    height: 164px;
+    border: 1px solid #555555;
+    pointer-events: none;
+}
+
+.selected .page-thumbnail-content {
+    outline: 12px auto -webkit-focus-ring-color;
+}
+
+.page-thumbnail-name {
+    display: block;
+    margin-top: 6px;
+    text-align: center;
+}
+
+.selected .page-thumbnail-name {
+   font-weight: bold;
+}
