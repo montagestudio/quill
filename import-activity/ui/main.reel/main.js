@@ -165,15 +165,17 @@ console.log("--restoreContent")
                 var self = this,
                     ipc = this.environmentBridge.backend.get("ipc"),
                     pos = item.destination.lastIndexOf("/"),
-                    fileName = item.destination.substr(pos + 1);
+//                    fileName = item.destination.substr(pos + 1),
+                    params = {url: encodeURI(item.destination)};
 
-                alert("NYI: Open book " + fileName);
-                ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
-                    return ipc.invoke("send", self.processID, processID, ["removeItem", item]);
-                }).then(function(removed) {
-                    if (removed) {
-                        self.contentController.delete(item);
-                    }
+                this.environmentBridge.backend.get("application").invoke("openDocument", params).then(function() {
+//                    return ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
+//                        return ipc.invoke("send", self.processID, processID, ["removeItem", item]);
+//                    }).then(function(removed) {
+//                        if (removed) {
+//                            self.contentController.delete(item);
+//                        }
+//                    });
                 }).done();
             }
         }
