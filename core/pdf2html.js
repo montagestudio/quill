@@ -26,6 +26,8 @@ var TextRenderingMode = {
   ADD_TO_PATH_FLAG: 4
 };
 
+var unsupportedFeature = {}
+
 function setVendorStyleAttribute(style, name, value) {
     // While this method does set the vendor attribute for all 3 major vendors, this is only useful at runtime!
     // When we will serialize the dom, we will only see the attribute for the current vendor, we will have to
@@ -354,20 +356,19 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     this._preProcessor_DOM.owner = this,
                     this._preProcessor_DOM.page = page;
                     this._preProcessor_DOM.scale = scale;
-                    renderContext.preProcessor = this._preProcessor_DOM;
+                    renderContext.preprocessor = this._preProcessor_DOM;
                 } else if (self.renderingMode == PDF2HTML.RENDERING_MODE.svg) {
                     // Emit SVG
                     this._preProcessor_SVG.owner = this,
                     this._preProcessor_SVG.page = page;
                     this._preProcessor_SVG.scale = scale;
-                    renderContext.preProcessor = this._preProcessor_SVG;
+                    renderContext.preprocessor = this._preProcessor_SVG;
                 } else {
                     console.error("Invalid rendering mode:", self.renderingMode);
                 }
             }
 
             renderContext.continueCallback = function(callback) {
-                console.log("  >>> next");
                 if (renderContext.preProcessor === self._preProcessor_DOM) {
                     self._preProcessor_DOM.endSVG();
                 }
@@ -1081,12 +1082,22 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             },
 
             setRenderingIntent: function(context, intent) {
-                console.warn("rendering intent not yet supported:", intent);
+                if (unsupportedFeature["setRenderingIntent"] === undefined) {
+                    unsupportedFeature["setRenderingIntent"] = 1
+                    console.warn("rendering intent not yet supported:", intent);
+                } else {
+                    unsupportedFeature["setRenderingIntent"] ++;
+                }
                 // TODO set rendering intent?
             },
 
             setFlatness: function(context, value) {
-                console.warn("flatness not yet supported:", value);
+                if (unsupportedFeature["setFlatness"] === undefined) {
+                    unsupportedFeature["setFlatness"] = 1
+                    console.warn("flatness not yet supported:", value);
+                } else {
+                    unsupportedFeature["setFlatness"] ++;
+                }
                 this._svgStates[0].flatness = value;
                 // TODO set flatness?
             },
@@ -1139,18 +1150,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         case 'RI': self.setRenderingIntent(context, value);             break;
                         case 'FL': self.setFlatness(context, value);                    break;
                         case 'Font': self.setFont(context, state[1], state[2]);         break;
-                        case 'CA':
-                            self._svgStates[0].strokeAlpha = state[1];
-                            if (state[1] !== 1) {
-                                console.warn("stroke alpha not yet supported")
-                            }
-                            break;
-                        case 'ca':
-                            self._svgStates[0].fillAlpha = state[1];
-                            if (state[1] !== 1) {
-                                console.warn("fill alpha not yet supported")
-                            }
-                            break;
+                        case 'CA':  self._svgStates[0].strokeAlpha = state[1];          break;
+                        case 'ca': self._svgStates[0].fillAlpha = state[1];             break;
                         case 'BM':
                             if (value && value.name && (value.name !== 'Normal')) {
                                 var mode = value.name.replace(/([A-Z])/g, function(c) {
@@ -1478,7 +1479,6 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 if (object instanceof Image) {
                     this._paintImage(context, object.src, w, h, true);
                 } else {
-                    console.log("MASK INLINE IMAGE NEED TO BE REVERSED!", object);
                     var data = object.data,
                         dataLength = data.length,
                         invertedData = new Uint8Array(0),
@@ -1572,8 +1572,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         // Spacer
                         offsets[index] += - item * current.fontMatrix[0] * fontSize * textHScale;
                         current.x += - item * current.fontMatrix[0] * textHScale;
-                    } else if (typeof item == "string") {
-                        glyphs = font.charsToGlyphs(item);
+                    } else {
+                        glyphs = typeof item == "string" ? font.charsToGlyphs(item) : item;
                         if (glyphs) {
                             glyphs.forEach(function(glyph) {
                                 if (glyph === null) {
@@ -1602,8 +1602,6 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                 }
                             });
                         }
-                    } else {
-                        console.error("unknown spaced text type:", typeof item, item)
                     }
                 });
 
@@ -1670,9 +1668,13 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 }
 
                 if (current.lineWidth !== 1) {
-                    console.warn("text line width not yet supported:", current.lineWidth);
+                    if (unsupportedFeature["lineWidth"] === undefined) {
+                       unsupportedFeature["lineWidth"] = 1
+                        console.warn("text line width not yet supported:", current.lineWidth);
+                   } else {
+                       unsupportedFeature["lineWidth"] ++;
+                   }
                 }
-
 
                 if (needTransform) {
                     textElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");

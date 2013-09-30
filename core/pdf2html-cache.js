@@ -145,6 +145,7 @@ exports.PDF2HTMLCache = Montage.specialize({
         enumerable: false,
         value:     function(filePath, bytes) {
             var self = this;
+
             return self.backend.get("fs").invoke("open", filePath, "wb").then(function(writer) {
                 var offset = 0,
                     remaining = bytes.length;
@@ -154,7 +155,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                         var chunks = [],
                             k;
 
-                        for (k = 0; k < 4 && remaining > 0; k ++) {
+                        for (k = 0; k < 1 && remaining > 0; k ++) {
                             var chunckLength = Math.min(256 * 1024, remaining),
                                 chunkData,
                                 i, j;
@@ -169,14 +170,14 @@ exports.PDF2HTMLCache = Montage.specialize({
                                     chunkData[i]  = bytes[j];
                                 }
                             }
-
                             chunks.push(writer.write(bytesArrayToArray(chunkData), "binary"));
 
                             offset += chunckLength;
                             remaining -= chunckLength;
-
                         }
-                        return Promise.all(chunks).then(writeNextChunk);
+
+//                        return Promise.all(chunks).then(writeNextChunk);
+                        return chunks[0].then(writeNextChunk);
                     } else {
                         return;
                     }
@@ -200,56 +201,57 @@ exports.PDF2HTMLCache = Montage.specialize({
                 bytes,
                 length;
 
-            if (PDFJS.useExternalDiskCache) {
-//                console.log(">>> CACHE SET OBJECT", name, pageNbr, type, typeof data[3], data[3].length, data[4]);
-    //            console.log(">>> ID:", page.objs.resolve(data[0]))
-                switch (type) {
-                    case "JpegStream":
-                        filePath += ".jpeg";
+//            console.log(">>> CACHE SET OBJECT", name, pageNbr, type, typeof data[3], data[3].length, data[4]);
+//            console.log(">>> ID:", page.objs.resolve(data[0]))
+            switch (type) {
+                case "JpegStream":
+                    filePath += ".jpeg";
 
-                        length = objectData.length;
-                        bytes = new Uint8Array(length);
+                    length = objectData.length;
+                    bytes = new Uint8Array(length);
 
-                        for (var i = 0; i < length; i ++) {
-                            bytes[i] = objectData.charCodeAt(i);
-                        }
-                        break;
+                    for (var i = 0; i < length; i ++) {
+                        bytes[i] = objectData.charCodeAt(i);
+                    }
+                    break;
 
-                    case "Image":
-                        var width = objectData.width,
-                            height = objectData.height,
-                            imageCanvas = createScratchCanvas(width, height);
+                case "Image":
+                    var width = objectData.width,
+                        height = objectData.height,
+                        imageCanvas = createScratchCanvas(width, height);
 
-                        if (typeof ImageData !== 'undefined' && objectData instanceof ImageData) {
-                            imageCanvas.putImageData(objectData, 0, 0);
-                        } else {
-                            if (objectData.data) {
-                                putBinaryImageData(imageCanvas.getContext('2d'), objectData.data, width, height);
-                                if (hasMask) {
-                                    hasMask = checkForTransparency(objectData.data);
-                                }
-                            } else {
-                                // JFD TODO: this is likely to be a mask which we do not yet support, just ignore for now...
-                                break;
+                    if (typeof ImageData !== 'undefined' && objectData instanceof ImageData) {
+                        imageCanvas.putImageData(objectData, 0, 0);
+                    } else {
+                        if (objectData.data) {
+                            putBinaryImageData(imageCanvas.getContext('2d'), objectData.data, width, height);
+                            if (hasMask) {
+                                hasMask = checkForTransparency(objectData.data);
                             }
+                        } else {
+                            // JFD TODO: this is likely to be a mask which we do not yet support, just ignore for now...
+                            break;
                         }
-                        filePath += hasMask ? ".png" : ".jpeg";
-                        bytes = bytesFromDataURL(imageCanvas.toDataURL(hasMask ? "image/png" :"image/jpeg", PDFJS.jpegQuality));
-                        break;
-                }
+                    }
+                    filePath += hasMask ? ".png" : ".jpeg";
+                    bytes = bytesFromDataURL(imageCanvas.toDataURL(hasMask ? "image/png" :"image/jpeg", PDFJS.jpegQuality));
+                    break;
             }
 
             if (bytes) {
+                var url;
+
                 self.writeToDisk(filePath, bytes).then(function() {
-                    callback(encodeURI("fs://localhost" + filePath));
-                }, function(error) {console.log("ERROR", error)}).fail(function(error) {
+                    url = encodeURI("fs://localhost" + filePath);
+                }, function(error) {
                     if (error instanceof Error) {
                         console.warn("Cannot save image to disk:", error.message, error.stack);
                     } else {
                         console.warn("Cannot save image to disk:", error);
                     }
-                    callback();
-                }).done();
+                }).done(function() {
+                    callback(url);
+                });
             } else {
                 callback();
             }
@@ -258,7 +260,6 @@ exports.PDF2HTMLCache = Montage.specialize({
 
     setFonts: {
         value: function(fonts, callback) {
-
             var self = this,
                 nbrFonts = fonts ? fonts.length : 0;
 
@@ -299,7 +300,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                     callback();
                 }
             }, function(error) {
-                console.log("FONT SAVING ERROR", error.message);
+                console.warn("Error saving font:", error.message);
                 if (callback) {
                     callback();
                 }
@@ -311,16 +312,13 @@ exports.PDF2HTMLCache = Montage.specialize({
     _checkFile: {
         value: function(filePath) {
             var self = this,
-                deferred = Promise.defer(),
                 fs = self.backend.get("fs");
 
-            fs.invoke("stat", filePath).then(function(stats) {
-                deferred.resolve(stats && stats.size > 0);
-            }, function() {
-                deferred.resolve(false);
-            }).done();
-
-            return deferred.promise;
+            return fs.invoke("stat", filePath).then(function(stats) {
+                return (stats && stats.size > 0);
+            }, function(e) {
+                return (false);
+            });
         }
     },
 
@@ -333,33 +331,31 @@ exports.PDF2HTMLCache = Montage.specialize({
                 referenceID = data[3],
                 hasMask = data[4],
                 filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
-                fileSize = 0;
+                fileSize = 0,
+                url = null;
 
 //            console.log(">>> CACHE GET OBJECT URL:", filePath, type);
-
             switch (type) {
                 case "JpegStream": filePath += hasMask ? ".png" : ".jpeg";     break;
-                case "Image": filePath += hasMask ? ".png" : ".jpeg";           break;
+                case "Image": filePath += hasMask ? ".png" : ".jpeg";          break;
             }
 
             this._checkFile(filePath).then(function(valid) {
                 if (valid) {
-                    callback(encodeURI("fs://localhost" + filePath));
+                    url = encodeURI("fs://localhost" + filePath);
                 } else {
                     if (hasMask) {
                         // check for a jpeg version of the image
                         filePath = filePath.substr(0, filePath.length - 4) + ".jpeg";
-                        self._checkFile(filePath).then(function(valid) {
+                        return self._checkFile(filePath).then(function(valid) {
                             if (valid) {
-                                callback(encodeURI("fs://localhost" + filePath));
-                            } else {
-                                callback(null);
+                                url = encodeURI("fs://localhost" + filePath);
                             }
                         });
-                    } else {
-                        callback(null);
                     }
                 }
+            }).done(function() {
+                callback(url);
             });
         }
     }

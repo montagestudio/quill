@@ -112,8 +112,9 @@ exports.Main = Component.specialize({
                                return self._converter.getDocument(self.url, self.outputURL + "/OEBPS/pages").then(function(pdf) {
                                    self._document = pdf;
                                    self.numberOfPages = pdf.pdfInfo.numPages;
-//self.numberOfPages = 2;
-//self.params.p = 2;
+//self.numberOfPages = 3;
+////if (!self.params.p)
+//self.params.p = 3;
 
                                    self._pageNumber = parseInt(self.params.p, 10) || 1;
 
@@ -146,29 +147,31 @@ exports.Main = Component.specialize({
                                                title = self.url.substr(self.url.lastIndexOf("/") + 1),
                                                pos;
 
-                                           title = title.substr(0, title.toLowerCase().indexOf(".pdf"));
-                                           pos = title.indexOf("_");
-                                           if (pos > 0) {
-                                               title = title.substr(0, title.indexOf("_"));
-                                           }
+                                           if (success) {
+                                               title = title.substr(0, title.toLowerCase().indexOf(".pdf"));
+                                               pos = title.indexOf("_");
+                                               if (pos > 0) {
+                                                   title = title.substr(0, title.indexOf("_"));
+                                               }
 
-                                           options["original-resolution"] = Math.round((view[2] - view[0]) * self.scale) + "x" +
-                                               Math.round((view[3] - view[1]) * self.scale);
-                                           options["book-id"] = self._document.pdfInfo.fingerprint;
-                                           options["document-title"] = title;
+                                               options["original-resolution"] = Math.round((view[2] - view[0]) * self.scale) + "x" +
+                                                   Math.round((view[3] - view[1]) * self.scale);
+                                               options["book-id"] = self._document.pdfInfo.fingerprint;
+                                               options["document-title"] = title;
 
 
-                                           // Time to get the table of content
-                                           return self._converter.getOutline(self._document).then(function(toc) {
-                                               options["toc"] = toc;
-                                               return self.sendMessage("importDone", {
-                                                               id: self.id,
-                                                               destination: self.outputURL,
-                                                               meta: options
-                                               }).then(function() {
-                                                   lumieres.document.close(true);
+                                               // Time to get the table of content
+                                               return self._converter.getOutline(self._document).then(function(toc) {
+                                                   options["toc"] = toc;
+                                                   return self.sendMessage("importDone", {
+                                                                   id: self.id,
+                                                                   destination: self.outputURL,
+                                                                   meta: options
+                                                   }).then(function() {
+                                                       lumieres.document.close(true);
+                                                   });
                                                });
-                                           });
+                                           }
                                        });
                                    });
                                });
@@ -376,6 +379,7 @@ exports.Main = Component.specialize({
                                     sep = "&";
                                 }
                                 window.location.href = newLoc;
+                                return false;
                             }
 
                             return true;

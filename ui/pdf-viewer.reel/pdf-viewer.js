@@ -220,7 +220,6 @@ devicePixelRatio = 1; //JFD DEBUG
 
         set: function(value) {
             this._renderingMode = parseInt(value, 10);
-console.log("SETTING RENDERING MODE:", this._renderingMode, typeof this._renderingMode)
             if (typeof this._renderingMode == "number") {
                 this._converter.renderingMode = this._renderingMode;
                 if (this.state >= STATE_DocumentLoaded) {
