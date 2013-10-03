@@ -58,6 +58,8 @@ exports.Main = Component.specialize({
 
             if (IS_IN_LUMIERES) {
                 this._converter = PDF2HTML.create();
+                this._converter.bypassPFDJSRendering = true;
+
 //                this._converter.renderingMode = PDF2HTML.RENDERING_MODE.hybrid;
                 this._converter.renderingMode = PDF2HTML.RENDERING_MODE.svg;
 
@@ -113,8 +115,8 @@ exports.Main = Component.specialize({
                                    self._document = pdf;
                                    self.numberOfPages = pdf.pdfInfo.numPages;
 //self.numberOfPages = 3;
-////if (!self.params.p)
-//self.params.p = 3;
+//if (!self.params.p)
+//self.params.p = 2;
 
                                    self._pageNumber = parseInt(self.params.p, 10) || 1;
 

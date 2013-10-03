@@ -228,6 +228,10 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
         }
     },
 
+    bypassPFDJSRendering: {
+        value: false
+    },
+
     rootDirectory: {
         value: "~/"
     },
@@ -992,11 +996,14 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                 this.owner._rootNodeStack[0].appendChild(gElem);
                 this.owner._rootNodeStack.unshift(gElem);
-                console.log("BEGIN GROUP", group, gElem);
+
+                return this.owner.bypassPFDJSRendering;
             },
 
             endGroup: function(context, group) {
                 this.owner._rootNodeStack.splice(0, 1);
+
+                return this.owner.bypassPFDJSRendering;
             },
 
 
@@ -1020,6 +1027,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     this.clip(context);
                     this.endPath(context);
                 }
+
+                return this.owner.bypassPFDJSRendering;
             },
 
             paintFormXObjectEnd: function (context) {
@@ -1029,6 +1038,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 // some pdf don't close all restores inside object
                 // closing those for them
               } while (this._svgStates[0].paintFormXObjectDepth >= depth && this._svgStates[0].length > 1);
+
+                return this.owner.bypassPFDJSRendering;
             },
 
 
@@ -1200,10 +1211,14 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
 
                 this.owner._rootNodeStack.unshift(gElem);
+
+                return this.owner.bypassPFDJSRendering;
             },
 
             eoClip: function(context) {
                 this.clip(context, "evenodd");
+
+                return this.owner.bypassPFDJSRendering;
            },
 
             endPath: function(context) {
@@ -1329,6 +1344,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 rectElem.setAttribute("fill","url(#" + gradID + ")");
                 rectElem.setAttribute("stroke","none");
                 this.owner._rootNodeStack[0].appendChild(rectElem);
+
+                return this.owner.bypassPFDJSRendering;
             },
 
 
@@ -1428,6 +1445,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     error('Dependent image isn\'t ready yet');
                 }
                 this._paintImage(context, object.src, w, h);
+
+                return this.owner.bypassPFDJSRendering;
             },
 
             paintImageXObject: function(context, objId, w, h) {
@@ -1438,10 +1457,12 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 }
 
                 if (object instanceof Image) {
-                    this.paintJpegXObject(context, objId, w, h);
+                   this.paintJpegXObject(context, objId, w, h);
                 } else {
                     this.paintInlineImageXObject(context, object, true);
                 }
+
+                return this.owner.bypassPFDJSRendering;
             },
 
             paintInlineImageXObject: function(context, object, useBlobURL, isAMask) {
@@ -1465,6 +1486,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     // Add image as data URL
                     this._paintImage(context, imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", PDFJS.jpegQuality), width, height, isAMask);
                 }
+
+                return this.owner.bypassPFDJSRendering;
             },
 
             paintImageMaskXObject: function(context, object, w, h) {
@@ -1494,6 +1517,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         this.paintInlineImageXObject(context, object, true, true);
                     object.data = data;
                 }
+
+                return this.owner.bypassPFDJSRendering;
             },
 
             // Text Drawing
@@ -1510,7 +1535,9 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             },
 
             showText: function(context, text) {
-                return this.showSpacedText(context, [text]);
+                this.showSpacedText(context, [text]);
+
+                return this.owner.bypassPFDJSRendering;
             },
 
             showSpacedText: function(context, data) {
@@ -1687,6 +1714,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                 this.owner._rootNodeStack[0].appendChild(textElem);
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+
+                return this.owner.bypassPFDJSRendering;
             },
 
             moveText: function(context, x, y) {
