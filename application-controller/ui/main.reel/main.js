@@ -228,7 +228,9 @@ exports.Main = Component.specialize({
                                         });
                                     });
                                 });
-                            }).done();;
+                            }, function(error) {
+                                console.log("import error:", error.message)
+                            }).done();
 
                             item.lastContact = new Date().getTime() / 1000;
                             return true;
