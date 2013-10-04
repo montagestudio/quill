@@ -1459,13 +1459,13 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 if (object instanceof Image) {
                    this.paintJpegXObject(context, objId, w, h);
                 } else {
-                    this.paintInlineImageXObject(context, object, true);
+                    this.paintInlineImageXObject(context, object, false);
                 }
 
                 return this.owner.bypassPFDJSRendering;
             },
 
-            paintInlineImageXObject: function(context, object, useBlobURL, isAMask) {
+            paintInlineImageXObject: function(context, object, isAMask) {
                 var imageData = object.data,
                     width = object.width,
                     height = object.height,
@@ -1477,8 +1477,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                 putBinaryImageData(imageCtx, imageData, width, height);
                 hasTransparency = checkForTransparency(imageData);
-
-                if (useBlobURL) {
+                if (!PDFJS.useExternalObjectsCache) {
                     // Add image as blob URL
                     var imageBlob = blobFromDataURL(imageCanvas.toDataURL(hasTransparency ? "image/png" : "image/jpeg", PDFJS.jpegQuality));
                     this._paintImage(context, URL.createObjectURL(imageBlob), width, height, isAMask);
@@ -1514,7 +1513,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     }
 
                     object.data = invertedData;
-                        this.paintInlineImageXObject(context, object, true, true);
+                        this.paintInlineImageXObject(context, object, true);
                     object.data = data;
                 }
 
