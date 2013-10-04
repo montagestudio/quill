@@ -15,8 +15,21 @@ exports.Main = Component.specialize({
         }
     },
 
-    url: {
+    _url: {
         value: null
+    },
+
+    url: {
+        get: function() {
+            return this._url;
+        },
+
+        set: function(url) {
+            var pos = url.lastIndexOf("/");
+
+            this._url = url;
+            window.document.title = pos !== -1 ? url.substr(pos + 1) : url;
+        }
     },
 
     pages: {
@@ -193,6 +206,8 @@ exports.Main = Component.specialize({
             var self = this;
             if (firstTime) {
                 window.addEventListener("resize", this);
+                // JFD TODO: add keyboard shortcut to navigate the pages
+//                document.addEventListener("keydown", this);
             }
         }
     },
