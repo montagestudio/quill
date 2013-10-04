@@ -78,7 +78,7 @@ exports.ActivityListItem = Component.specialize({
             }
 
             else if (item.status === IMPORT_STATES.fetchError) {
-                this.statusLabel = "Fetching description failed, will try again later...";
+                this.statusLabel = "Fetching description failed, will try again...";
             }
 
             else if (item.status === IMPORT_STATES.converting || item.status == IMPORT_STATES.stalled) {
@@ -89,7 +89,7 @@ exports.ActivityListItem = Component.specialize({
                 }
 
                 if (item.status == IMPORT_STATES.stalled) {
-                    this.statusLabel += " (stalled)";
+                    this.statusLabel += "...";
                 }
             }
 

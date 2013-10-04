@@ -62,12 +62,16 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                             console.log("ERROR:", error)
                             deferred.reject({id: item.id, error: error});
                         }
+                    }, function(error) {
+                        deferred.reject({id: item.id, error: error});
                     });
                 } else {
                     deferred.resolve({id: item.id});
                 }
             }, function(error) {
-                deferred.reject({id: item.id, error: error});
+//                deferred.reject({id: item.id, error: error});
+                // JFD TODO: for now, if you try to convert a file that is not a typical scholastic filename, let's just ignore the metadata
+                deferred.resolve({id: item.id});
             }).done();
 
             return deferred.promise;

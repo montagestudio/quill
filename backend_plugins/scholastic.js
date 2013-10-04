@@ -121,10 +121,10 @@ exports.fetchMetaData = function(isbn) {
     var deferred = Q.defer();
 
     var options = {
-//        host: 'dpd.scholastic.net',
-//        path: "/services/DPDService.cfc?wsdl&method=getXPSMetadata&isbn_13=" + isbn,
-        host: 'localhost',
-        path: "/Projects/scholastic.xml?isbn=" + isbn,
+        host: 'dpd.scholastic.net',
+        path: "/services/DPDService.cfc?wsdl&method=getXPSMetadata&isbn_13=" + isbn,
+//        host: 'localhost',
+//        path: "/Projects/scholastic.xml?isbn=" + isbn,
         port: 80
     }
 
@@ -132,15 +132,18 @@ exports.fetchMetaData = function(isbn) {
         var data = "";
 //        res.setEncoding('utf8');
 
-        res.on('data', function (chunk) {
-            data += chunk;
-        });
+        if (res.statusCode == 200) {
+            res.on('data', function (chunk) {
+                data += chunk;
+            });
 
-        res.on('end', function () {
-            console.log('DATA: ', data);
-            deferred.resolve(data);
-        });
-
+            res.on('end', function () {
+                console.log('DATA: ', data);
+                deferred.resolve(data);
+            });
+        } else {
+            deferred.reject("Cannot connect to " + options.host + ":" + options.port);
+        }
     });
 
     request.on('error', function(e) {

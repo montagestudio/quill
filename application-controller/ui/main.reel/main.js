@@ -429,14 +429,20 @@ exports.Main = Component.specialize({
                                     self.updateItemState(itemRef, IMPORT_STATES.fetchError);
                                     itemRef.retries ++;
 
-                                    if (itemRef.retries < 10 ) {
+                                    if (itemRef.retries < 3 ) {
                                         setTimeout(function() {
                                             itemRef.status = IMPORT_STATES.unknown;
                                             self.upgradeItemsState();
-                                        }, 30000);
+                                        }, 15000);
                                     } else {
-                                        itemRef.error = e.error.message;
+                                        itemRef.error = e.error.message || e.error;
                                         self.updateItemState(itemRef, IMPORT_STATES.error);
+
+                                        //JFD TODO: TEMPORARY-- after displaying the error for couple seconds, let just resume the import without the meta data...
+                                        setTimeout(function() {
+                                            self.updateItemState(itemRef, IMPORT_STATES.waiting)
+                                            itemRef.metadata = itemRef.metadata || {};
+                                        }, 5000);
                                     }
 
                                     self.upgradeItemsState();
