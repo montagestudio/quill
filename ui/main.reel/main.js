@@ -28,7 +28,7 @@ exports.Main = Component.specialize({
             var pos = url.lastIndexOf("/");
 
             this._url = url;
-            window.document.title = pos !== -1 ? url.substr(pos + 1) : url;
+            window.document.title = decodeURI(pos !== -1 ? url.substr(pos + 1) : url);
         }
     },
 
