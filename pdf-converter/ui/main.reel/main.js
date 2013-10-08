@@ -334,6 +334,8 @@ exports.Main = Component.specialize({
         value: function() {
             var self = this;
 
+            lumieres.powerManager.preventIdleSleep("Importing PDF");    // We don't want to system to go to sleep while importing
+
             self.updateState(IMPORT_STATES.converting, self._pageNumber, self.numberOfPages);
 
             console.log("convert", this._pageNumber)
@@ -380,10 +382,12 @@ exports.Main = Component.specialize({
                                     newLoc += sep + param + "=" + encodeURIComponent(self.params[param]);
                                     sep = "&";
                                 }
+                                lumieres.powerManager.allowIdleSleep();
                                 window.location.href = newLoc;
                                 return false;
                             }
 
+                            lumieres.powerManager.allowIdleSleep();
                             return true;
                         });
                     });
