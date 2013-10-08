@@ -581,14 +581,17 @@ exports.Main = Component.specialize({
 
     buildTableOfContent: {
         value: function(meta) {
-            var toc = meta.toc;
+            var toc = meta.toc,
+                maxDepth = 0,
+                idCounter = 1;
 
             if (!toc) {
-                meta.toc = "<ol></ol>";
+                meta.nav = "<ol></ol>";
+                meta.tocmap = "";
                 return;
             }
 
-            var _generateTable = function(items, pading) {
+            var _generateNavTable = function(items, pading) {
                 var result = pading + '<ol>';
 
                 items.forEach(function(item) {
@@ -605,16 +608,53 @@ exports.Main = Component.specialize({
                         result += pading + '\t' + title;
                     }
                     if (item.items && item.items.length) {
-                        result += _generateTable(item.items, pading + "\t");
+                        result += _generateNavTable(item.items, pading + "\t");
                     }
                     result += pading + '</li>';
                 });
 
                 result += pading + "</ol>";
                 return result;
-            }
+            };
 
-            meta.toc = _generateTable(toc, "\n\t\t\t");
+            var _generateTocTable = function(items, pading, depth) {
+                var result = "";
+
+                // JFD TODO: add entry for cover page
+
+                depth = depth || 1;
+                if (depth > maxDepth) {
+                    maxDepth = depth;
+                }
+
+                items.forEach(function(item) {
+                    var title = item.title;
+
+                    title = title.replace(/&/g, "&amp;");
+                    title = title.replace(/</g, "&lt;");
+                    title = title.replace(/>/g, "&gt;");
+
+                    result += pading + '<navPoint id="np' + idCounter + '" playOrder="' + idCounter + '">';
+                    result += pading + '\t<navLabel><text>' + title + '</text></navLabel>';
+                    if (item.pageNumber) {
+                        result += pading + '\t<content src="pages/' + item.pageNumber + '.xhtml"/>'
+                    }
+
+                    idCounter ++;
+
+                    if (item.items && item.items.length) {
+                        result += _generateTocTable(item.items, pading + "\t", depth + 1);
+                    }
+                    result += pading + '</navPoint>';
+                });
+
+                return result;
+            };
+
+
+            meta.nav = _generateNavTable(toc, "\n\t\t\t");
+            meta.tocmap = _generateTocTable(toc, "\n\t\t");
+            meta["tocmap-depth"] = maxDepth;
         }
     },
 
