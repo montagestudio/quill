@@ -1,3 +1,4 @@
+/*global toolbar,pdf,pdfPage,loadPDFPage */
 /**
  * Created with JetBrains WebStorm.
  * User: jf

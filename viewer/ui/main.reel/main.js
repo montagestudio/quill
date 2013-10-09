@@ -13,8 +13,6 @@ exports.Main = Component.specialize({
 
     templateDidLoad: {
         value: function() {
-            foo = this;
-
             var searches = document.location.search.substr(1).split("&"),
                 i;
 

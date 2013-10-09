@@ -144,7 +144,6 @@ exports.Main = Component.specialize({
             var self = this;
 
             console.log("templateDidLoad");
-            foo = this;
 
             var searches = document.location.search.substr(1).split("&"),
                 i;

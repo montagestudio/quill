@@ -1,9 +1,9 @@
-/* global lumieres */
+/* global lumieres,alert */
 var Montage = require("montage/core/core").Montage,
     Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
     RangeController = require("montage/core/range-controller").RangeController,
-    IMPORT_STATES = require("core/importStates").importStates;    
+    IMPORT_STATES = require("core/importStates").importStates;
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
@@ -244,7 +244,7 @@ console.log("--restoreContent")
                         if (item) {
                             this.contentController.content.some(function (object) {
                                 if (object.id === parseInt(item.id, 10)) {
-                                    for (property in item) {
+                                    for (var property in item) {
                                         if (item.hasOwnProperty(property) && object[property] !== item[property]) {
                                             object[property] = item[property];
                                         }

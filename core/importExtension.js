@@ -1,4 +1,5 @@
 var Montage = require("montage/core/core").Montage;
+var Promise = require("montage/core/promise").Promise;
 
 exports.ImportExtension = Montage.specialize({
 
@@ -7,7 +8,7 @@ exports.ImportExtension = Montage.specialize({
      */
     getMetaData: {
         value: function(item) {
-            var deferred = Q.defer();
+            var deferred = Promise.defer();
 
             deferred.resolve({id: item.id, metadata: null});
             return deferred.promise;
@@ -20,7 +21,7 @@ exports.ImportExtension = Montage.specialize({
      */
     customizePages: {
         value: function(item) {
-            var deferred = Q.defer();
+            var deferred = Promise.defer();
 
             deferred.resolve(item.id);
             return deferred.promise;
@@ -34,7 +35,7 @@ exports.ImportExtension = Montage.specialize({
      */
     customizeAssets: {
         value: function(item) {
-            var deferred = Q.defer();
+            var deferred = Promise.defer();
 
             deferred.resolve(item.id);
             return deferred.promise;
@@ -48,7 +49,7 @@ exports.ImportExtension = Montage.specialize({
      */
     customizeEbook: {
         value: function(item) {
-            var deferred = Q.defer();
+            var deferred = Promise.defer();
 
             deferred.resolve(item.id);
             return deferred.promise;

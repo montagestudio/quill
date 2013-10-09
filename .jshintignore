@@ -1,0 +1,3 @@
+node_modules/**
+core/emmet.js
+core/node/*

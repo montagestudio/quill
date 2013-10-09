@@ -1,3 +1,4 @@
+/*jshint node:true */
 /*
     Scholastic specific extension
  */
