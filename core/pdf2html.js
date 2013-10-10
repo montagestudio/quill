@@ -545,7 +545,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                 items.forEach(function(item) {
                                     var dest = item.dest,
                                         entry = {
-                                            title: item.title,
+                                            title: item.title.replace(/^\s+|\s+$/g,''),     // trim white space
                                             bold: item.bold,
                                             italic: item.italic,
                                             color: item.color
