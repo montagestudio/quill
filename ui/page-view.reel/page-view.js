@@ -123,7 +123,7 @@ var PageView = exports.PageView = Component.specialize({
                     frame.height = 0;
 
                     if (this._pageDrawInfo[i].data) {
-                        // Blank page or cover image, draw in two steps to work arounf cross-origin restriction
+                        // Blank page or cover image, draw in two steps to work around cross-origin restriction
                         if (frame.src === "about:blank") {
                             var doc = frame.contentDocument;
                             if (doc) {

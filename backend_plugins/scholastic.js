@@ -90,7 +90,6 @@ exports.setupCoverPage = function(item) {
     return QFS.listTree(root, guard(isbn)).then(function (paths) {
         if (paths && paths.length) {
             // Copy the cover file
-            // JFD TODO: optimize cover image
             var destPath = PATH.join(pathFromURL(item.destination), "OEBPS", "assets", "cover.jpeg"),
                 destURL = (item.destination + "/OEBPS/assets/cover.jpeg").replace(/ /g, "%20");
             return QFS.copy(paths[0], destPath).then(function() {
