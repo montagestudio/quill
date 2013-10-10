@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "montage": "git://github.com/montagejs/montage.git#6096b96573e7f1ea35761d38cd9c5d8b8f6cf36f",
+    "collectif": "git+ssh://git@github.com:declarativ/collectif.git#f2cfb6d956781bf325d64d5a68bf9f33f5032e88",
     "matte": "0.1.1",
     "native": "0.1.1",
     "mousse": "0.1.2",
