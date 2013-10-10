@@ -2,7 +2,7 @@
 var Montage = require("montage/core/core").Montage,
     Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
-//    defaultMenu = require("ui/native-menu/menu").defaultMenu,
+
     defaultEventManager = require("montage/core/event/event-manager").defaultEventManager,
     ImportExtension = require("core/ImportExtension").ImportExtension,
     IMPORT_STATES = require("core/importStates").importStates;
