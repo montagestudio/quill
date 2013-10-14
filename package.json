@@ -7,7 +7,7 @@
     "url": "git@github.com:declarativ/plume.git"
   },
   "dependencies": {
-    "montage": "git://github.com/montagejs/montage.git#6096b96573e7f1ea35761d38cd9c5d8b8f6cf36f",
+    "montage": "git://github.com/montagejs/montage.git#051679decf47ed60ee86db63101f2688fad5a15b",
     "matte": "0.1.1",
     "native": "0.1.1",
     "mousse": "0.1.2",
