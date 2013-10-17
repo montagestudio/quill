@@ -266,6 +266,8 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                         deferred.resolve(false);
                     }
                 });
+            } else {
+                deferred.resolve();
             }
 
             return deferred.promise;
