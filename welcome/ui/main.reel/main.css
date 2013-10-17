@@ -71,6 +71,12 @@
     text-align: center;
 }
 
+.Intro-warning {
+    font-size: 13px;
+    font-weight: bold;
+    color: hsl(0, 0%, 10%);
+    text-align: center;
+}
 
 /* Launcher --------------------------------- */
 

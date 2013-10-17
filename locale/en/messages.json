@@ -17,6 +17,22 @@
             "bibliotheque/ui/main.reel/main.html"
         ]
     },
+
+    "welcome_warning1": {
+        "message": "Proprietary and Confidential.",
+        "description": "line 1 or 2",
+        "locations": [
+            "welcome/ui/main.reel/main.html"
+        ]
+    },
+
+    "welcome_warning2": {
+        "message": "Please do not distribute.",
+        "description": "line 2 of 2",
+        "locations": [
+            "welcome/ui/main.reel/main.html"
+        ]
+    },
     "new_book": {
         "message": "New",
         "description": "Button to create a new book",
