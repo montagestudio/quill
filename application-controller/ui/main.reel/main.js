@@ -2,7 +2,7 @@
 var Montage = require("montage/core/core").Montage,
     Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
-//    defaultMenu = require("ui/native-menu/menu").defaultMenu,
+
     defaultEventManager = require("montage/core/event/event-manager").defaultEventManager,
     ImportExtension = require("core/ImportExtension").ImportExtension,
     IMPORT_STATES = require("core/importStates").importStates;
@@ -54,8 +54,8 @@ exports.Main = Component.specialize({
             if (IS_IN_LUMIERES) {
                 var self = this;
 
-                require.async("core/lumieres-bridge").then(function (exported) {
-                    self.environmentBridge = exported.LumiereBridge.create();
+                require.async("collectif/core/lumieres-bridge").then(function (exported) {
+                    self.environmentBridge = new exported.LumiereBridge().init("plume-backend");
 
                     self.environmentBridge.connectionHandler = self;
                     var backend = self.environmentBridge.backend; // force open backend connection

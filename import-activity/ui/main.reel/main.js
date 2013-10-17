@@ -46,8 +46,8 @@ exports.Main = Component.specialize({
         value: function Main() {
             var self = this;
             if (IS_IN_LUMIERES) {
-                require.async("core/lumieres-bridge").then(function (exported) {
-                    self.environmentBridge = exported.LumiereBridge.create();
+                require.async("collectif/core/lumieres-bridge").then(function (exported) {
+                    self.environmentBridge = new exported.LumiereBridge().init("plume-backend");
 
                     self.environmentBridge.connectionHandler = self;
                     var backend = self.environmentBridge.backend; // force open backend connection

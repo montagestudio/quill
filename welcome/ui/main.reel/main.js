@@ -1,7 +1,6 @@
 /* global lumieres */
 var Montage = require("montage/core/core").Montage,
-    Component = require("montage/ui/component").Component,
-    HistoryItemConverter = require("welcome/core/history-item-converter").HistoryItemConverter;
+    Component = require("montage/ui/component").Component;
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
@@ -32,8 +31,8 @@ exports.Main = Component.specialize({
                     source: lumieres
                 });
 
-                require.async("core/lumieres-bridge").then(function (exported) {
-                    self.environmentBridge = exported.LumiereBridge.create();
+                require.async("collectif/core/lumieres-bridge").then(function (exported) {
+                    self.environmentBridge = new exported.LumiereBridge().init("plume-backend");
                     self.environmentBridge.userPreferences.then(function (prefs) {
                         self.isFirstRun = prefs.firstRun;
                         //TODO I don't want firstrun to be set-able as an API, but this feels a little weird
