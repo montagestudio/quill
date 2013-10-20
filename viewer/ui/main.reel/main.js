@@ -14,12 +14,12 @@ exports.Main = Component.specialize({
     templateDidLoad: {
         value: function() {
             var searches = document.location.search.substr(1).split("&"),
-                i;
+                self = this;
 
-            for (i in searches) {
-                var param = searches[i].split("=");
-                this.params[decodeURIComponent(param[0])] = param.length > 1 ? decodeURIComponent(param[1]) : null;
-            }
+            searches.forEach(function (search) {
+                var param = search.split("=");
+                self.params[decodeURIComponent(param[0])] = param.length > 1 ? decodeURIComponent(param[1]) : null;
+            });
         }
     }
 });

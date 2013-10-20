@@ -109,7 +109,7 @@ exports.Main = Component.specialize({
                     // auto reconnect...
                     setTimeout(function() {
                         var reconnected = self.backend;
-                    }, 250)
+                    }, 250);
                 });
                 self._backend = Connection(connection);
 
@@ -119,8 +119,8 @@ exports.Main = Component.specialize({
                         return self.onIPCMessage.apply(self, arguments);
                     })).then(function(processID){
                         self._processID = processID;
-                        console.log("reconnected to ipc with id:", processID)
-                    })
+                        console.log("reconnected to ipc with id:", processID);
+                    });
                 }
             }
 
@@ -142,16 +142,15 @@ exports.Main = Component.specialize({
 
             console.log("templateDidLoad");
 
-            var searches = document.location.search.substr(1).split("&"),
-                i;
+            var searches = document.location.search.substr(1).split("&");
+            searches.forEach(function (search) {
+                var param = search.split("=");
+                self.params[decodeURIComponent(param[0])] = param.length > 1 ? decodeURIComponent(param[1]) : null;
+            });
 
-            for (i in searches) {
-                var param = searches[i].split("=");
-                this.params[decodeURIComponent(param[0])] = param.length > 1 ? decodeURIComponent(param[1]) : null;
-            }
             console.log(this.params);
 
-            if (this.params.file && this.params.file.slice(-6) == ".ebook") {
+            if (this.params.file && this.params.file.slice(-6) === ".ebook") {
                 this.url = encodeURI(this.params.file);
                 this.loadContentInfo();
             }
@@ -182,7 +181,7 @@ exports.Main = Component.specialize({
             })).then(function(processID){
                 console.log("processID:", processID);
                 self._processID = processID;
-            })
+            });
         }
     },
 
@@ -218,7 +217,7 @@ exports.Main = Component.specialize({
             xhr.open('GET', self.url + '/OEBPS/content.opf', true);
 
             xhr.onload = function(e) {
-                if (this.status == 200) {
+                if (this.status === 200) {
                     var spines,
                         contentInfo = this.responseXML,
                         pageDocument,

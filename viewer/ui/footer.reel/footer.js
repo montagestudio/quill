@@ -132,14 +132,14 @@ exports.Footer = Component.specialize({
             }
 
             if (event.keyIdentifier === "Left" || event.keyIdentifier === "Right") {
-                this.mode = event.keyIdentifier === "Left" ? "overlay" : "aside"
+                this.mode = event.keyIdentifier === "Left" ? "overlay" : "aside";
 
                 event.stopPropagation();
                 event.preventDefault();
             }
 
             if (event.keyIdentifier === "Up" || event.keyIdentifier === "Down") {
-                if (this.mode == "overlay") {
+                if (this.mode === "overlay") {
                     if (event.keyIdentifier === "Down") {
                         this.opacity -= 0.25;
                         if (this.opacity < 0) {

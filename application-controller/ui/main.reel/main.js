@@ -30,7 +30,7 @@ exports.Main = Component.specialize({
     },
 
     _processID: {
-        value: undefined
+        value: void 0
     },
 
     processID: {
@@ -70,10 +70,10 @@ exports.Main = Component.specialize({
                                     self.importDestinationPath = path.url + "/" + lumieres.applicationName;
                                     lumieres.setUserPreferences({importDestinationPath: self.importDestinationPath}, function (error, result) {
                                         if (error) {
-                                            console.warm("Cannot set preferences")
+                                            console.warm("Cannot set preferences");
                                         }
                                     });
-                                })
+                                });
                             } else {
                                 self.importDestinationPath = prefs.importDestinationPath;
                             }
@@ -87,10 +87,10 @@ exports.Main = Component.specialize({
                     self.needsDraw = true;
 
                     window.setInterval(function() {
-                        self.checkImporters()
+                        self.checkImporters();
                     }, CHECK_INTERVAL * 1000);
 
-                    console.log("--- application-controller running ---")
+                    console.log("--- application-controller running ---");
                 });
             } else {
                 alert("Plume cannot be run outside of Lumieres!");
@@ -119,7 +119,7 @@ exports.Main = Component.specialize({
                 self._processID = processID;
                 console.log("--- app-controller process id:", processID);
             }, function(e) {
-                console.log("ERROR:", e.message, e.stack)
+                console.log("ERROR:", e.message, e.stack);
             }).done();
         }
     },
@@ -143,17 +143,21 @@ exports.Main = Component.specialize({
 
             if (to === this.processID) {
                 if (data && data.length) {
-                    var command = data[0];
+                    var command = data[0],
+                        items,
+                        item,
+                        length,
+                        id,
+                        i;
 
                     if (command === "getImportItems") {
                         return this.importItems;
                     }
 
-                    else if (command == "getItem") {
-                        var items = this.importItems,
-                            length = items.length,
-                            id = parseInt(data[1], 10),
-                            i;
+                    else if (command === "getItem") {
+                        items = this.importItems;
+                        length = items.length;
+                        id = parseInt(data[1], 10);
 
                         for (i = 0; i < length; i ++) {
                             if (items[i].id === id) {
@@ -163,18 +167,17 @@ exports.Main = Component.specialize({
                         return null;
                     }
 
-                    else if (command == "removeItem") {
-                        var items = this.importItems,
-                            length = items.length,
-                            id = parseInt(data[1].id, 10),
-                            i;
+                    else if (command === "removeItem") {
+                        items = this.importItems;
+                        length = items.length;
+                        id = parseInt(data[1].id, 10);
 
                         for (i = 0; i < length; i ++) {
                             if (items[i].id === id) {
                                 if (items[i].processID) {
                                    // Stop the import before removing the item from the list...
                                     this.environmentBridge.backend.get("ipc").invoke("send", self.processID, items[i].processID, ["close"]).fail(function(e){
-                                        console.log("ERROR:", e.message, e.stack)
+                                        console.log("ERROR:", e.message, e.stack);
                                     }).done();
                                 }
 
@@ -187,7 +190,7 @@ exports.Main = Component.specialize({
                     }
 
                     else if (command === "converterInfo") {
-                        var item = this._importItemForID(data[1].id);
+                        item = this._importItemForID(data[1].id);
                         if (item) {
                             item.processID = data[1].processID;
                             item.lastContact = new Date().getTime() / 1000;
@@ -197,9 +200,9 @@ exports.Main = Component.specialize({
                     }
 
                     else if (command === "itemUpdate") {
-                        var item = this._importItemForID(data[1].id);
+                        item = this._importItemForID(data[1].id);
                         if (item) {
-                            self.updateItemState(item, data[1].status, data[1].currentPage, data[1].nbrPages, data[1].destination, data[1].meta)
+                            self.updateItemState(item, data[1].status, data[1].currentPage, data[1].nbrPages, data[1].destination, data[1].meta);
                             item.lastContact = new Date().getTime() / 1000;
                             return true;
                         }
@@ -207,7 +210,7 @@ exports.Main = Component.specialize({
                     }
 
                     else if (command === "importDone") {
-                        var item = this._importItemForID(data[1].id);
+                        item = this._importItemForID(data[1].id);
                         if (item) {
                             item.meta = data[1].meta;
 
@@ -229,7 +232,7 @@ exports.Main = Component.specialize({
                                     });
                                 });
                             }, function(error) {
-                                console.log("import error:", error.message)
+                                console.log("import error:", error.message);
                             }).done();
 
                             item.lastContact = new Date().getTime() / 1000;
@@ -252,14 +255,14 @@ exports.Main = Component.specialize({
     },
 
     handleMenuAction: {
-      value: function(event) {
-          var menuItem = event.detail,
-              method = "handleMenuAction" + menuItem.identifier.substr(0, 1).toUpperCase() + menuItem.identifier.substr(1);
+        value: function(event) {
+            var menuItem = event.detail,
+                method = "handleMenuAction" + menuItem.identifier.substr(0, 1).toUpperCase() + menuItem.identifier.substr(1);
 
-          if (typeof this[method] === "function") {
-              this[method](event);
-          }
-      }
+            if (typeof this[method] === "function") {
+                this[method](event);
+            }
+        }
     },
 
     handleMenuActionImportDocument : {
@@ -270,7 +273,7 @@ exports.Main = Component.specialize({
                     canChooseDirectories: true,
                     fileTypes: ["com.adobe.pdf"],
                     displayAsSheet: false
-                }
+                };
 
             if (this._import_reentrant_lock === true) {
                 // the import dialog is already open, just ignore
@@ -290,7 +293,7 @@ exports.Main = Component.specialize({
                 }
 
                 if (!(urls instanceof Array)) {
-                   urls = [urls];
+                    urls = [urls];
                 }
 
                 urls.map(function(url) {
@@ -326,7 +329,7 @@ exports.Main = Component.specialize({
                         importItems.addEach(newContent);
 
                     }, function(error) {
-                        console.log("ERROR", error.message, error.stack)
+                        console.log("ERROR", error.message, error.stack);
                     }));
                 });
 
@@ -334,8 +337,11 @@ exports.Main = Component.specialize({
                     console.log("URLS:", self.importItems);
                     var windowParams = {
                         url:"http://client/import-activity/index.html",
-                        width:400, height:600, canResize:true,
-                        showToolbar:false, canOpenMultiple: false
+                        width:400,
+                        height:600,
+                        canResize:true,
+                        showToolbar:false,
+                        canOpenMultiple: false
                     };
 
                     self.upgradeItemsState();
@@ -365,7 +371,7 @@ exports.Main = Component.specialize({
                 self._upgradeItemsStateTimer = null;
                 self.launchFetch();
                 self.launchImport();
-            }, 250)
+            }, 250);
         }
     },
 
@@ -382,13 +388,13 @@ exports.Main = Component.specialize({
                 var status = item.status,
                     retries = Math.floor(item.retries / 5);
 
-                if (status == IMPORT_STATES.unknown) {
-                    if (sortedTable[retries] === undefined) {
+                if (status === IMPORT_STATES.unknown) {
+                    if (typeof sortedTable[retries] === "undefined") {
                         sortedTable[retries] = [item];
                     } else {
                         sortedTable[retries].push(item);
                     }
-                } else if (status == IMPORT_STATES.fetching) {
+                } else if (status === IMPORT_STATES.fetching) {
                     nbrFetches ++;
                 }
             });
@@ -402,9 +408,9 @@ exports.Main = Component.specialize({
                     for (index in sortedTable[retries]) {
                         item = sortedTable[retries][index];
 
-                        if (self.extension && typeof self.extension.getMetaData == "function") {
+                        if (self.extension && typeof self.extension.getMetaData === "function") {
                             console.log("***** START FETCHING:", item.name, item.status, item.retries);
-                            self.updateItemState(item, IMPORT_STATES.fetching)
+                            self.updateItemState(item, IMPORT_STATES.fetching);
 
                             self.extension.getMetaData(self.environmentBridge.backend, item).then(function(response) {
                                 var id = response.id,
@@ -413,7 +419,7 @@ exports.Main = Component.specialize({
                                 // let's match the metadata id with an item ID. We cannot rely on the variable item as we shared it for every items.
                                 var itemRef = self._importItemForID(id);
                                 if (itemRef) {
-                                    self.updateItemState(itemRef, IMPORT_STATES.waiting)
+                                    self.updateItemState(itemRef, IMPORT_STATES.waiting);
                                     itemRef.metadata = itemRef.metadata || {};
                                     for (var property in metadata) {
                                         itemRef.metadata[property] = metadata[property];
@@ -440,7 +446,7 @@ exports.Main = Component.specialize({
 
                                         //JFD TODO: TEMPORARY-- after displaying the error for couple seconds, let just resume the import without the meta data...
                                         setTimeout(function() {
-                                            self.updateItemState(itemRef, IMPORT_STATES.waiting)
+                                            self.updateItemState(itemRef, IMPORT_STATES.waiting);
                                             itemRef.metadata = itemRef.metadata || {};
                                         }, 5000);
                                     }
@@ -480,13 +486,13 @@ exports.Main = Component.specialize({
                 var status = item.status,
                     retries = Math.floor(item.retries / 5);
 
-                if (status == IMPORT_STATES.waiting) {
+                if (status === IMPORT_STATES.waiting) {
                     if (waitings[retries] === undefined) {
                         waitings[retries] = [item];
                     } else {
                         waitings[retries].push(item);
                     }
-                } else if (status == IMPORT_STATES.converting || status == IMPORT_STATES.stalled) {
+                } else if (status === IMPORT_STATES.converting || status === IMPORT_STATES.stalled) {
                     nbrProcess ++;
                 }
             });
@@ -571,7 +577,7 @@ exports.Main = Component.specialize({
                 return this._optimizeImages(item, 0.6);             // JFD TODO: the quality should come from a setting somewhere...
 
             } else {
-                console.log("--- no image optimization!")
+                console.log("--- no image optimization!");
                 var deferred = Promise.defer();
                 deferred.resolve(0);
                 return deferred.promise;
@@ -637,7 +643,7 @@ exports.Main = Component.specialize({
                     result += pading + '<navPoint id="np' + idCounter + '" playOrder="' + idCounter + '">';
                     result += pading + '\t<navLabel><text>' + title + '</text></navLabel>';
                     if (item.pageNumber) {
-                        result += pading + '\t<content src="pages/' + item.pageNumber + '.xhtml"/>'
+                        result += pading + '\t<content src="pages/' + item.pageNumber + '.xhtml"/>';
                     }
 
                     idCounter ++;
@@ -707,7 +713,7 @@ exports.Main = Component.specialize({
                     return ipc.invoke("send", self.processID, processID[0], ["itemUpdate", item]);
                 }
             }).fail(function(e){
-                console.log("ERROR:", e.message, e.stack)
+                console.log("ERROR:", e.message, e.stack);
             }).done();
 
             if (statusChanged) {
@@ -724,7 +730,7 @@ exports.Main = Component.specialize({
             this.importItems.map(function(item) {
                 if (item.status === IMPORT_STATES.converting && item.lastContact) {
                     if (Math.round(now - item.lastContact) >= STALL_TIMEOUT) {
-                        self.updateItemState(item, IMPORT_STATES.stalled, item.currentPage, item.nbrPages, item.destination, item.meta)
+                        self.updateItemState(item, IMPORT_STATES.stalled, item.currentPage, item.nbrPages, item.destination, item.meta);
                     }
 
                 } else if (item.status === IMPORT_STATES.stalled) {
@@ -792,7 +798,7 @@ exports.Main = Component.specialize({
                             promises.push(self.environmentBridge.backend.get("plume-backend").invoke("optimizeImage",
                                 originalURL, url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}, quality).then(function() {
                                     self.updateItemState(item, IMPORT_STATES.optimizing, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
-                            }));
+                                }));
 
                             if (++ i > 4) {
                                 break;
@@ -810,7 +816,7 @@ exports.Main = Component.specialize({
                         }
 
                         return null;
-                    }
+                    };
 
                     return Promise.when(_optimizeNextBatch());
 

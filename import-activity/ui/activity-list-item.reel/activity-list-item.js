@@ -1,6 +1,6 @@
 var Montage = require("montage/core/core").Montage,
     Component = require("montage/ui/component").Component,
-    IMPORT_STATES = require("core/importStates").importStates;    
+    IMPORT_STATES = require("core/importStates").importStates;
 
 
 exports.ActivityListItem = Component.specialize({
@@ -15,7 +15,7 @@ exports.ActivityListItem = Component.specialize({
 
     status: {
         get: function() {
-            return this.item.status
+            return this.item.status;
         },
 
         set: function(value) {
@@ -25,7 +25,7 @@ exports.ActivityListItem = Component.specialize({
 
     currentPage: {
         get: function() {
-            return this.item.currentPage
+            return this.item.currentPage;
         },
 
         set: function(value) {
@@ -35,7 +35,7 @@ exports.ActivityListItem = Component.specialize({
 
     nbrPages: {
         get: function() {
-            return this.item.nbrPages
+            return this.item.nbrPages;
         },
 
         set: function(value) {
@@ -45,7 +45,7 @@ exports.ActivityListItem = Component.specialize({
 
     error: {
         get: function() {
-            return this.item.error
+            return this.item.error;
         },
 
         set: function(value) {
@@ -55,7 +55,7 @@ exports.ActivityListItem = Component.specialize({
 
     coverImage: {
         get: function() {
-            return this.item.coverImage
+            return this.item.coverImage;
         },
 
         set: function(value) {
@@ -70,7 +70,7 @@ exports.ActivityListItem = Component.specialize({
             var item = this.item;
 
             if (item.status === IMPORT_STATES.unknown || item.status === IMPORT_STATES.waiting) {
-                this.statusLabel = "Waiting..."
+                this.statusLabel = "Waiting...";
             }
 
             else if (item.status === IMPORT_STATES.fetching) {
@@ -81,14 +81,14 @@ exports.ActivityListItem = Component.specialize({
                 this.statusLabel = "Fetching description failed, will try again...";
             }
 
-            else if (item.status === IMPORT_STATES.converting || item.status == IMPORT_STATES.stalled) {
+            else if (item.status === IMPORT_STATES.converting || item.status === IMPORT_STATES.stalled) {
                 if (item.currentPage > 0 && item.nbrPages > 0) {
                     this.statusLabel = "Importing page " + item.currentPage + " of " + item.nbrPages;
                 } else {
-                    this.statusLabel = "Importing..."
+                    this.statusLabel = "Importing...";
                 }
 
-                if (item.status == IMPORT_STATES.stalled) {
+                if (item.status === IMPORT_STATES.stalled) {
                     this.statusLabel += "...";
                 }
             }
