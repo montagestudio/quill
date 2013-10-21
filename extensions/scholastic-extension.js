@@ -16,9 +16,17 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                             xmlDoc,
                             data;
 
-                        console.log("XML:", response)
                         try {
                             xmlDoc = parser.parseFromString(response, "text/xml");
+
+                            // Encapsulated XML
+                            var wddxPacket = xmlDoc.getElementsByTagName("wddxPacket");
+                            if (wddxPacket && wddxPacket.length) {
+                                var data = wddxPacket[0].getElementsByTagName("string");
+                                if (data && data.length) {
+                                    xmlDoc = parser.parseFromString(data[0].textContent, "text/xml");
+                                }
+                            }
 
                             var rootNodes = xmlDoc.getElementsByTagName("XPSMetadata"),
                                 nodes = rootNodes ? rootNodes[0].childNodes : [],
@@ -31,7 +39,8 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                                 "isbn_13": "book-id",
                                 "language": "document-language",
                                 "publisher": "document-publisher",
-                                "title": "document-title"
+                                "title": "document-title",
+                                "eReader_Category_Output": "document-type"
 
                                 // JFD TODO: add more names as needed
                             }

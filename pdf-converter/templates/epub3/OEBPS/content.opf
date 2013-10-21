@@ -10,6 +10,8 @@
         <dc:creator>{{document-author}}</dc:creator>
         <dc:description>{{document-description}}</dc:description>
         <dc:publisher>{{document-publisher}}</dc:publisher>
+        <dc:source>PDF</dc:source>
+        <dc:type>{{document-type}}</dc:type>
         <dc:date>{{document-date}}</dc:date>
         <dc:language>{{document-language}}</dc:language>
         <dc:identifier id="bookid">{{book-id}}</dc:identifier>

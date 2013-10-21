@@ -138,7 +138,6 @@ exports.fetchMetaData = function(isbn) {
             });
 
             res.on('end', function () {
-                console.log('DATA: ', data);
                 deferred.resolve(data);
             });
         } else {
