@@ -98,15 +98,16 @@ var PageView = exports.PageView = Component.specialize({
                 viewMode = this.viewMode,
                 nbrPagesShown,
                 scale = 0,
-                i;
+                i,
+                blankPage;
 
-            if (viewMode == "default") {
+            if (viewMode === "default") {
                 viewMode = nbrPages < 3 ? "single" : "dual-right";
             }
 
             if (this.index === undefined || this.index < 0 || this.index >= nbrPages) {
                 nbrPagesShown = 0;
-            } else if (viewMode == "single" || this.index === 0) {
+            } else if (viewMode === "single" || this.index === 0) {
                 nbrPagesShown = 1;
             } else {
                 nbrPagesShown = 2;
@@ -115,8 +116,9 @@ var PageView = exports.PageView = Component.specialize({
             // Inject pages data is available
             for (i = 0; i < nbrPagesShown; i ++) {
                 var frame = iFrames[i],
-                    page = this.pages[this.index],
-                    blankPage = false;
+                    page = this.pages[this.index];
+
+                blankPage = false;
 
                 if (this._pageDrawInfo[i]) {
                     frame.width = 0;
@@ -132,7 +134,7 @@ var PageView = exports.PageView = Component.specialize({
                                     doc.removeChild(doc.documentElement);
                                 }
                                 doc.open();
-                                    doc.writeln(this._pageDrawInfo[i].data);
+                                doc.writeln(this._pageDrawInfo[i].data);
                                 doc.close();
                             }
 
@@ -197,8 +199,8 @@ var PageView = exports.PageView = Component.specialize({
             }
 
             for (i = 0; i < nbrPagesShown; i ++) {
-                var iFrame = iFrames[i],
-                    blankPage = false;
+                var iFrame = iFrames[i];
+                blankPage = false;
 
                 if (this._pageSize[i]) {
                     iFrame.height = this._pageSize[i].height;
@@ -212,7 +214,7 @@ var PageView = exports.PageView = Component.specialize({
                 }
 
                 // Use the same scale for both displayed page
-                if (scale == 0) {
+                if (scale === 0) {
                     scale = Math.min(innerHeight / iFrame.height, innerWidth / iFrame.width);
                 }
 
@@ -225,7 +227,7 @@ var PageView = exports.PageView = Component.specialize({
 
                 iFrame.style.webkitTransformOrigin = "0 0";
                 iFrame.style.webkitTransform = "matrix(" + [scale, 0, 0, scale,
-                    i == 0 ? Math.round((innerWidth - (iFrame.clientWidth * scale)) / (3 - nbrPagesShown)) : innerWidth - 1,
+                    i === 0 ? Math.round((innerWidth - (iFrame.clientWidth * scale)) / (3 - nbrPagesShown)) : innerWidth - 1,
                         Math.round((innerHeight - (iFrame.clientHeight * scale)) / 2)].join(",") + ")";
             }
         }
@@ -242,8 +244,8 @@ var PageView = exports.PageView = Component.specialize({
                 var maxPages,
                     nbrPages = this.pages.length;
 
-                if (viewMode == "default") {
-                   viewMode = nbrPages <= 2 ? "single" : "dual-right";
+                if (viewMode === "default") {
+                    viewMode = nbrPages <= 2 ? "single" : "dual-right";
                 }
 
                 if (index === 0) {  // Cover page image
@@ -257,14 +259,14 @@ var PageView = exports.PageView = Component.specialize({
                     this._pageDrawInfo[1] = null;
                     this.needsDraw = true;
                     return;
-                } else if (viewMode == "single" ) {
+                } else if (viewMode === "single" ) {
                     maxPages = 1;
                     this._pageDrawInfo[1] = null;
                 } else {
                     maxPages = 2;
 
                     // Adjust the index to make sure we display the proper page on the left side and right side
-                    if (viewMode == "dual-right") {
+                    if (viewMode === "dual-right") {
                         index -= index & 1;
                     } else {
                         index -= (index + 1) & 1;
@@ -345,7 +347,7 @@ var PageView = exports.PageView = Component.specialize({
                     clearTimeout(this._loadPageTimer);
                 }
 
-                this._loadPageTimer = setTimeout(function() {self._loadPage()}, 100);
+                this._loadPageTimer = setTimeout(function() {self._loadPage();}, 100);
             }
         }
     }

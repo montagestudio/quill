@@ -105,7 +105,7 @@ exports.Main = Component.specialize({
 //                data = [];
 //            }
 //            this.contentController.content = data;
-console.log("--restoreContent")
+            console.log("--restoreContent");
 
             var self = this,
                 ipc = this.environmentBridge.backend.get("ipc");
@@ -159,7 +159,7 @@ console.log("--restoreContent")
     handleOpenButtonAction: {
         value: function (event) {
             var item = event.detail.get("associatedObject");
-            console.log("OPEN BUTTON", item)
+            console.log("OPEN BUTTON", item);
 
             if (item) {
                 var self = this,
@@ -252,7 +252,7 @@ console.log("--restoreContent")
                                     return true;
                                 }
                                 return false;
-                            })
+                            });
                         }
                         return this.importItems;
                     }

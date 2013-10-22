@@ -102,9 +102,9 @@ exports.Main = Component.specialize({
             }).then(function() {
                 delete self._isImporting;
             }, function(error) {
-                console.warn("ERROR:", error.message, error.stack)
+                console.warn("ERROR:", error.message, error.stack);
                 delete self._isImporting;
-            }).done()
+            }).done();
         }
     },
 

@@ -4,14 +4,14 @@ var Montage = require("montage/core/core").Montage,
     PDF2HTML = require("core/pdf2html.js").PDF2HTML;
 
 
-var STATE_Unknown = 0,
-    STATE_FirstRun = 1,
-    STATE_LoadingDocument = 2,
-    STATE_DocumentLoaded = 3,
-    STATE_LoadingPage = 4,
-    STATE_PageLoaded = 5,
-    STATE_RenderingPage = 6,
-    STATE_PageRenderred = 7;
+var UNKNOWN_STATE = 0,
+    FIRST_RUN_STATE = 1,
+    LOADING_DOCUMENT_STATE = 2,
+    DOCUMENT_LOADED_STATE = 3,
+    LOADING_PAGE_STATE = 4,
+    PAGE_LOADED_STATE = 5,
+    RENDERING_PAGE_STATE = 6,
+    PAGE_RENDERED_STATE = 7;
 
 exports.PdfViewer = Component.specialize({
     _converter: {
@@ -19,7 +19,7 @@ exports.PdfViewer = Component.specialize({
     },
 
     _state: {
-        value: STATE_Unknown
+        value: UNKNOWN_STATE
     },
 
     state: {
@@ -34,7 +34,7 @@ exports.PdfViewer = Component.specialize({
     },
 
     _drawState: {
-        value: STATE_Unknown
+        value: UNKNOWN_STATE
     },
 
     _canvasView : {
@@ -70,8 +70,8 @@ exports.PdfViewer = Component.specialize({
     enterDocument: {
         value: function(firstTime) {
             if (firstTime) {
-                this._state = STATE_FirstRun;
-                this._drawState = STATE_Unknown;
+                this._state = FIRST_RUN_STATE;
+                this._drawState = UNKNOWN_STATE;
 
                 document.addEventListener("keydown", this);
             }
@@ -99,7 +99,7 @@ exports.PdfViewer = Component.specialize({
                 ctx = this._canvasView ? this._canvasView.getContext("2d") : null;
 
             // First run, let's install the views
-            if (this._state >= STATE_FirstRun && this._drawState < STATE_FirstRun) {
+            if (this._state >= FIRST_RUN_STATE && this._drawState < FIRST_RUN_STATE) {
                 this._canvasView = document.createElement("canvas");
                 this._canvasView.classList.add("pdf-viewer-output");
 
@@ -114,17 +114,17 @@ exports.PdfViewer = Component.specialize({
                 this.element.classList.remove("pdf-viewer-rendering");
             }
 
-            if (this._state >= STATE_LoadingDocument && this._drawState < STATE_LoadingDocument) {
+            if (this._state >= LOADING_DOCUMENT_STATE && this._drawState < LOADING_DOCUMENT_STATE) {
                 this.element.classList.add("pdf-viewer-loading");
                 this.element.classList.remove("pdf-viewer-rendering");
             }
 
-            if (this._state >= STATE_LoadingPage && this._drawState < STATE_LoadingPage) {
+            if (this._state >= LOADING_PAGE_STATE && this._drawState < LOADING_PAGE_STATE) {
                 this.element.classList.add("pdf-viewer-loading");
                 this.element.classList.remove("pdf-viewer-rendering");
             }
 
-            if (this._state >= STATE_PageLoaded && this._drawState < STATE_PageLoaded) {
+            if (this._state >= PAGE_LOADED_STATE && this._drawState < PAGE_LOADED_STATE) {
                 this.element.classList.add("pdf-viewer-rendering");
                 this.element.classList.remove("pdf-viewer-loading");
 
@@ -132,7 +132,7 @@ exports.PdfViewer = Component.specialize({
                 // Prepare canvas using PDF page dimensions
                 //
                 var devicePixelRatio = window.devicePixelRatio;
-devicePixelRatio = 1; //JFD DEBUG
+                devicePixelRatio = 1; //JFD DEBUG
                 this._canvasView.height = viewport.height * devicePixelRatio;
                 this._canvasView.width = viewport.width * devicePixelRatio;
                 this._canvasView.style.height = viewport.height + "px";
@@ -145,7 +145,7 @@ devicePixelRatio = 1; //JFD DEBUG
                 this._drawMode = "unknown";
             }
 
-            if (this._state >= STATE_PageLoaded) {
+            if (this._state >= PAGE_LOADED_STATE) {
                 if (this._mode !== this._drawMode) {
                     if (this._mode === "aside") {
                         this._htmlView.style.left = (viewport.width + 10) + "px";
@@ -220,9 +220,9 @@ devicePixelRatio = 1; //JFD DEBUG
 
         set: function(value) {
             this._renderingMode = parseInt(value, 10);
-            if (typeof this._renderingMode == "number") {
+            if (typeof this._renderingMode === "number") {
                 this._converter.renderingMode = this._renderingMode;
-                if (this.state >= STATE_DocumentLoaded) {
+                if (this.state >= DOCUMENT_LOADED_STATE) {
                     this.loadPage(this.pageNumber);
                 }
             }
@@ -377,14 +377,14 @@ devicePixelRatio = 1; //JFD DEBUG
             this._document = null;
             this._page = null;
 
-            console.log("path:", this._documentPath, this.pageNumber)
+            console.log("path:", this._documentPath, this.pageNumber);
 
             if (typeof value === "string" && value.length) {
-                this.state = STATE_LoadingDocument;
+                this.state = LOADING_DOCUMENT_STATE;
                 // Load the document
                 this._converter.getDocument(this._documentPath).then(function(pdf) {
                     thisRef._document = pdf;
-                    thisRef.state = STATE_DocumentLoaded;
+                    thisRef.state = DOCUMENT_LOADED_STATE;
                     thisRef.numberOfPages = pdf.pdfInfo.numPages;
 
                     // let's load a page
@@ -426,7 +426,7 @@ devicePixelRatio = 1; //JFD DEBUG
         },
         set: function(value) {
             console.log("set pageNumber:", value, parseInt(value, 10));
-            if (this.state >= STATE_DocumentLoaded) {
+            if (this.state >= DOCUMENT_LOADED_STATE) {
                 this.loadPage(parseInt(value, 10));
             } else {
                 this._pageNumber = value;
@@ -442,27 +442,27 @@ devicePixelRatio = 1; //JFD DEBUG
         value: function(pageNumber) {
             var thisRef = this;
 
-            console.log("Load page", pageNumber, this.numberOfPages, this._page, this.state)
-            if (this.state >= STATE_DocumentLoaded) {
-                if (pageNumber > 0 && pageNumber <= this.numberOfPages && this.state !== STATE_LoadingPage) {
-                this._page = null;
+            console.log("Load page", pageNumber, this.numberOfPages, this._page, this.state);
+            if (this.state >= DOCUMENT_LOADED_STATE) {
+                if (pageNumber > 0 && pageNumber <= this.numberOfPages && this.state !== LOADING_PAGE_STATE) {
+                    this._page = null;
 
-                this.state = STATE_LoadingPage;
-                this._pageNumber = pageNumber;
-                console.log("Page", this.pageNumber, "of", this.numberOfPages)
+                    this.state = LOADING_PAGE_STATE;
+                    this._pageNumber = pageNumber;
+                    console.log("Page", this.pageNumber, "of", this.numberOfPages);
 
                     this._converter.getPage(this._document, this._pageNumber).then(function(page) {
-                    console.log("...page", thisRef._pageNumber, "loaded")
+                        console.log("...page", thisRef._pageNumber, "loaded");
 
-                    thisRef._page = page;
-                    thisRef.state = STATE_PageLoaded;
+                        thisRef._page = page;
+                        thisRef.state = PAGE_LOADED_STATE;
 
-                    thisRef.renderPage();
-                },
-                function(exception) {
-                    console.log("#ERROR:", exception.message, exception.stack);
-                });
-            }
+                        thisRef.renderPage();
+                    },
+                    function(exception) {
+                        console.log("#ERROR:", exception.message, exception.stack);
+                    });
+                }
             } else {
                 this._pageNumber = pageNumber;
             }
@@ -472,10 +472,10 @@ devicePixelRatio = 1; //JFD DEBUG
     renderPage: {
         value: function() {
             var thisRef = this;
-            this.state = STATE_RenderingPage;
+            this.state = RENDERING_PAGE_STATE;
 
             this._converter.renderPage(this.page, this.canvasView, this.htmlView, this.scale).then(function(output){
-                thisRef.state = STATE_PageRenderred;
+                thisRef.state = PAGE_RENDERED_STATE;
                 console.log("*** DONE RENDERING...:");
             },
             function(exception) {

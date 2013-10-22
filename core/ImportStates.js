@@ -12,4 +12,4 @@ exports.importStates = {
     generating: enumIndex ++,          // Generating EPUB3 file
     error: enumIndex ++,               // error, import aborted
     ready: enumIndex ++                // Done!
-}
+};

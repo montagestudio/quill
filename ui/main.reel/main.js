@@ -4,7 +4,8 @@ var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
     RangeController = require("montage/core/range-controller").RangeController,
     adaptConnection = require("q-connection/adapt"),
-    Connection = require("q-connection");
+    Connection = require("q-connection"),
+    PageDocument = require("core/page-document").PageDocument;
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
@@ -33,7 +34,7 @@ exports.Main = Component.specialize({
     },
 
     pages: {
-        value: []
+        value: null
     },
 
     currentPageIndex: {
@@ -50,19 +51,15 @@ exports.Main = Component.specialize({
         },
 
         set: function(value) {
-            var self = this,
-                index = 0;
+            var index = -1;
 
             this._currentPage = value;
-            this.pages.some(function(page) {
-                if (page === value) {
-                    self.currentPageIndex = index;
-                    return true;
-                }
 
-                index ++;
-                return false;
-            });
+            if (this.pages) {
+                index = this.pages.indexOf(value);
+            }
+
+            this.currentPageIndex = index;
         }
     },
 
@@ -112,7 +109,7 @@ exports.Main = Component.specialize({
                     // auto reconnect...
                     setTimeout(function() {
                         var reconnected = self.backend;
-                    }, 250)
+                    }, 250);
                 });
                 self._backend = Connection(connection);
 
@@ -122,8 +119,8 @@ exports.Main = Component.specialize({
                         return self.onIPCMessage.apply(self, arguments);
                     })).then(function(processID){
                         self._processID = processID;
-                        console.log("reconnected to ipc with id:", processID)
-                    })
+                        console.log("reconnected to ipc with id:", processID);
+                    });
                 }
             }
 
@@ -145,16 +142,15 @@ exports.Main = Component.specialize({
 
             console.log("templateDidLoad");
 
-            var searches = document.location.search.substr(1).split("&"),
-                i;
+            var searches = document.location.search.substr(1).split("&");
+            searches.forEach(function (search) {
+                var param = search.split("=");
+                self.params[decodeURIComponent(param[0])] = param.length > 1 ? decodeURIComponent(param[1]) : null;
+            });
 
-            for (i in searches) {
-                var param = searches[i].split("=");
-                this.params[decodeURIComponent(param[0])] = param.length > 1 ? decodeURIComponent(param[1]) : null;
-            }
             console.log(this.params);
 
-            if (this.params.file && this.params.file.slice(-6) == ".ebook") {
+            if (this.params.file && this.params.file.slice(-6) === ".ebook") {
                 this.url = encodeURI(this.params.file);
                 this.loadContentInfo();
             }
@@ -185,7 +181,7 @@ exports.Main = Component.specialize({
             })).then(function(processID){
                 console.log("processID:", processID);
                 self._processID = processID;
-            })
+            });
         }
     },
 
@@ -221,16 +217,19 @@ exports.Main = Component.specialize({
             xhr.open('GET', self.url + '/OEBPS/content.opf', true);
 
             xhr.onload = function(e) {
-                if (this.status == 200) {
+                if (this.status === 200) {
                     var spines,
                         contentInfo = this.responseXML,
-                        pages = [{
-                            name: "cover",
-                            type: "image",
-                            url: null
-                        }],
+                        pageDocument,
+                        pages = [],
                         contentWidth = 0,
                         contentHeight = 0;
+
+                    pageDocument = new PageDocument();
+                    pageDocument.name = "cover";
+                    pageDocument.type = "image";
+                    pageDocument.url = null;
+                    pages.push(pageDocument);
 
                     self.contentInfo = contentInfo;
 
@@ -270,12 +269,14 @@ exports.Main = Component.specialize({
                                 var id = node.getAttribute("idref");
                                 if (id) {
                                     var page = contentInfo.getElementById(id);
-                                    pages.push({
-                                        name: (i + 1),
-                                        type: "page",
-                                        width: contentWidth,
-                                        height: contentHeight,
-                                        url: self.url + "/OEBPS/" + page.getAttribute("href")});
+                                    pageDocument = new PageDocument();
+                                    pageDocument.name = (i + 1);
+                                    pageDocument.type = "page";
+                                    pageDocument.width = contentWidth;
+                                    pageDocument.height = contentHeight;
+                                    pageDocument.url = self.url + "/OEBPS/" + page.getAttribute("href");
+
+                                    pages.push(pageDocument);
                                 }
                             }
 
