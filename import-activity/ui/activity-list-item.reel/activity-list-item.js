@@ -1,5 +1,4 @@
-var Montage = require("montage/core/core").Montage,
-    Component = require("montage/ui/component").Component,
+var Component = require("montage/ui/component").Component,
     IMPORT_STATES = require("core/importStates").importStates;
 
 

@@ -1,9 +1,6 @@
-/* global lumieres */
-var Montage = require("montage/core/core").Montage,
-    Component = require("montage/ui/component").Component,
-    Promise = require("montage/core/promise").Promise;
+var Component = require("montage/ui/component").Component;
 
-var PageView = exports.PageView = Component.specialize({
+exports.PageView = Component.specialize({
 
     _pages: {
         value: null
@@ -208,10 +205,10 @@ var PageView = exports.PageView = Component.specialize({
                 } else if (this._pageSize[(i + 1) % 2]) {
                     iFrame.height = this._pageSize[(i + 1) % 2].height;
                     iFrame.width = this._pageSize[(i + 1) % 2].width;
-                } else {
+                }// else {
 //                    iFrame.height = 1024;
 //                    iFrame.width = 1024;
-                }
+                //}
 
                 // Use the same scale for both displayed page
                 if (scale === 0) {
@@ -235,8 +232,7 @@ var PageView = exports.PageView = Component.specialize({
 
     _loadPage: {
         value: function() {
-            var self = this,
-                index = this.index,
+            var index = this.index,
                 viewMode = this.viewMode,
                 blankPage = '<html><head></head><body style="background-color: white; height:100%; width:100%"></body></html>';
 

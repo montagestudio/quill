@@ -1,5 +1,4 @@
-var Montage = require("montage/core/core").Montage,
-    Converter = require("montage/core/converter/converter").Converter;
+var Converter = require("montage/core/converter/converter").Converter;
 
 exports.HistoryItemNameConverter = Converter.specialize({
 

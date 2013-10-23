@@ -1,6 +1,5 @@
 /* global lumieres,alert */
-var Montage = require("montage/core/core").Montage,
-    Component = require("montage/ui/component").Component,
+var Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
     RangeController = require("montage/core/range-controller").RangeController,
     IMPORT_STATES = require("core/importStates").importStates;
@@ -162,11 +161,8 @@ exports.Main = Component.specialize({
             console.log("OPEN BUTTON", item);
 
             if (item) {
-                var self = this,
-                    ipc = this.environmentBridge.backend.get("ipc"),
-                    pos = item.destination.lastIndexOf("/"),
-//                    fileName = item.destination.substr(pos + 1),
-                    params = {url: encodeURI(item.destination)};
+                var params = {url: encodeURI(item.destination)};
+                this.environmentBridge.backend.get("ipc");
 
                 this.environmentBridge.backend.get("application").invoke("openDocument", params).then(function() {
 //                    return ipc.invoke("namedProcesses", "app-controller").then(function(processID) {

@@ -1,6 +1,5 @@
-/* global lumieres */
-var Montage = require("montage/core/core").Montage,
-    Component = require("montage/ui/component").Component,
+/* global lumieres, PDFJS */
+var Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
     PDF2HTML = require("core/pdf2html.js").PDF2HTML,
     PDF2HTMLCache = require("core/pdf2html-cache.js").PDF2HTMLCache,
@@ -262,8 +261,9 @@ exports.Main = Component.specialize({
     updateState: {
         value: function(status, meta) {
             var self = this,
-                ipc = this.environmentBridge.backend.get("ipc"),
                 deferred = Promise.defer();
+
+            this.environmentBridge.backend.get("ipc");
 
             if (this._pendingStatus === status) {
                 deferred.resolve();

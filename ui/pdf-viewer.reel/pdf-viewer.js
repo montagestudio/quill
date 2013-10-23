@@ -1,6 +1,4 @@
-/* global lumieres */
-var Montage = require("montage/core/core").Montage,
-    Component = require("montage/ui/component").Component,
+var Component = require("montage/ui/component").Component,
     PDF2HTML = require("core/pdf2html.js").PDF2HTML;
 
 

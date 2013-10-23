@@ -1,13 +1,10 @@
 /* global lumieres */
-var Montage = require("montage/core/core").Montage,
-    Component = require("montage/ui/component").Component,
+var Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
     RangeController = require("montage/core/range-controller").RangeController,
     adaptConnection = require("q-connection/adapt"),
     Connection = require("q-connection"),
     PageDocument = require("core/page-document").PageDocument;
-
-var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 exports.Main = Component.specialize({
 
@@ -108,6 +105,7 @@ exports.Main = Component.specialize({
                     self._backend = null;
                     // auto reconnect...
                     setTimeout(function() {
+                        // force the backend getter to be called again
                         var reconnected = self.backend;
                     }, 250);
                 });
@@ -198,7 +196,6 @@ exports.Main = Component.specialize({
 
     enterDocument: {
         value: function(firstTime) {
-            var self = this;
             if (firstTime) {
                 window.addEventListener("resize", this);
                 // JFD TODO: add keyboard shortcut to navigate the pages
