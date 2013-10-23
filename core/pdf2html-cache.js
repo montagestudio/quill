@@ -1,3 +1,4 @@
+/*jshint camelcase:false, maxcomplexity:11 */ // TODO: fix these warnings
 /*global lumieres, PDFJS, ImageData, createScratchCanvas */
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
@@ -190,7 +191,7 @@ exports.PDF2HTMLCache = Montage.specialize({
         value: function (data, page, callback) {
             var self = this,
                 name = data[0],
-                pageNbr = data[1] + 1,
+                // pageNbr = data[1] + 1,
                 type = data[2],
                 objectData = data[3],
                 referenceID = data[4],

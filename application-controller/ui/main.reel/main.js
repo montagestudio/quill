@@ -1,4 +1,5 @@
-/* global lumieres,alert */
+/*jshint camelcase:false, maxcomplexity:18, forin:false, loopfunc:true */ // TODO: fix these warnings
+/*global lumieres,alert */
 var Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
 

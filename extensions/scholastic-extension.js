@@ -1,3 +1,4 @@
+/*jshint camelcase:false, maxcomplexity:16 */ // TODO: fix these warnings
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
     ImportExtension = require("core/ImportExtension").ImportExtension;

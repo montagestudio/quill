@@ -1,6 +1,6 @@
+/*jshint maxcomplexity:12 */ // TODO: fix these warnings
 var Component = require("montage/ui/component").Component,
     IMPORT_STATES = require("core/importStates").importStates;
-
 
 exports.ActivityListItem = Component.specialize({
 

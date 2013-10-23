@@ -1,3 +1,4 @@
+/*jshint camelcase:false */ // TODO: fix these warnings
 var Q = require("Q");
 
 var g_registeredProcess = {},

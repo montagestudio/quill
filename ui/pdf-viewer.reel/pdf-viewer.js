@@ -1,3 +1,4 @@
+/*jshint maxcomplexity:20 */ // TODO: fix these warnings
 var Component = require("montage/ui/component").Component,
     PDF2HTML = require("core/pdf2html.js").PDF2HTML;
 

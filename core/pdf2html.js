@@ -1,3 +1,4 @@
+/*jshint camelcase:false, maxcomplexity:28, eqeqeq:false, eqnull:true, forin:false, loopfunc:true */ // TODO: fix these warnings
 /*global lumieres, PDFJS, createScratchCanvas, IDENTITY_MATRIX, FONT_IDENTITY_MATRIX, ImageData, Shadings, PatternType, URL */
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,

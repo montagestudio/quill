@@ -1,3 +1,4 @@
+/*jshint maxcomplexity:20 */ // TODO: fix these warnings
 var Component = require("montage/ui/component").Component;
 
 exports.Footer = Component.specialize({

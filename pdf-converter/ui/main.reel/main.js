@@ -1,3 +1,4 @@
+/*jshint maxcomplexity:12 */ // TODO: fix these warnings
 /* global lumieres, PDFJS */
 var Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,

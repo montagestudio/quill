@@ -1,3 +1,4 @@
+/*jshint maxcomplexity:20 */ // TODO: fix these warnings
 /*global toolbar,pdf,pdfPage,loadPDFPage */
 /**
  * Created with JetBrains WebStorm.

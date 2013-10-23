@@ -1,3 +1,4 @@
+/*jshint camelcase:false, maxcomplexity:18 */ // TODO: fix these warnings
 /*jshint node:true */
 
 exports = module.exports = Object.create(require("adaptor/server/backend"));

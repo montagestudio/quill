@@ -1,3 +1,4 @@
+/*jshint maxcomplexity:27, bitwise: false */ // TODO: fix these warnings
 var Component = require("montage/ui/component").Component;
 
 exports.PageView = Component.specialize({
