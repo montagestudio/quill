@@ -72,10 +72,18 @@
 }
 
 .Intro-warning {
+    margin: 1em 0;
+    padding: 15px;
     font-size: 13px;
     font-weight: bold;
-    color: hsl(0, 0%, 10%);
+    color: hsl(0, 0%, 30%);
     text-align: center;
+    border-radius: 6px;
+    border: 1px solid hsla(0, 0%, 0%, .1);
+}
+
+.Intro-warning-line {
+    margin: 0;
 }
 
 /* Launcher --------------------------------- */
