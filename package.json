@@ -10,21 +10,15 @@
     "montage": "git://github.com/montagejs/montage.git#051679decf47ed60ee86db63101f2688fad5a15b",
     "matte": "0.1.1",
     "native": "0.1.1",
-    "mousse": "0.1.2",
     "q": "0.9.5",
     "q-connection": "0.5.3",
     "q-io": "~1.9.3",
-    "qs": "0.5.2",
-    "npm": "1.1.70",
-    "minit": "0.3.1",
-    "minimatch": "0.2.9",
     "pdf.js": "git+ssh://git@github.com:ducarroz/pdf.js.git#master"
   },
   "devDependencies": {
     "jasmine-node": "1.2.2",
     "sandboxed-module": "0.1.4",
     "montage-testing": "git+ssh://git@github.com:montagejs/montage-testing.git#edge",
-    "shelljs": "0.1.2",
     "jshint": "1.1.0"
   },
   "mappings": {
