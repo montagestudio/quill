@@ -1,6 +1,5 @@
-/* global lumieres */
-var Montage = require("montage/core/core").Montage,
-    Component = require("montage/ui/component").Component,
+/* global lumieres,alert */
+var Component = require("montage/ui/component").Component,
     Promise = require("montage/core/promise").Promise,
 
     defaultEventManager = require("montage/core/event/event-manager").defaultEventManager,
@@ -49,6 +48,19 @@ exports.Main = Component.specialize({
 
     constructor: {
         value: function applicationController() {
+            // Make stack traces from promise errors easily available in the
+            // console. Otherwise you need to manually inspect the error.stack
+            // in the debugger.
+            Promise.onerror = function (error) {
+                if (error.stack) {
+                    console.groupCollapsed("%c Uncaught promise rejection: " + (error.message || error), "color: #F00; font-weight: normal");
+                    console.log(error.stack);
+                    console.groupEnd();
+                } else {
+                    throw error;
+                }
+            };
+
             this.super();
 
             if (IS_IN_LUMIERES) {
@@ -176,9 +188,9 @@ exports.Main = Component.specialize({
                             if (items[i].id === id) {
                                 if (items[i].processID) {
                                    // Stop the import before removing the item from the list...
-                                    this.environmentBridge.backend.get("ipc").invoke("send", self.processID, items[i].processID, ["close"]).fail(function(e){
-                                        console.log("ERROR:", e.message, e.stack);
-                                    }).done();
+                                    this.environmentBridge.backend.get("ipc")
+                                    .invoke("send", self.processID, items[i].processID, ["close"])
+                                    .done();
                                 }
 
                                 items.splice(i, 1);
@@ -283,8 +295,7 @@ exports.Main = Component.specialize({
             }
 
             this.environmentBridge.promptForOpen(options).then(function(urls) {
-                var items = [],
-                    promises = [];
+                var promises = [];
 
                 if (!urls || !urls.length) {
                     // user has canceled the prompt
@@ -427,8 +438,6 @@ exports.Main = Component.specialize({
                                     return true;
                                 }
                                 return false;
-
-                                self.upgradeItemsState();
                             }, function(e) {
                                 var itemRef = self._importItemForID(e.id);
                                 if (itemRef) {
@@ -521,8 +530,6 @@ exports.Main = Component.specialize({
 
     import: {
         value: function(item) {
-            var self = this;
-
             console.log("STARTING PROCESS", item);
 
             item.lastContact = new Date().getTime() / 1000;

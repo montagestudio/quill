@@ -22,7 +22,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                             // Encapsulated XML
                             var wddxPacket = xmlDoc.getElementsByTagName("wddxPacket");
                             if (wddxPacket && wddxPacket.length) {
-                                var data = wddxPacket[0].getElementsByTagName("string");
+                                data = wddxPacket[0].getElementsByTagName("string");
                                 if (data && data.length) {
                                     xmlDoc = parser.parseFromString(data[0].textContent, "text/xml");
                                 }
@@ -43,7 +43,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                                 "eReader_Category_Output": "document-type"
 
                                 // JFD TODO: add more names as needed
-                            }
+                            };
 
                             for (i = 0; i < nbrNodes; i ++) {
                                 var node = nodes[i],
@@ -68,7 +68,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
                             deferred.resolve({id: item.id, metadata: metadata});
                         } catch(error) {
-                            console.log("ERROR:", error)
+                            console.log("ERROR:", error);
                             deferred.reject({id: item.id, error: error});
                         }
                     }, function(error) {
@@ -143,12 +143,12 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
             if (toc) {
                 toc.some(function(entry) {
-                    if (entry.title == "_copyright") {
+                    if (entry.title === "_copyright") {
                         copyrightPageNbr = entry.pageNumber;
                         return true;
                     }
                     return false;
-                })
+                });
             }
 
             if (copyrightPageNbr) {
@@ -290,7 +290,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
             xhr.open('GET', url, true);
             xhr.onload = function(e) {
-                if (Math.floor(this.status / 100) == 2) {
+                if (Math.floor(this.status / 100) === 2) {
                     if (this.responseXML) {
                         deferred.resolve({text: this.responseText, document: this.responseXML});
                     } else {
@@ -300,11 +300,11 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                 } else {
                     deferred.reject("cannot load " + url);
                 }
-            }
+            };
 
             xhr.onerror = function(e) {
                 deferred.reject(e);
-            }
+            };
 
             xhr.send();
 
@@ -322,11 +322,11 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                 previous = null;
 
             var _intersect = function (a, b) {
-              return (a.left <= b.right &&
+                return (a.left <= b.right &&
                       b.left <= a.right &&
                       a.top <= b.bottom &&
-                      b.top <= a.bottom)
-            }
+                      b.top <= a.bottom);
+            };
 
             var _walkNodes = function(parentNode) {
                 Array.prototype.forEach.call(parentNode.childNodes, function(elem) {
@@ -336,13 +336,13 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
                         if (value.length) {
                             if (elem.getBoundingClientRect) {
-                              box = elem.getBoundingClientRect();
+                                box = elem.getBoundingClientRect();
                             } else {
                                 if (elem.parentNode.getBoundingClientRect) {
                                     box = elem.parentNode.getBoundingClientRect();
-                                } else {
+                                }// else {
                                     // JFD TODO: write me. Need to find the position of a lone text node
-                                }
+                                // }
                             }
                             // Make sure the node intersect with the parent element
                             if (box && _intersect(box, parentMetrics)) {
@@ -354,7 +354,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                     if (elem.childElementCount) {
                         _walkNodes(elem);
                     }
-                })
+                });
             };
 
 
@@ -368,7 +368,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
             boxes = boxes.sort(function(a, b) {
                 if (a[start] < b[start]) {
                     return -1;
-                } else if (a[start] == b[start]) {
+                } else if (a[start] === b[start]) {
                     return (a[end] - b[end]);
                 } else {
                     return 1;
