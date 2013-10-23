@@ -349,7 +349,7 @@ exports.Main = Component.specialize({
                     }));
                 });
 
-                Promise.allResolved(promises).then(function() {
+                Promise.allSettled(promises).then(function() {
                     console.log("URLS:", self.importItems);
                     var windowParams = {
                         url:"http://client/import-activity/index.html",
@@ -569,7 +569,7 @@ exports.Main = Component.specialize({
                     }
                 });
 
-                Promise.allResolved(promises).then(function() {
+                Promise.allSettled(promises).then(function() {
                     return application.invoke("openWindow", windowParams).then(function() {
                         console.log("PDF Converter for", windowParams.url, "launched");
                     });
@@ -820,7 +820,7 @@ exports.Main = Component.specialize({
                         self.updateItemState(item, IMPORT_STATES.optimizing, item.currentPage, item.nbrPages, item.destination, item.meta);
 
                         if (promises.length) {
-                            return Promise.allResolved(promises).then(function() {
+                            return Promise.allSettled(promises).then(function() {
                                 if (currentImage < nbrImages) {
                                     return _optimizeNextBatch();
                                 }
