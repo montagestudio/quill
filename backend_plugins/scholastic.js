@@ -40,7 +40,7 @@ var pathFromURL = function(path) {
         }
 
         return false;
-    })
+    });
 
     return path;
 };
@@ -55,20 +55,20 @@ function isValidISBN13(ISBNumber) {
 
     check = 0;
     for (i = 0; i < 13; i += 2) {
-      check += +ISBNumber[i];
+        check += +ISBNumber[i];
     }
     for (i = 1; i < 12; i += 2){
-      check += 3 * +ISBNumber[i];
+        check += 3 * +ISBNumber[i];
     }
     return check % 10 === 0;
-};
+}
 
 exports.getISBNFromFile = function (filePath) {
     var values = PATH.basename(filePath, ".pdf").replace(/[-\s]/g,'').match(/[0-9]*/),
         isbn = null;
 
     values.some(function(value) {
-        if (value.length == 13) {
+        if (value.length === 13) {
             // check if this is a valid ISBN-13
             if (isValidISBN13(value)) {
                 isbn = value;
@@ -126,13 +126,13 @@ exports.fetchMetaData = function(isbn) {
 //        host: 'localhost',
 //        path: "/Projects/scholastic.xml?isbn=" + isbn,
         port: 80
-    }
+    };
 
     var request = HTTP.request(options, function(res) {
         var data = "";
 //        res.setEncoding('utf8');
 
-        if (res.statusCode == 200) {
+        if (res.statusCode === 200) {
             res.on('data', function (chunk) {
                 data += chunk;
             });
@@ -154,7 +154,7 @@ exports.fetchMetaData = function(isbn) {
     request.end();
 
     return deferred.promise;
-}
+};
 
 //exports.scholastic = function() {
 //    return true;

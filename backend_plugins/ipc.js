@@ -32,7 +32,7 @@ exports.register = function(name, id, messageHandler, isSingleton) {
 
 exports.unregister = function(id) {
     if (g_registeredProcess.hasOwnProperty(id)) {
-        delete g_registeredProcess.hasOwnProperty(id);
+        delete g_registeredProcess[id];
     }
     return true;
 };
@@ -55,7 +55,7 @@ exports.send = function(from, to, data) {
     var deferred = Q.defer();
 
     // only accept message from a registered process or null
-    if (from == "anonymous" || g_registeredProcess[from]) {
+    if (from === "anonymous" || g_registeredProcess[from]) {
         var dest = g_registeredProcess[to];
         if (dest && dest.handler) {
             var timeout = setTimeout(function() {

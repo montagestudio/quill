@@ -1,12 +1,10 @@
-/* global global */
+/*jshint node:true */
 
 exports = module.exports = Object.create(require("adaptor/server/backend"));
 
 var PATH = require("path"),
-    fs = require("fs"),
     Q = require("q"),
     QFS = require("q-io/fs"),
-    minimatch = require('minimatch'),
     child_process = require('child_process');
 
 var pathFromURL = function(path) {
@@ -21,10 +19,10 @@ var pathFromURL = function(path) {
         }
 
         return false;
-    })
+    });
 
     return path;
-}
+};
 
 var exec = function(command, options) {
     var deferred = Q.defer(),
@@ -33,7 +31,7 @@ var exec = function(command, options) {
     options = options || {};
     process = child_process.exec(command, options, function (error, stdout, stderr) {
         if (error !== null) {
-            console.log("EXCEC COMMAND:", command)
+            console.log("EXCEC COMMAND:", command);
             console.log('exec error: ' + error);
             console.log('stderr: ' + stderr);
             deferred.reject(error);
@@ -70,7 +68,7 @@ exports.customizeFile = function(fileURL, options) {
             }
 
             return value;
-        })
+        });
 
         if (changed) {
             return QFS.write(filePath, data).then(function() {
@@ -78,7 +76,7 @@ exports.customizeFile = function(fileURL, options) {
             });
         }
         return issues;
-    })
+    });
 };
 
 exports.createFromTemplate = function(template, destination, options, replaceExisting, _index) {
@@ -103,7 +101,7 @@ exports.createFromTemplate = function(template, destination, options, replaceExi
                 if (replaceExisting) {
                     return QFS.removeTree(dest).then(function() {
                         return exports.createFromTemplate(template, destination, options, false);
-                    })
+                    });
                 } else if (_index < 100) {
                     return exports.createFromTemplate(template, destination, options, false, _index + 1);
                 }
@@ -125,8 +123,8 @@ exports.createFromTemplate = function(template, destination, options, replaceExi
                             issues.push.apply(issues, result);
                         });
                         return {url:"fs://localhost" + dest, issues:issues};
-                    })
-                })
+                    });
+                });
             });
         });
     });
@@ -161,52 +159,52 @@ exports.updateContentInfo = function(rootDirectory, options) {
                         properties = null;
 
                     switch (ext.toLowerCase()) {
-                        case ".html":
-                            type = "text/html";
-                            if (firstChar <= "A") {
-                                name = "page" + name;
-                            }
-                            break;
-                        case ".xhtml":
-                            type = "application/xhtml+xml";
-                            if (firstChar <= "A") {
-                                name = "page" + name;
-                            }
-                            // Set the SVG property for now, we will remove it later is not needed
-                            properties = "svg";
-                            pageToRead.push({
-                                name: name,
-                                path: pathFromURL(file.url)
-                            });
-                            break;
-                        case ".css":
-                            type = "text/css";
-                            if (firstChar <= "A") {
-                                name = "style" + name;
-                            }
-                            break;
-                        case ".jpeg":
-                            type = "image/jpeg";
-                            if (firstChar <= "A") {
-                                name = "image" + name;
-                            }
-                            break;
-                        case ".png":
-                            type = "image/png";
-                            if (firstChar <= "A") {
-                                name = "image" + name;
-                            }
-                            break;
-                        case ".otf":
-                            type = "font/opentype";
-                            if (firstChar <= "A") {
-                                name = "font" + name;
-                            }
-                            break;
+                    case ".html":
+                        type = "text/html";
+                        if (firstChar <= "A") {
+                            name = "page" + name;
+                        }
+                        break;
+                    case ".xhtml":
+                        type = "application/xhtml+xml";
+                        if (firstChar <= "A") {
+                            name = "page" + name;
+                        }
+                        // Set the SVG property for now, we will remove it later is not needed
+                        properties = "svg";
+                        pageToRead.push({
+                            name: name,
+                            path: pathFromURL(file.url)
+                        });
+                        break;
+                    case ".css":
+                        type = "text/css";
+                        if (firstChar <= "A") {
+                            name = "style" + name;
+                        }
+                        break;
+                    case ".jpeg":
+                        type = "image/jpeg";
+                        if (firstChar <= "A") {
+                            name = "image" + name;
+                        }
+                        break;
+                    case ".png":
+                        type = "image/png";
+                        if (firstChar <= "A") {
+                            name = "image" + name;
+                        }
+                        break;
+                    case ".otf":
+                        type = "font/opentype";
+                        if (firstChar <= "A") {
+                            name = "font" + name;
+                        }
+                        break;
                     }
 
                     // Special case for the cover image
-                    if (name == "cover") {
+                    if (name === "cover") {
                         properties = "cover-image";
                     }
 
@@ -250,7 +248,7 @@ exports.updateContentInfo = function(rootDirectory, options) {
 
         var checkNextFile = function() {
             return QFS.read(pageToRead[pageIndex].path).then(function(data) {
-                if (data.search(/<svg /i) == -1) {
+                if (data.search(/<svg /i) === -1) {
                     var i = -1;
 
                      // this page does not contains any SVG, let's remove the svg attribute from the manifest
@@ -269,8 +267,8 @@ exports.updateContentInfo = function(rootDirectory, options) {
                 if (++ pageIndex < nbrPagesToRead) {
                     return checkNextFile();
                 }
-            })
-        }
+            });
+        };
 
         return checkNextFile().then(function() {
             return exports.customizeFile(PATH.join(root, "content.opf"), options).then(function() {
@@ -315,7 +313,7 @@ exports.saveOriginalAssets = function(rootDirectory) {
             return QFS.copyTree(source, dest);
         }
     });
-}
+};
 
 exports.appendImagesInfo = function(rootDirectory, info) {
     var root = pathFromURL(rootDirectory);
@@ -400,4 +398,4 @@ exports.getCoverImage = function(rootDirectory) {
 
         return null;
     });
-}
+};

@@ -1,14 +1,9 @@
-var PATH = require("path"),
-    URL = require('url'),
-    FS = require('fs');
-
-
 exports.setup = function(firstLoad, capabilities) {
     if (firstLoad) {
         console.log("Initializing plume backend:", capabilities.application);
-        capabilities.application.invoke("openWindow", {url:"http://client/application-controller/index.html", width:400, height:600, canOpenMultiple:false, showWindow: false}).done()
+        capabilities.application.invoke("openWindow", {url:"http://client/application-controller/index.html", width:400, height:600, canOpenMultiple:false, showWindow: false}).done();
     }
-},
+};
 
 
 /*
@@ -17,7 +12,7 @@ exports.setup = function(firstLoad, capabilities) {
     called when the user open the Open or Save panel
     returns an array of file types (extension or UTI) that filament will accept to open
 */
-exports.allowedFileTypes = function(object) {
+exports.allowedFileTypes = function (object) {
     var response = {types: []};
 
     if (object.mode === "open") {
@@ -34,14 +29,14 @@ exports.allowedFileTypes = function(object) {
     returns the URL for the document or null if type not supported
 */
 exports.documentURLForFileType = function(object) {
-    console.log("documentURLForFileType", object)
+    console.log("documentURLForFileType", object);
     switch (object.type) {
 //        case "public.folder":
 //        case "com.adobe.pdf":
 //            return "http://client/importer/index.html";
 
-        case "com.declarativ.book":
-            return "http://client/index.html";
+    case "com.declarativ.book":
+        return "http://client/index.html";
     }
 
     return null;
@@ -100,7 +95,7 @@ exports.rootURLForFileURL = function(object) {
 //    }
 
     // Always return the same root for all imported document
-    console.log("rootURLForFileURL", object)
+    console.log("rootURLForFileURL", object);
 //    if (object.url.substr(-4) === ".pdf") {
 //       return  "file://localhost/importer";
 //    }
