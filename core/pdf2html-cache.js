@@ -1,3 +1,4 @@
+/*global lumieres, PDFJS, ImageData, createScratchCanvas */
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
     adaptConnection = require("q-connection/adapt"),
@@ -5,53 +6,50 @@ var Montage = require("montage/core/core").Montage,
 
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
-
+// TODO DRY pdf2html
 function putBinaryImageData(ctx, data, w, h) {
-  var tmpImgData = 'createImageData' in ctx ? ctx.createImageData(w, h) :
-    ctx.getImageData(0, 0, w, h);
+    var tmpImgData = 'createImageData' in ctx ? ctx.createImageData(w, h) :
+        ctx.getImageData(0, 0, w, h);
 
-  var tmpImgDataPixels = tmpImgData.data;
-  if ('set' in tmpImgDataPixels)
-    tmpImgDataPixels.set(data);
-  else {
-    // Copy over the imageData pixel by pixel.
-    for (var i = 0, ii = tmpImgDataPixels.length; i < ii; i++)
-      tmpImgDataPixels[i] = data[i];
-  }
+    var tmpImgDataPixels = tmpImgData.data;
+    if ('set' in tmpImgDataPixels) {
+        tmpImgDataPixels.set(data);
+    } else {
+        // Copy over the imageData pixel by pixel.
+        for (var i = 0, ii = tmpImgDataPixels.length; i < ii; i++) {
+            tmpImgDataPixels[i] = data[i];
+        }
+    }
 
-  ctx.putImageData(tmpImgData, 0, 0);
+    ctx.putImageData(tmpImgData, 0, 0);
 }
 
 function bytesFromDataURL(dataURL) {
-  // convert base64 to raw binary data held in a string
-  // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
-  var byteString = atob(dataURL.split(',')[1]);
+    // convert base64 to raw binary data held in a string
+    // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+    var byteString = atob(dataURL.split(',')[1]);
 
-  // separate out the mime component
-  var mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0]
+    // write the bytes of the string to an Uint8Array
+    var length = byteString.length,
+        bytes = new Uint8Array(length);
 
-  // write the bytes of the string to an Uint8Array
-  var length = byteString.length,
-       bytes = new Uint8Array(length);
+    for (var i = 0; i < length; i++) {
+        bytes[i] = byteString.charCodeAt(i);
+    }
 
-  for (var i = 0; i < length; i ++) {
-      bytes[i] = byteString.charCodeAt(i);
-  }
-
-  return bytes;
+    return bytes;
 }
 
 function bytesArrayToArray(bytes) {
-  var length = bytes.length,
-      array = new Array(length);
+    var length = bytes.length,
+        array = new Array(length);
 
-  for (var i = 0; i < length; i ++) {
-      array[i] = bytes[i];
-  }
+    for (var i = 0; i < length; i++) {
+        array[i] = bytes[i];
+    }
 
-  return array;
+    return array;
 }
-
 
 function checkForTransparency(data) {
     var length = data.length,
@@ -128,13 +126,13 @@ exports.PDF2HTMLCache = Montage.specialize({
                             } else {
                                 deferred.reject("Cannot initialize the PDF Object cache: cache path does not exist!");
                             }
-                        })
-                    })
+                        });
+                    });
                 } else {
                     deferred.reject("Cannot initialize the PDF Object cache: invalid document path!");
                 }
             } else {
-                deferred.reject("The PDF object cache can only be set when running under Lumieres!")
+                deferred.reject("The PDF object cache can only be set when running under Lumieres!");
             }
 
             return deferred.promise;
@@ -160,9 +158,9 @@ exports.PDF2HTMLCache = Montage.specialize({
                                 chunkData,
                                 i, j;
 
-                            if (typeof bytes.subarray == "function") {
+                            if (typeof bytes.subarray === "function") {
                                 chunkData = bytes.subarray(offset, offset + chunckLength);
-                            } else if (typeof bytes.slice == "function") {
+                            } else if (typeof bytes.slice === "function") {
                                 chunkData = bytes.slice(offset, offset + chunckLength);
                             } else {
                                 chunkData = [];
@@ -181,7 +179,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                     } else {
                         return;
                     }
-                }
+                };
 
                 return writeNextChunk();
             });
@@ -189,7 +187,7 @@ exports.PDF2HTMLCache = Montage.specialize({
     },
 
     setObject: {
-        value: function(data, page, callback) {
+        value: function (data, page, callback) {
             var self = this,
                 name = data[0],
                 pageNbr = data[1] + 1,
@@ -204,38 +202,38 @@ exports.PDF2HTMLCache = Montage.specialize({
 //            console.log(">>> CACHE SET OBJECT", name, pageNbr, type, typeof data[3], data[3].length, data[4]);
 //            console.log(">>> ID:", page.objs.resolve(data[0]))
             switch (type) {
-                case "JpegStream":
-                    filePath += ".jpeg";
+            case "JpegStream":
+                filePath += ".jpeg";
 
-                    length = objectData.length;
-                    bytes = new Uint8Array(length);
+                length = objectData.length;
+                bytes = new Uint8Array(length);
 
-                    for (var i = 0; i < length; i ++) {
-                        bytes[i] = objectData.charCodeAt(i);
-                    }
-                    break;
+                for (var i = 0; i < length; i ++) {
+                    bytes[i] = objectData.charCodeAt(i);
+                }
+                break;
 
-                case "Image":
-                    var width = objectData.width,
-                        height = objectData.height,
-                        imageCanvas = createScratchCanvas(width, height);
+            case "Image":
+                var width = objectData.width,
+                    height = objectData.height,
+                    imageCanvas = createScratchCanvas(width, height);
 
-                    if (typeof ImageData !== 'undefined' && objectData instanceof ImageData) {
-                        imageCanvas.putImageData(objectData, 0, 0);
-                    } else {
-                        if (objectData.data) {
-                            putBinaryImageData(imageCanvas.getContext('2d'), objectData.data, width, height);
-                            if (hasMask) {
-                                hasMask = checkForTransparency(objectData.data);
-                            }
-                        } else {
-                            // JFD TODO: this is likely to be a mask which we do not yet support, just ignore for now...
-                            break;
+                if (typeof ImageData !== 'undefined' && objectData instanceof ImageData) {
+                    imageCanvas.putImageData(objectData, 0, 0);
+                } else {
+                    if (objectData.data) {
+                        putBinaryImageData(imageCanvas.getContext('2d'), objectData.data, width, height);
+                        if (hasMask) {
+                            hasMask = checkForTransparency(objectData.data);
                         }
+                    } else {
+                        // JFD TODO: this is likely to be a mask which we do not yet support, just ignore for now...
+                        break;
                     }
-                    filePath += hasMask ? ".png" : ".jpeg";
-                    bytes = bytesFromDataURL(imageCanvas.toDataURL(hasMask ? "image/png" :"image/jpeg", PDFJS.jpegQuality));
-                    break;
+                }
+                filePath += hasMask ? ".png" : ".jpeg";
+                bytes = bytesFromDataURL(imageCanvas.toDataURL(hasMask ? "image/png" :"image/jpeg", PDFJS.jpegQuality));
+                break;
             }
 
             if (bytes) {
@@ -271,7 +269,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                     fs = self.backend.get("fs");
 
                 // rename partial font to avoid potential name conflict
-                if (fontName.length > 7 && fontName.charAt(6) == "+") {
+                if (fontName.length > 7 && fontName.charAt(6) === "+") {
                     fontName = font.loadedName.substr(2) + fontName.substr(6);
                 }
                 filePath = self.folderPath + fontName + ".otf";
@@ -293,7 +291,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                         }
                     }
                 });
-            }
+            };
 
             writeFontToDisk(0).then(function() {
                 if (callback) {
@@ -325,19 +323,21 @@ exports.PDF2HTMLCache = Montage.specialize({
     objectUrl: {
         value: function(data, page, callback) {
             var self = this,
-                fs = self.backend.get("fs"),
                 name = data[0],
                 type = data[2],
                 referenceID = data[3],
                 hasMask = data[4],
                 filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
-                fileSize = 0,
                 url = null;
 
 //            console.log(">>> CACHE GET OBJECT URL:", filePath, type);
             switch (type) {
-                case "JpegStream": filePath += hasMask ? ".png" : ".jpeg";     break;
-                case "Image": filePath += hasMask ? ".png" : ".jpeg";          break;
+            case "JpegStream":
+                filePath += hasMask ? ".png" : ".jpeg";
+                break;
+            case "Image":
+                filePath += hasMask ? ".png" : ".jpeg";
+                break;
             }
 
             this._checkFile(filePath).then(function(valid) {

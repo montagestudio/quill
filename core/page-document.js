@@ -10,7 +10,6 @@ var Montage = require("montage").Montage;
  */
 
 var PAGE_TYPE = "page";
-var IMAGE_TYPE = "image";
 
 exports.PageDocument = Montage.specialize({
 

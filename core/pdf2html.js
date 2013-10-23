@@ -1,3 +1,4 @@
+/*global lumieres, PDFJS, createScratchCanvas, IDENTITY_MATRIX, FONT_IDENTITY_MATRIX, ImageData, Shadings, PatternType, URL */
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
     adaptConnection = require("q-connection/adapt"),
@@ -5,7 +6,7 @@ var Montage = require("montage/core/core").Montage,
 
 
 var xmlns = "http://www.w3.org/2000/svg",
-    xmlns_xlink = "http://www.w3.org/1999/xlink"
+    xmlns_xlink = "http://www.w3.org/1999/xlink";
 
 var RENDERING_MODE = {hybrid: 4, svg: 5};
 
@@ -13,20 +14,20 @@ var LINE_CAP_STYLES = ['butt', 'round', 'square'];
 var LINE_JOIN_STYLES = ['miter', 'round', 'bevel'];
 
 var TextRenderingMode = {
-  FILL: 0,
-  STROKE: 1,
-  FILL_STROKE: 2,
-  INVISIBLE: 3,
-  FILL_ADD_TO_PATH: 4,
-  STROKE_ADD_TO_PATH: 5,
-  FILL_STROKE_ADD_TO_PATH: 6,
-  ADD_TO_PATH: 7,
+    FILL: 0,
+    STROKE: 1,
+    FILL_STROKE: 2,
+    INVISIBLE: 3,
+    FILL_ADD_TO_PATH: 4,
+    STROKE_ADD_TO_PATH: 5,
+    FILL_STROKE_ADD_TO_PATH: 6,
+    ADD_TO_PATH: 7,
 
-  FILL_STROKE_MASK: 3,
-  ADD_TO_PATH_FLAG: 4
+    FILL_STROKE_MASK: 3,
+    ADD_TO_PATH_FLAG: 4
 };
 
-var unsupportedFeature = {}
+var unsupportedFeature = {};
 
 function setVendorStyleAttribute(style, name, value) {
     // While this method does set the vendor attribute for all 3 major vendors, this is only useful at runtime!
@@ -41,20 +42,23 @@ function setVendorStyleAttribute(style, name, value) {
     style["ms" + name] = value;
 }
 
+// TODO DRY pdf2html-cache
 function putBinaryImageData(ctx, data, w, h) {
-  var tmpImgData = 'createImageData' in ctx ? ctx.createImageData(w, h) :
-    ctx.getImageData(0, 0, w, h);
+    var tmpImgData = 'createImageData' in ctx ? ctx.createImageData(w, h) :
+        ctx.getImageData(0, 0, w, h);
 
-  var tmpImgDataPixels = tmpImgData.data;
-  if ('set' in tmpImgDataPixels)
-    tmpImgDataPixels.set(data);
-  else {
-    // Copy over the imageData pixel by pixel.
-    for (var i = 0, ii = tmpImgDataPixels.length; i < ii; i++)
-      tmpImgDataPixels[i] = data[i];
-  }
+    var tmpImgDataPixels = tmpImgData.data;
+    if ('set' in tmpImgDataPixels) {
+        tmpImgDataPixels.set(data);
+    }
+    else {
+        // Copy over the imageData pixel by pixel.
+        for (var i = 0, ii = tmpImgDataPixels.length; i < ii; i++) {
+            tmpImgDataPixels[i] = data[i];
+        }
+    }
 
-  ctx.putImageData(tmpImgData, 0, 0);
+    ctx.putImageData(tmpImgData, 0, 0);
 }
 
 function checkForTransparency(data) {
@@ -71,23 +75,23 @@ function checkForTransparency(data) {
 }
 
 function blobFromDataURL(dataURL) {
-  // convert base64 to raw binary data held in a string
-  // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
-  var byteString = atob(dataURL.split(',')[1]);
+    // convert base64 to raw binary data held in a string
+    // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+    var byteString = atob(dataURL.split(',')[1]);
 
-  // separate out the mime component
-  var mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0]
+    // separate out the mime component
+    var mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
 
-  // write the bytes of the string to an Uint8Array
-  var length = byteString.length,
-       bytes = new Uint8Array(length);
+    // write the bytes of the string to an Uint8Array
+    var length = byteString.length,
+        bytes = new Uint8Array(length);
 
-  for (var i = 0; i < length; i ++) {
-      bytes[i] = byteString.charCodeAt(i);
-  }
+    for (var i = 0; i < length; i++) {
+        bytes[i] = byteString.charCodeAt(i);
+    }
 
-  // write the ArrayBuffer to a blob, and you're done
-  var blob = new Blob([bytes], {type: mimeString});
+    // write the ArrayBuffer to a blob, and you're done
+    var blob = new Blob([bytes], { type: mimeString });
     return blob;
 }
 
@@ -112,12 +116,12 @@ function getBaselineOffset(font, data, fontStyle, height) {
 
     var _findVerticalFirstPixel = function(ctx, originX, width) {
         var pixels = ctx.getImageData(originX, 0, originX + width, canvas.height);
-        for (var x = 0; x < pixels.width; x ++) {
-            for (var y = 0; y < pixels.height; y ++) {
-               if (pixels.data[((x + y * pixels.width) * 4) + 3] !== 0) {
-                   return y;
-               }
-           }
+        for (var x = 0; x < pixels.width; x++) {
+            for (var y = 0; y < pixels.height; y++) {
+                if (pixels.data[((x + y * pixels.width) * 4) + 3] !== 0) {
+                    return y;
+                }
+            }
         }
 
         return -1;
@@ -133,7 +137,7 @@ function getBaselineOffset(font, data, fontStyle, height) {
             if (typeof item === "string") {
                 font.charsToGlyphs(item);
             }
-        })
+        });
     } else {
         font.charsToGlyphs(data);
     }
@@ -182,7 +186,7 @@ function getBaselineOffset(font, data, fontStyle, height) {
 function sanitizeFontName(fontName) {
     // convert the name of a partial font set to is full set equivalent
 
-    if (fontName.length > 7 && fontName.charAt(6) == "+") {
+    if (fontName.length > 7 && fontName.charAt(6) === "+") {
         return fontName.substring(7);
     }
 
@@ -307,10 +311,10 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             } else {
                 pdf.getPage(pageNumber).then(
                     function(page) {
-                        deferred.resolve(page)
+                        deferred.resolve(page);
                     },
                     function(exception) {
-                        deferred.reject(exception)
+                        deferred.reject(exception);
                     },
                     function(progress) {
                         console.log("...getPage progress:", progress);
@@ -344,9 +348,9 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     if (image.src.substring(0, 5) === "blob:") {
                         window.URL.revokeObjectURL(image.src);
                     }
-                })
+                });
                 rootNode.innerHTML = "";
-                if (self.renderingMode == PDF2HTML.RENDERING_MODE.hybrid) {
+                if (self.renderingMode === PDF2HTML.RENDERING_MODE.hybrid) {
                     // Emit DOM + SVG
                     this._imageLayer.owner = this;
                     this._imageLayer.page = page;
@@ -357,13 +361,13 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     this._textLayer.page = page;
                     this._textLayer.scale = scale;
 
-                    this._preProcessor_DOM.owner = this,
+                    this._preProcessor_DOM.owner = this; // TODO ever used?
                     this._preProcessor_DOM.page = page;
                     this._preProcessor_DOM.scale = scale;
                     renderContext.preprocessor = this._preProcessor_DOM;
-                } else if (self.renderingMode == PDF2HTML.RENDERING_MODE.svg) {
+                } else if (self.renderingMode === PDF2HTML.RENDERING_MODE.svg) {
                     // Emit SVG
-                    this._preProcessor_SVG.owner = this,
+                    this._preProcessor_SVG.owner = this; // TODO ever used?
                     this._preProcessor_SVG.page = page;
                     this._preProcessor_SVG.scale = scale;
                     renderContext.preprocessor = this._preProcessor_SVG;
@@ -377,11 +381,12 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     self._preProcessor_DOM.endSVG();
                 }
                 callback();
-            }
+            };
 
             try {
                 page.render(renderContext).then(
                     function() {
+                        var expr;
                         console.log("...success");
 
                         if (returnOutput) {
@@ -399,11 +404,9 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                             // Add font-face style rules
                             for (var property in self._pdf.cssFonts) {
-                              if (self._pdf.cssFonts.hasOwnProperty(property)) {
-                                  var fontExpr = new RegExp(property, "g");
-
-                                  styleNode.appendChild(document.createTextNode(self._pdf.cssFonts[property].style + "\n"));
-                              }
+                                if (self._pdf.cssFonts.hasOwnProperty(property)) {
+                                    styleNode.appendChild(document.createTextNode(self._pdf.cssFonts[property].style + "\n"));
+                                }
                             }
 
                             // Get the style as text
@@ -412,7 +415,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                             // Put the style back
                             if (styleNode) {
-                                rootNode.insertBefore(styleNode, rootNode.firstChild)
+                                rootNode.insertBefore(styleNode, rootNode.firstChild);
                             }
 
                             // Convert URL to relative
@@ -425,8 +428,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                     searchURI,
                                     i = 0;
 
-                                console.log("--- baseURI:", baseURI)
-                                console.log("--- sourceURI:", sourceURI)
+                                console.log("--- baseURI:", baseURI);
+                                console.log("--- sourceURI:", sourceURI);
 
                                 if (baseURI.charAt(baseLength - 1) === '/') {
                                     baseURI = baseURI.substr(0, baseLength - 1);
@@ -442,8 +445,9 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                 sourceLength = sourceURI.length;
 
                                 while (i < baseLength && i < sourceLength) {
-                                    if (baseURI[i] !== sourceURI[i])
+                                    if (baseURI[i] !== sourceURI[i]) {
                                         break;
+                                    }
                                     i ++;
                                 }
 
@@ -451,9 +455,9 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                     replacementURI += "../";
                                 }
 
-                                searchURI = sourceURI.slice(0, i).join('/') + '/'
+                                searchURI = sourceURI.slice(0, i).join('/') + '/';
 
-                                var expr = new RegExp(encodeURI(searchURI), "g");
+                                expr = new RegExp(encodeURI(searchURI), "g");
                                 data = data.replace(expr, replacementURI);
                                 style = style.replace(expr, replacementURI);
                             }
@@ -463,7 +467,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                             style = style.replace(/&nbsp;/g, "&#160;");
 
                             // properly terminate tags, XML is very strict!
-                            var tags = ["img"]
+                            var tags = ["img"];
                             expr = new RegExp("(<(" + tags.join("|") + ") [^>]*[^/])(>)", "gi");
                             data = data.replace(expr, "$1/$3");
 
@@ -476,7 +480,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 //    });
 
                             //add extra vendor CSS properties
-                            data = data.replace(/\<[a-z]* [^>]*(-webkit-[a-z0-9\-]*:[^;>]*)[^>]*>/gi, function(match) {
+                            data = data.replace(/<[a-z]* [^>]*(-webkit-[a-z0-9\-]*:[^;>]*)[^>]*>/gi, function(match) {
                                 return match.replace(/-webkit-[a-z0-9\-]*:[^;>]*/gi, function(match) {
                                     var rule = match.substr("-webkit-".length);
 
@@ -484,7 +488,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                              "; -ms-" + rule +
                                              "; " + rule;
                                     return match;
-                                })
+                                });
                             });
 
                             page.destroy();
@@ -497,7 +501,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     function(exception) {
                         console.log("...error:", exception.message, exception.stack);
                         page.destroy();
-                        deferred.reject(exception)
+                        deferred.reject(exception);
                     },
                     function(progress) {
                         console.log("...renderPage progress:", progress);
@@ -551,7 +555,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                             color: item.color
                                         };
 
-                                    if (typeof(dest) == "string") {
+                                    if (typeof dest === "string") {
                                         // Destination redirect
                                         dest = destinations[dest];
                                     }
@@ -569,7 +573,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                 });
 
                                 return result;
-                            }
+                            };
                             // Let's build the outline now that we have all the needed pieces
                             deferred.resolve( _buildOutline(outline));
                         });
@@ -631,7 +635,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         height = imageData.height,
                         imageCanvas = createScratchCanvas(width, height),
                         imageCtx = imageCanvas.getContext('2d'),
-                        hasTransparency = false;;
+                        hasTransparency = false;
 
                     position = context.getCanvasPosition(0, -height);
                     transform[4] = position[0];
@@ -644,7 +648,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                             hasTransparency = checkForTransparency(imageData.data);
                             putBinaryImageData(imageCtx, imageData.data, width, height);
                         } else {
-                            console.log("======== MASK:", typeof Element, imageData.tagName)
+                            console.log("======== MASK:", typeof Element, imageData.tagName);
                             // JFD TODO: this is likely to be a mask which we do not yet support, just ignore for now...
                             return;
                         }
@@ -669,10 +673,10 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
     _textLayer: {
         value: {
             beginLayout: function() {
-                console.log("TEXT:beginLayout", this.owner)
+                console.log("TEXT:beginLayout", this.owner);
             },
             endLayout: function() {
-                console.log("TEXT:endLayout")
+                console.log("TEXT:endLayout");
             },
 
             showText: function(context, text) {
@@ -705,155 +709,155 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                 try {
 
-                ctx.save();
-                context.applyTextTransforms();
+                    ctx.save();
+                    context.applyTextTransforms();
 
-                // Export the font
-                if (this.owner._pdf.cssFonts[fontName] == undefined) {
-                    if (font.url) {
-                        self.owner._pdf.cssFonts[fontName] = {
-                            style: '@font-face {font-family: "' + fontName + '"; src: url(\'' + font.url + '\');}',
-                            loadedFontName: font.loadedName,
-                            fontName: font.name
-                        };
-                    } else {
-                        var fontStyle = font.bindDOM();
-                        self.owner._pdf.cssFonts[fontName] = {
-                            style: fontStyle
-                        }
-                    }
-                }
-
-                fallbackName = sanitizeFontName(font.name);
-                if (fallbackName !== font.fallbackName) {
-                    fallbackName += ", " + font.fallbackName;
-                } else {
-                    fallbackName = font.fallbackName;
-                }
-
-// JFD TODO: Not sure how to apply the line width for text outline in css
-                var lineWidth = current.lineWidth,
-                    a1 = current.textMatrix[0],
-                    b1 = current.textMatrix[1],
-                    scale = Math.sqrt(a1 * a1 + b1 * b1);
-
-                if (scale === 0 || lineWidth === 0)
-                  lineWidth = context.getSinglePixelWidth();
-                else
-                  lineWidth /= scale;
-
-//                if (fontSizeScale != 1.0) {
-//                  ctx.scale(fontSizeScale, fontSizeScale);
-//                  lineWidth /= fontSizeScale;
-//                }
-//
-//                ctx.lineWidth = lineWidth;
-
-                if (glyphs) {
-                    vOffset = getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px '" + fontName + "'", fontSize * scale / fontSizeScale);
-
-                    ctx.scale(1/scale, 1/scale);
-                    ctx.translate(0, vOffset);
-
-                    setVendorStyleAttribute(outerElemStyle, "transform", "matrix(" + [
-                        sanitizeCSSValue(ctx.mozCurrentTransform[0]),
-                        sanitizeCSSValue(ctx.mozCurrentTransform[1]),
-                        sanitizeCSSValue(ctx.mozCurrentTransform[2]),
-                        sanitizeCSSValue(ctx.mozCurrentTransform[3]),
-                        sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[4], roundingPrecission) : ctx.mozCurrentTransform[4]),
-                        sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[5], roundingPrecission) : ctx.mozCurrentTransform[5])
-                    ] + ")");
-                }
-                outerElemStyle.fontFamily = "'" + fontName + "', " + fallbackName;
-                outerElemStyle.fontSize = (fontSize * scale / fontSizeScale) + "px";
-                outerElemStyle.color = current.fillColor;
-
-                for (i = 0; i < dataLen; i ++) {
-                    var value = data[i],
-                        i, j, l;
-
-                    if (typeof value === "number") {
-                        // space
-                        var spacingLength = - value * fontSize * current.textHScale * 0.001 * current.fontDirection;
-//                        if (vertical) {
-//                          current.y += spacingLength;
-//                        } else {
-                          x += spacingLength;
-//                        }
-                    } else {
-                        // character
-                        if (isSpacedText) {
-                            glyphs = font.charsToGlyphs(value);
-                            l = glyphs.length;
-                            j = 0;
-
-                            if (vOffset === null) {
-                                vOffset = getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px '" + fontName + "'", fontSize * scale / fontSizeScale);
-                                ctx.scale(1/scale, 1/scale);
-                                ctx.translate(0, vOffset);
-
-                                setVendorStyleAttribute(outerElemStyle, "transform", "matrix(" + [
-                                    ctx.mozCurrentTransform[0],
-                                    ctx.mozCurrentTransform[1],
-                                    ctx.mozCurrentTransform[2],
-                                    ctx.mozCurrentTransform[3],
-                                    roundPosition ? roundValue(ctx.mozCurrentTransform[4], roundingPrecission) : ctx.mozCurrentTransform[4],
-                                    roundPosition ? roundValue(ctx.mozCurrentTransform[5], roundingPrecission) : ctx.mozCurrentTransform[5]
-                                ] + ")");
-                            }
+                    // Export the font
+                    if (this.owner._pdf.cssFonts[fontName] == null) { // TODO DRY
+                        if (font.url) {
+                            self.owner._pdf.cssFonts[fontName] = {
+                                style: '@font-face {font-family: "' + fontName + '"; src: url(\'' + font.url + '\');}',
+                                loadedFontName: font.loadedName,
+                                fontName: font.name
+                            };
                         } else {
-                            j = i;
-                            l = j + 1;
+                            var fontStyle = font.bindDOM();
+                            self.owner._pdf.cssFonts[fontName] = {
+                                style: fontStyle
+                            };
                         }
+                    }
 
-                        for (; j < l; j ++) {
-                            var glyph = glyphs[j];
+                    fallbackName = sanitizeFontName(font.name);
+                    if (fallbackName !== font.fallbackName) {
+                        fallbackName += ", " + font.fallbackName;
+                    } else {
+                        fallbackName = font.fallbackName;
+                    }
 
-                            if (glyph && !glyph.disabled) {
-//                                console.log("==========> CHAR:", glyph.fontChar, "(" + glyph.unicode + ")", glyph.fontChar.charCodeAt(0));
-                                var vmetric = glyph.vmetric || font.defaultVMetrics,
-                                    width = vmetric ? -vmetric[0] : glyph.width,
-                                    charWidth = width * fontSize * current.fontMatrix[0] + charSpacing * current.fontDirection,
-                                    innerElem = document.createElement("span"),
-                                    innerElemStyle = innerElem.style,
-                                    roundScaledX = roundValue(x * scale, 0),
-                                    character = font.remaped ? glyph.unicode : glyph.fontChar;
+    // JFD TODO: Not sure how to apply the line width for text outline in css
+                    var lineWidth = current.lineWidth,
+                        a1 = current.textMatrix[0],
+                        b1 = current.textMatrix[1],
+                        scale = Math.sqrt(a1 * a1 + b1 * b1);
 
-                                if (character === ' ' || character.charCodeAt(0) === 0) {
-                                    innerElem.innerHTML = "&nbsp;";
-                                } else {
-//                                    if (character.charCodeAt(0) === 57357) {
-//                                        innerElem.innerHTML = "&#xfb01;"
-//                                    } else {
-                                        innerElem.appendChild(document.createTextNode(character));
-//                                    }
+                    if (scale === 0 || lineWidth === 0) {
+                        lineWidth = context.getSinglePixelWidth();
+                    } else {
+                        lineWidth /= scale;
+                    }
+
+    //                if (fontSizeScale != 1.0) {
+    //                  ctx.scale(fontSizeScale, fontSizeScale);
+    //                  lineWidth /= fontSizeScale;
+    //                }
+    //
+    //                ctx.lineWidth = lineWidth;
+
+                    if (glyphs) {
+                        vOffset = getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px '" + fontName + "'", fontSize * scale / fontSizeScale);
+
+                        ctx.scale(1/scale, 1/scale);
+                        ctx.translate(0, vOffset);
+
+                        setVendorStyleAttribute(outerElemStyle, "transform", "matrix(" + [
+                            sanitizeCSSValue(ctx.mozCurrentTransform[0]),
+                            sanitizeCSSValue(ctx.mozCurrentTransform[1]),
+                            sanitizeCSSValue(ctx.mozCurrentTransform[2]),
+                            sanitizeCSSValue(ctx.mozCurrentTransform[3]),
+                            sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[4], roundingPrecission) : ctx.mozCurrentTransform[4]),
+                            sanitizeCSSValue(roundPosition ? roundValue(ctx.mozCurrentTransform[5], roundingPrecission) : ctx.mozCurrentTransform[5])
+                        ] + ")");
+                    }
+                    outerElemStyle.fontFamily = "'" + fontName + "', " + fallbackName;
+                    outerElemStyle.fontSize = (fontSize * scale / fontSizeScale) + "px";
+                    outerElemStyle.color = current.fillColor;
+
+                    for (i = 0; i < dataLen; i ++) {
+                        var value = data[i], j, l;
+
+                        if (typeof value === "number") {
+                            // space
+                            var spacingLength = - value * fontSize * current.textHScale * 0.001 * current.fontDirection;
+    //                        if (vertical) {
+    //                          current.y += spacingLength;
+    //                        } else {
+                            x += spacingLength;
+    //                        }
+                        } else {
+                            // character
+                            if (isSpacedText) {
+                                glyphs = font.charsToGlyphs(value);
+                                l = glyphs.length;
+                                j = 0;
+
+                                if (vOffset === null) {
+                                    vOffset = getBaselineOffset(font, text, "normal normal " + (fontSize * scale / fontSizeScale) + "px '" + fontName + "'", fontSize * scale / fontSizeScale);
+                                    ctx.scale(1/scale, 1/scale);
+                                    ctx.translate(0, vOffset);
+
+                                    setVendorStyleAttribute(outerElemStyle, "transform", "matrix(" + [
+                                        ctx.mozCurrentTransform[0],
+                                        ctx.mozCurrentTransform[1],
+                                        ctx.mozCurrentTransform[2],
+                                        ctx.mozCurrentTransform[3],
+                                        roundPosition ? roundValue(ctx.mozCurrentTransform[4], roundingPrecission) : ctx.mozCurrentTransform[4],
+                                        roundPosition ? roundValue(ctx.mozCurrentTransform[5], roundingPrecission) : ctx.mozCurrentTransform[5]
+                                    ] + ")");
                                 }
-
-                                if (previousSpan) {
-                                    innerElemStyle.position = "relative";
-                                    setVendorStyleAttribute(innerElemStyle, "transform", "translate(" + (roundPosition ? roundValue((x - previousX) * scale, roundingPrecission) : (x - previousX) * scale) + "px, 0)");
-                                    previousSpan.appendChild(innerElem);
-                                } else {
-                                    setVendorStyleAttribute(innerElemStyle, "transform", "translate(" + (roundPosition ? roundValue(x * scale, roundingPrecission) : x * scale) + "px, 0)");
-                                    outerElem.appendChild(innerElem);
-                                }
-//                                previousSpan = innerElem;
-                                previousRoundScaledX = roundScaledX;
-                                previousX = x;
-
-                                x += charWidth;
                             } else {
-//                                console.log("==========> * word separator *");
-                                x += fontDirection * wordSpacing;
-//                                previousSpan = null;
-                                previousX = x
+                                j = i;
+                                l = j + 1;
+                            }
+
+                            for (; j < l; j ++) {
+                                var glyph = glyphs[j];
+
+                                if (glyph && !glyph.disabled) {
+    //                                console.log("==========> CHAR:", glyph.fontChar, "(" + glyph.unicode + ")", glyph.fontChar.charCodeAt(0));
+                                    var vmetric = glyph.vmetric || font.defaultVMetrics,
+                                        width = vmetric ? -vmetric[0] : glyph.width,
+                                        charWidth = width * fontSize * current.fontMatrix[0] + charSpacing * current.fontDirection,
+                                        innerElem = document.createElement("span"),
+                                        innerElemStyle = innerElem.style,
+                                        roundScaledX = roundValue(x * scale, 0),
+                                        character = font.remaped ? glyph.unicode : glyph.fontChar;
+
+                                    if (character === ' ' || character.charCodeAt(0) === 0) {
+                                        innerElem.innerHTML = "&nbsp;";
+                                    } else {
+    //                                    if (character.charCodeAt(0) === 57357) {
+    //                                        innerElem.innerHTML = "&#xfb01;"
+    //                                    } else {
+                                        innerElem.appendChild(document.createTextNode(character));
+    //                                    }
+                                    }
+
+                                    if (previousSpan) {
+                                        innerElemStyle.position = "relative";
+                                        setVendorStyleAttribute(innerElemStyle, "transform", "translate(" + (roundPosition ? roundValue((x - previousX) * scale, roundingPrecission) : (x - previousX) * scale) + "px, 0)");
+                                        previousSpan.appendChild(innerElem);
+                                    } else {
+                                        setVendorStyleAttribute(innerElemStyle, "transform", "translate(" + (roundPosition ? roundValue(x * scale, roundingPrecission) : x * scale) + "px, 0)");
+                                        outerElem.appendChild(innerElem);
+                                    }
+    //                                previousSpan = innerElem;
+                                    previousRoundScaledX = roundScaledX;
+                                    previousX = x;
+
+                                    x += charWidth;
+                                } else {
+    //                                console.log("==========> * word separator *");
+                                    x += fontDirection * wordSpacing;
+    //                                previousSpan = null;
+                                    previousX = x;
+                                }
                             }
                         }
                     }
-                }
 
-                this.owner._rootNodeStack[0].appendChild(outerElem);
-                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+                    this.owner._rootNodeStack[0].appendChild(outerElem);
+                    this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
 
                 } catch (ex) {
                     console.log("========== showText ERROR:", ex.message, ex.stack);
@@ -881,7 +885,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             _viewBoxWidth: 0,
 
             beginLayout: function() {
-                this.log("beginLayout:", self._svgStates);
+                this.log("beginLayout:", this._svgStates);
                 var view = this.page.pageInfo.view.slice(),
                     scale = this.scale;
 
@@ -1014,13 +1018,13 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                 this._svgStates[0].paintFormXObjectDepth ++;
 
-                if (matrix && isArray(matrix) && 6 == matrix.length) {
+                if (matrix && Array.isArray(matrix) && 6 === matrix.length) {
                     var params = matrix.slice();
                     params.unshift(context);
                     this.transform.apply(this, params);
                 }
 
-                if (bbox && isArray(bbox) && 4 == bbox.length) {
+                if (bbox && Array.isArray(bbox) && 4 === bbox.length) {
                     var width = bbox[2] - bbox[0];
                     var height = bbox[3] - bbox[1];
                     this.rectangle(context, bbox[0], bbox[1], width, height);
@@ -1032,12 +1036,12 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             },
 
             paintFormXObjectEnd: function (context) {
-              var depth = this._svgStates[0].paintFormXObjectDepth;
-              do {
-                this.restore();
-                // some pdf don't close all restores inside object
-                // closing those for them
-              } while (this._svgStates[0].paintFormXObjectDepth >= depth && this._svgStates[0].length > 1);
+                var depth = this._svgStates[0].paintFormXObjectDepth;
+                do {
+                    this.restore();
+                    // some pdf don't close all restores inside object
+                    // closing those for them
+                } while (this._svgStates[0].paintFormXObjectDepth >= depth && this._svgStates[0].length > 1);
 
                 return this.owner.bypassPFDJSRendering;
             },
@@ -1083,31 +1087,31 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     m = currentState.transform;
 
                 currentState.transform = [
-                  m[0] * a + m[2] * b,
-                  m[1] * a + m[3] * b,
-                  m[0] * c + m[2] * d,
-                  m[1] * c + m[3] * d,
-                  m[0] * e + m[2] * f + m[4],
-                  m[1] * e + m[3] * f + m[5]
+                    m[0] * a + m[2] * b, // TODO DRY
+                    m[1] * a + m[3] * b,
+                    m[0] * c + m[2] * d,
+                    m[1] * c + m[3] * d,
+                    m[0] * e + m[2] * f + m[4],
+                    m[1] * e + m[3] * f + m[5]
                 ];
             },
 
             setRenderingIntent: function(context, intent) {
-                if (unsupportedFeature["setRenderingIntent"] === undefined) {
-                    unsupportedFeature["setRenderingIntent"] = 1
+                if (unsupportedFeature.setRenderingIntent === undefined) {
+                    unsupportedFeature.setRenderingIntent = 1;
                     console.warn("rendering intent not yet supported:", intent);
                 } else {
-                    unsupportedFeature["setRenderingIntent"] ++;
+                    unsupportedFeature.setRenderingIntent ++;
                 }
                 // TODO set rendering intent?
             },
 
             setFlatness: function(context, value) {
-                if (unsupportedFeature["setFlatness"] === undefined) {
-                    unsupportedFeature["setFlatness"] = 1
+                if (unsupportedFeature.setFlatness === undefined) {
+                    unsupportedFeature.setFlatness = 1;
                     console.warn("flatness not yet supported:", value);
                 } else {
-                    unsupportedFeature["setFlatness"] ++;
+                    unsupportedFeature.setFlatness ++;
                 }
                 this._svgStates[0].flatness = value;
                 // TODO set flatness?
@@ -1148,34 +1152,54 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             setGState: function(context, states) {
                 var self = this;
 
-                states.forEach(function(state) {
+                states.forEach(function (state) {
                     var key = state[0],
                         value = state[1];
 
                     switch (key) {
-                        case 'LW': self.setLineWidth(context, value);                   break;
-                        case 'LC': self.setLineCap(context, value);                     break;
-                        case 'LJ': self.setLineJoin(context, value);                    break;
-                        case 'ML': self.setMiterLimit(context, value);                  break;
-                        case 'D': self.setDash(context, value[0], value[1]);            break;
-                        case 'RI': self.setRenderingIntent(context, value);             break;
-                        case 'FL': self.setFlatness(context, value);                    break;
-                        case 'Font': self.setFont(context, state[1], state[2]);         break;
-                        case 'CA':  self._svgStates[0].strokeAlpha = state[1];          break;
-                        case 'ca': self._svgStates[0].fillAlpha = state[1];             break;
-                        case 'BM':
-                            if (value && value.name && (value.name !== 'Normal')) {
-                                var mode = value.name.replace(/([A-Z])/g, function(c) {
-                                    return '-' + c.toLowerCase();
-                                }).substring(1);
+                    case 'LW':
+                        self.setLineWidth(context, value);
+                        break;
+                    case 'LC':
+                        self.setLineCap(context, value);
+                        break;
+                    case 'LJ':
+                        self.setLineJoin(context, value);
+                        break;
+                    case 'ML':
+                        self.setMiterLimit(context, value);
+                        break;
+                    case 'D':
+                        self.setDash(context, value[0], value[1]);
+                        break;
+                    case 'RI':
+                        self.setRenderingIntent(context, value);
+                        break;
+                    case 'FL':
+                        self.setFlatness(context, value);
+                        break;
+                    case 'Font':
+                        self.setFont(context, state[1], state[2]);
+                        break;
+                    case 'CA':
+                        self._svgStates[0].strokeAlpha = state[1];
+                        break;
+                    case 'ca':
+                        self._svgStates[0].fillAlpha = state[1];
+                        break;
+                    case 'BM':
+                        if (value && value.name && (value.name !== 'Normal')) {
+                            var mode = value.name.replace(/([A-Z])/g, function(c) {
+                                return '-' + c.toLowerCase();
+                            }).substring(1);
 //                                self.ctx.globalCompositeOperation = mode;
 //                                if (self.ctx.globalCompositeOperation !== mode) {
-                                    warn('globalCompositeOperation "' + mode + '" is not supported');
+                            console.warn('globalCompositeOperation "' + mode + '" is not supported');
 //                                }
-                            } else {
+                        }// else {
 //                                self.ctx.globalCompositeOperation = 'source-over';
-                            }
-                            break;
+                        //}
+                        break;
                     }
                 });
             },
@@ -1203,7 +1227,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 this.owner._rootNodeStack[0].appendChild(clipElem);
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
 
-                if (typeof clipRule == "string") {
+                if (typeof clipRule === "string") {
                     gElem.setAttribute("clip-rule", clipRule);
                 }
                 gElem.setAttribute("clip-path", "url(#" + clippingID + ")");
@@ -1219,7 +1243,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 this.clip(context, "evenodd");
 
                 return this.owner.bypassPFDJSRendering;
-           },
+            },
 
             endPath: function(context) {
                 this._svgPath = null;
@@ -1228,7 +1252,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
             // Shading
 
-            shadingFill: function(context, patternIR) {
+            shadingFill: function (context, patternIR) {
                 var currentState = this._svgStates[0],
                     transform = currentState.transform.slice(),     // Make a copy, so that we can alter it
                     transformInverse,
@@ -1264,7 +1288,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         patternIR[2].splice(0, 1);
                     }
 
-                    if (patternIR[2].length == 12) {
+                    if (patternIR[2].length === 12) {
                         // remove the end stop
                         stop = patternIR[2][10];
                         if (stop[0] > 0.95) {
@@ -1274,10 +1298,10 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     }
                 }
 
-                if (patternIR[1] == PatternType.AXIAL) {
+                if (patternIR[1] === PatternType.AXIAL) {
                     var directionVector = [patternIR[3].slice(), patternIR[4].slice()],
                         p1, p2;
-    
+
                     if (directionVector[0][0] <= directionVector[1][0]) {
                         p1 = directionVector[0][0];
                         p2 = directionVector[1][0];
@@ -1285,13 +1309,13 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         p1 = directionVector[1][0];
                         p2 = directionVector[0][0];
                     }
-    
+
                     // Reverse the user space (must be a better way to solve this issue!)
                     if (p1 > x1 || p2 < x0) {
                         directionVector[0][0] *= -1;
                         directionVector[1][0] *= -1;
                     }
-    
+
                     if (directionVector[0][1] <= directionVector[1][1]) {
                         p1 = directionVector[0][1];
                         p2 = directionVector[1][1];
@@ -1299,20 +1323,20 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         p1 = directionVector[1][1];
                         p2 = directionVector[0][1];
                     }
-    
+
                      // Reverse the user space (must be a better way to solve this issue!)
                     if (p1 > y1 || p2 < y0) {
                         directionVector[0][1] *= -1;
                         directionVector[1][1] *= -1;
                     }
-    
+
                     // PDF coordinates are [(x0 y0) (x1 y1)]
                     gradElem = document.createElementNS(xmlns, "linearGradient");
                     gradElem.setAttribute("x1", directionVector[0][0]);
                     gradElem.setAttribute("y1", directionVector[0][1]);
                     gradElem.setAttribute("x2", directionVector[1][0]);
                     gradElem.setAttribute("y2", directionVector[1][1]);
-                } else if (patternIR[1] == PatternType.RADIAL) {
+                } else if (patternIR[1] === PatternType.RADIAL) {
                     // PDF coordinates are [(x0 y0) r0 (x1 y1) r1] which are not quiet the same as SVG's radial gradient
                     // Let's use the center point of the first circle and the radius of the second one to make one big circle, might not be the right assumption!
                     gradElem = document.createElementNS(xmlns, "radialGradient");
@@ -1362,7 +1386,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 // scale transform to reflect image display size (rather that using an 1x1 image size like provided by PDF)
                 this.scaleTransform(scaleX, scaleY, transform);
 
-                geometry = this.getGeometry.apply(null, transform)
+                geometry = this.getGeometry.apply(null, transform);
 
                 // Flip Y origin and adjust x origin (PDF rotate image from the bottom-left corner while SVG does it from the top-left
                 transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
@@ -1426,14 +1450,14 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         width: width,
                         height: height,
                         usage: []
-                    }
+                    };
                 }
 
                 this.owner._pdf.imagesInfo[url].usage.push({
                     page: this.page.pageNumber,
                     width: roundValue(Math.abs(width * geometry.scaleX * this.scale), 0),
                     height: roundValue(Math.abs(height * geometry.scaleY * this.scale), 0)
-                })
+                });
 
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
             },
@@ -1442,7 +1466,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 var object = context.objs.get(objId);
 
                 if (!object) {
-                    error('Dependent image isn\'t ready yet');
+                    console.error('Dependent image isn\'t ready yet');
                 }
                 this._paintImage(context, object.src, w, h);
 
@@ -1453,11 +1477,11 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 var object = context.objs.get(objId);
 
                 if (!object) {
-                    error('Dependent image isn\'t ready yet');
+                    console.error('Dependent image isn\'t ready yet');
                 }
 
                 if (object instanceof Image) {
-                   this.paintJpegXObject(context, objId, w, h);
+                    this.paintJpegXObject(context, objId, w, h);
                 } else {
                     this.paintInlineImageXObject(context, object, false);
                 }
@@ -1491,11 +1515,11 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
             paintImageMaskXObject: function(context, object, w, h) {
                 if (typeof object === "string") {
-                    var object = context.objs.get(object);
+                    object = context.objs.get(object);
 
-                   if (!object) {
-                       error('Dependent image isn\'t ready yet');
-                   }
+                    if (!object) {
+                        console.error('Dependent image isn\'t ready yet');
+                    }
                 }
 
                 if (object instanceof Image) {
@@ -1513,7 +1537,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     }
 
                     object.data = invertedData;
-                        this.paintInlineImageXObject(context, object, true);
+                    this.paintInlineImageXObject(context, object, true);
                     object.data = data;
                 }
 
@@ -1547,7 +1571,6 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     charSpacing = current.charSpacing,
                     wordSpacing = current.wordSpacing,
                     textHScale = current.textHScale,
-                    fontDirection = current.fontDirection,
                     glyphs,
                     textElem = document.createElementNS(xmlns, "text"),
                     transform,
@@ -1557,7 +1580,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     needTransform;
 
                 // Export the font
-                if (this.owner._pdf.cssFonts[fontName] == undefined) {
+                if (this.owner._pdf.cssFonts[fontName] == null) { // TODO DRY
                     if (font.url) {
                         this.owner._pdf.cssFonts[fontName] = {
                             style: '@font-face {font-family: "' + fontName + '"; src: url(\'' + font.url + '\');}',
@@ -1568,7 +1591,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         var fontStyle = font.bindDOM();
                         this.owner._pdf.cssFonts[fontName] = {
                             style: fontStyle
-                        }
+                        };
                     }
                 }
 
@@ -1586,20 +1609,20 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 // Adjust Y origin
                 transform = this.getAdjustedTransform(transform);
 
-                geometry = this.getGeometry.apply(null, transform)
-                needTransform = !(geometry.rotateX == 0 && geometry.rotateY == 0 && geometry.scaleX == geometry.scaleY);
+                geometry = this.getGeometry.apply(null, transform);
+                needTransform = !(geometry.rotateX === 0 && geometry.rotateY === 0 && geometry.scaleX == geometry.scaleY);
 
                 var text = "",
                     index = 0,
                     offsets = [0];
 
                 data.forEach(function(item) {
-                    if (typeof item == "number") {
+                    if (typeof item === "number") {
                         // Spacer
                         offsets[index] += - item * current.fontMatrix[0] * fontSize * textHScale;
                         current.x += - item * current.fontMatrix[0] * textHScale;
                     } else {
-                        glyphs = typeof item == "string" ? font.charsToGlyphs(item) : item;
+                        glyphs = typeof item === "string" ? font.charsToGlyphs(item) : item;
                         if (glyphs) {
                             glyphs.forEach(function(glyph) {
                                 if (glyph === null) {
@@ -1632,10 +1655,10 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 });
 
                 // Replace the leading and trailing space characters by a nbsp as SVG will ignore them by default
-                text = text.replace(/^ | $/g, "\xA0")   // &nbsp == 0xA0
+                text = text.replace(/^ | $/g, "\xA0");   // &nbsp == 0xA0
                 // If the string contains continous white spaces, convert them to nbsp, else SVG will concatenate them
                 if (text.indexOf("  ") !== -1) {
-                    text = text.replace(/ /g, "\xA0")   // &nbsp == 0xA0
+                    text = text.replace(/ /g, "\xA0");   // &nbsp == 0xA0
                 }
 
                 var dx = "",
@@ -1656,50 +1679,50 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 // JFD TODO: remove dependency on canvas for color
                 // JFD TODO: add colorspace support
                 switch (current.textRenderingMode) {
-                    case TextRenderingMode.FILL:
-                        textElem.style.fill = context.current.fillColor;
-                        textElem.style.stroke = "none";
-                        if (current.fillAlpha !== 1) {
-                            textElem.style.opacity = current.fillAlpha;
-                            // JFD TODO: should we remove that text node all together when alpha = 0?
-                        }
-                        break;
-                    case TextRenderingMode.STROKE:
-                        textElem.style.fill = "none";
-                        textElem.style.stroke = context.current.strokeColor;
-                        if (current.strokeAlpha !== 1) {
-                            textElem.style.opacity = current.strokeAlpha;
-                            // JFD TODO: should we remove that text node all together when alpha = 0?
-                        }
-                        break;
-                    case TextRenderingMode.FILL_STROKE:
-                        textElem.style.fill = context.current.fillColor;
-                        textElem.style.stroke = context.current.strokeColor;
-                        if (current.strokeAlpha !== 1) {
-                            textElem.style.strokeOpacity = current.strokeAlpha;
-                        }
-                        if (current.fillAlpha !== 1) {
-                            textElem.style.fillOpacity = current.fillAlpha;
-                        }
+                case TextRenderingMode.FILL:
+                    textElem.style.fill = context.current.fillColor;
+                    textElem.style.stroke = "none";
+                    if (current.fillAlpha !== 1) {
+                        textElem.style.opacity = current.fillAlpha;
                         // JFD TODO: should we remove that text node all together when alpha = 0?
-                        break;
-                    case TextRenderingMode.INVISIBLE:
-                        textElem.style.fill = "none";
-                        textElem.style.stroke = "none";
-                        // JFD TODO: should we remove that text node all together?
-                        break;
+                    }
+                    break;
+                case TextRenderingMode.STROKE:
+                    textElem.style.fill = "none";
+                    textElem.style.stroke = context.current.strokeColor;
+                    if (current.strokeAlpha !== 1) {
+                        textElem.style.opacity = current.strokeAlpha;
+                        // JFD TODO: should we remove that text node all together when alpha = 0?
+                    }
+                    break;
+                case TextRenderingMode.FILL_STROKE:
+                    textElem.style.fill = context.current.fillColor;
+                    textElem.style.stroke = context.current.strokeColor;
+                    if (current.strokeAlpha !== 1) {
+                        textElem.style.strokeOpacity = current.strokeAlpha;
+                    }
+                    if (current.fillAlpha !== 1) {
+                        textElem.style.fillOpacity = current.fillAlpha;
+                    }
+                    // JFD TODO: should we remove that text node all together when alpha = 0?
+                    break;
+                case TextRenderingMode.INVISIBLE:
+                    textElem.style.fill = "none";
+                    textElem.style.stroke = "none";
+                    // JFD TODO: should we remove that text node all together?
+                    break;
 
-                    default:
-                        console.warn("unsuported text rendering mode:", current.textRenderingMode)
+                default:
+                    console.warn("unsuported text rendering mode:", current.textRenderingMode);
                 }
 
                 if (current.lineWidth !== 1) {
-                    if (unsupportedFeature["lineWidth"] === undefined) {
-                       unsupportedFeature["lineWidth"] = 1
+                    if (unsupportedFeature.lineWidth === undefined) {
+                        unsupportedFeature.lineWidth = 1;
                         console.warn("text line width not yet supported:", current.lineWidth);
-                   } else {
-                       unsupportedFeature["lineWidth"] ++;
-                   }
+                    } else {
+                        unsupportedFeature.lineWidth ++;
+                    }
                 }
 
                 if (needTransform) {
@@ -1754,14 +1777,14 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     current = this._svgStates[0];
 
                 if (!fontObj) {
-                    error('Can\'t find font for ' + fontRefName);
+                    console.error('Can\'t find font for ' + fontRefName);
                 }
 
                 current.fontMatrix = fontObj.fontMatrix ? fontObj.fontMatrix : FONT_IDENTITY_MATRIX;
 
                 // A valid matrix needs all main diagonal elements to be non-zero
                 if (current.fontMatrix[0] === 0 || current.fontMatrix[3] === 0) {
-                    warn('Invalid font matrix for font ' + fontRefName);
+                    console.warn('Invalid font matrix for font ' + fontRefName);
                 }
 
                 // The spec for Tf (setFont) says that 'size' specifies the font 'scale',
@@ -1776,8 +1799,9 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 current.font = fontObj;
                 current.fontSize = size;
 
-                if (fontObj.coded)
+                if (fontObj.coded) {
                     return; // we don't need ctx.font for Type3 fonts
+                }
 
                 var name = fontObj.loadedName || 'sans-serif';
                 var bold = fontObj.black ? (fontObj.bold ? 'bolder' : 'bold') : (fontObj.bold ? 'bold' : 'normal');
@@ -1854,11 +1878,11 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
             curveTo2: function(context, x2, y2, x3, y3) {
                 var current  = this._svgStates[0];
-                this.curveTo(context, current.currentPoint.x, current.currentPoint.y, x2, y2, x3, y3)
+                this.curveTo(context, current.currentPoint.x, current.currentPoint.y, x2, y2, x3, y3);
             },
 
             curveTo3: function(context, x1, y1, x3, y3) {
-                this.curveTo(context, x1, y1, x3, y3, x3, y3)
+                this.curveTo(context, x1, y1, x3, y3, x3, y3);
             },
 
             closePath: function(context) {
@@ -1889,7 +1913,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 // JFD TODO: use transform only if needed, else use x/y attribute
                 pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
 
-                if (typeof fillRule == "string") {
+                if (typeof fillRule === "string") {
                     pathElem.style.fileRule = fillRule;
                 }
                 pathElem.style.fill = context.current.fillColor;
@@ -1948,7 +1972,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 pathElem.style.strokeLinejoin = current.lineJoin;
                 pathElem.style.strokeMiterlimit = current.miterLimit;
 
-                if (typeof current.lineDash == "string" && current.lineDash !== "") {
+                if (typeof current.lineDash === "string" && current.lineDash !== "") {
                     pathElem.style.strokeDasharray = current.lineDash;
                     if (current.lineDashOffset) {
                         pathElem.style.strokeDashoffset = current.lineDashOffset;
@@ -1996,9 +2020,9 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             // Utilities
 
             applyTransform: function(p, m) {
-              var xt = p[0] * m[0] + p[1] * m[2] + m[4];
-              var yt = p[0] * m[1] + p[1] * m[3] + m[5];
-              return [xt, yt];
+                var xt = p[0] * m[0] + p[1] * m[2] + m[4];
+                var yt = p[0] * m[1] + p[1] * m[3] + m[5];
+                return [xt, yt];
             },
 
             applyTextMatrix: function (current, textMatrix, transform) {
@@ -2007,12 +2031,12 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                 // Apply text transform
                 transform = [
-                  m[0] * a + m[2] * b,
-                  m[1] * a + m[3] * b,
-                  m[0] * c + m[2] * d,
-                  m[1] * c + m[3] * d,
-                  m[0] * e + m[2] * f + m[4],
-                  m[1] * e + m[3] * f + m[5]
+                    m[0] * a + m[2] * b, // TODO DRY
+                    m[1] * a + m[3] * b,
+                    m[0] * c + m[2] * d,
+                    m[1] * c + m[3] * d,
+                    m[0] * e + m[2] * f + m[4],
+                    m[1] * e + m[3] * f + m[5]
                 ];
 
                 // translate to current position
@@ -2027,7 +2051,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 //                    m[2] = m[2] * -1;
 //                    m[3] = m[3] * -1;
                 } else {
-                    console.warn("reverse font direction not tested")
+                    console.warn("reverse font direction not tested");
                     m[0] = m[0] * -current.textHScale;
                     m[1] = m[1] * -current.textHScale;
 //                    m[2] = m[2] * 1;
@@ -2069,24 +2093,24 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             },
 
             getTransformInverse: function (transform) {
-              // Calculation done using WolframAlpha:
-              // http://www.wolframalpha.com/input/?
-              //   i=Inverse+{{a%2C+c%2C+e}%2C+{b%2C+d%2C+f}%2C+{0%2C+0%2C+1}}
+                // Calculation done using WolframAlpha:
+                // http://www.wolframalpha.com/input/?
+                //   i=Inverse+{{a%2C+c%2C+e}%2C+{b%2C+d%2C+f}%2C+{0%2C+0%2C+1}}
 
-              var m = transform;
-              var a = m[0], b = m[1], c = m[2], d = m[3], e = m[4], f = m[5];
+                var m = transform;
+                var a = m[0], b = m[1], c = m[2], d = m[3], e = m[4], f = m[5];
 
-              var ad_bc = a * d - b * c;
-              var bc_ad = b * c - a * d;
+                var ad_bc = a * d - b * c;
+                var bc_ad = b * c - a * d;
 
-              return [
-                d / ad_bc,
-                b / bc_ad,
-                c / bc_ad,
-                a / ad_bc,
-                (d * e - c * f) / bc_ad,
-                (b * e - a * f) / ad_bc
-              ];
+                return [
+                    d / ad_bc,
+                    b / bc_ad,
+                    c / bc_ad,
+                    a / ad_bc,
+                    (d * e - c * f) / bc_ad,
+                    (b * e - a * f) / ad_bc
+                ];
             },
 
             getGeometry: function(a, b, c, d, e, f) {
@@ -2397,7 +2421,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     groupElem = document.createElement("div");
 
                 // Adjust the opacity
-                if (current.fillAlpha != 1) {
+                if (current.fillAlpha !== 1) {
                     groupElem.style.opacity = current.fillAlpha;
                 }
 
@@ -2411,11 +2435,11 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     transform;
 
                 ctx.save();
-                    // Resize the group (but do not reverse the Y axis)
-                    ctx.scale(1.0 / this.scale, 1.0 / this.scale);
-                    transform = ctx.mozCurrentTransform.slice(0, 6);
-                    transform[4] /= this.scale;
-                    transform[5] /= this.scale;
+                // Resize the group (but do not reverse the Y axis)
+                ctx.scale(1.0 / this.scale, 1.0 / this.scale);
+                transform = ctx.mozCurrentTransform.slice(0, 6);
+                transform[4] /= this.scale;
+                transform[5] /= this.scale;
                 ctx.restore();
 
                 groupElem.classList.add("group");
@@ -2430,7 +2454,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                 this.owner._rootNodeStack[0].appendChild(groupElem);
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
-                console.log("---INSERTING NEW GROUP:", groupElem)
+                console.log("---INSERTING NEW GROUP:", groupElem);
             }
         }
     }
