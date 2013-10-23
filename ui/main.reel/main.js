@@ -106,7 +106,9 @@ exports.Main = Component.specialize({
                     // auto reconnect...
                     setTimeout(function() {
                         // force the backend getter to be called again
-                        var reconnected = self.backend;
+                        //jshint -W030
+                        self.backend;
+                        //jshint +W030
                     }, 250);
                 });
                 self._backend = Connection(connection);

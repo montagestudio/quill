@@ -70,7 +70,9 @@ exports.Main = Component.specialize({
                     self.environmentBridge = new exported.LumiereBridge().init("plume-backend");
 
                     self.environmentBridge.connectionHandler = self;
-                    var backend = self.environmentBridge.backend; // force open backend connection
+                    //jshint -W030
+                    self.environmentBridge.backend; // force open backend connection
+                    //jshint +W030
 
                     // JFD TODO: we need a dynamic way to figure out which extension we want to load, for know we will default to Scholastic
                     return require.async("extensions/scholastic-extension.js").then(function(exported) {
@@ -142,7 +144,9 @@ exports.Main = Component.specialize({
 
             // Let's reconnect...
             setTimeout(function() {
-                var backend = self.environmentBridge.backend;
+                //jshint -W030
+                self.environmentBridge.backend;
+                //jshint +W030
             }, 250);
         }
     },

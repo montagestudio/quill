@@ -222,7 +222,9 @@ exports.Main = Component.specialize({
 
             // Let's reconnect...
             setTimeout(function() {
-                var backend = self.environmentBridge.backend;
+                //jshint -W030
+                self.environmentBridge.backend;
+                //jshint +W030
             }, 250);
         }
     },

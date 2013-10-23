@@ -49,7 +49,9 @@ exports.Main = Component.specialize({
                     self.environmentBridge = new exported.LumiereBridge().init("plume-backend");
 
                     self.environmentBridge.connectionHandler = self;
-                    var backend = self.environmentBridge.backend; // force open backend connection
+                    //jshint -W030
+                    self.environmentBridge.backend; // force open backend connection
+                    //jshint +W030
 
                     self.environmentBridge.userPreferences.then(function (prefs) {
                         self.destination = prefs.importDestinationPath.substring("fs://localhost".length);
@@ -222,7 +224,9 @@ exports.Main = Component.specialize({
 
             // Let's reconnect...
             setTimeout(function() {
-                var backend = self.environmentBridge.backend;
+                //jshint -W030
+                self.environmentBridge.backend;
+                //jshint +W030
             }, 250);
         }
     },
