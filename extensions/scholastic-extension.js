@@ -3,7 +3,159 @@ var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
     ImportExtension = require("core/ImportExtension").ImportExtension;
 
+
+var g_validLicense = null;      // Null = need to check the license, true = licence ok, false = invalid license
+
+var g_TrialPeriod = 10;     //in days
+
+var g_local_secret_hash_key =  "e9161e517f3db0bed9ecf45f634f1f25";
+var g_remote_secret_hash_key = "cdc1421b4468131ec9411b8522b1df61";
+
+
+var _storeExpirationDate = function(scholastic, expiration) {
+    expiration = expiration.getTime().toString(16);
+
+    return scholastic.invoke("random", 4).then(function(salt) {
+        return scholastic.invoke("hash", salt + g_local_secret_hash_key + expiration).then(function(hash) {
+            var encodedData =  salt + hash.substr(0, 13) + expiration + hash.substr(13);
+            return scholastic.invoke("exec", 'defaults write -g NSPowerMgrOptions "' + encodedData + '"');
+        });
+    });
+};
+
+var _checkLicense = function(scholastic) {
+    scholastic.invoke("exec", "defaults read -g NSPowerMgrOptions").then(function(response) {
+        response = response.trim();
+
+        // Check if the date is valid
+        var salt = response.substr(0, 8),
+            hash = response.substr(8, 13) + response.substr(13-32),
+            expiration = response.substr(8+13, response.length - (8+32));
+
+        return scholastic.invoke("hash", salt + g_local_secret_hash_key + expiration).then(function(value) {
+            if (hash === value) {
+                expiration = new Date(parseInt(expiration, 16));
+                console.log("LOCAL EXPIRATION:", expiration)
+                g_validLicense = expiration > new Date();
+
+                // Tricky user might change their computer time, we will check it against the date from
+                // the HTTP request when we retrieve the actual expiration date from our server
+
+                var url = "https://updates.declarativ.com/plume/builds/";
+                url += "?u=scholastic&v=" + lumieres.buildVersion + "&t=" + new Date().getTime();
+
+                // do not return the promise from the fetchData call as we don't want to block the initialization for that,
+                // it's gonna be async
+                scholastic.invoke("fetchData", url, true).then(function(response) {
+                    var currentDate = response.headers.date;
+
+                    if (currentDate) {
+                        currentDate = new Date(currentDate);
+                    } else {
+                        currentDate = new Date();
+                    }
+
+                    // Decode and verify the data received from the server
+                    var data = response.data.trim(),
+                        salt = data.substr(0, 8),
+                        hash = data.substr(8, 11) + data.substr(11-32),
+                        expiration = data.substr(8+11, data.length - (8+32));
+
+                    return scholastic.invoke("hash", salt + g_remote_secret_hash_key + expiration).then(function(value) {
+                        if (hash === value) {
+                            expiration = new Date(parseInt(expiration, 16) * 1000);
+
+                            if (expiration - currentDate < 0) {
+                                g_validLicense = false;
+                                _reportInvalidLicense();
+                            }
+
+                            return _storeExpirationDate(scholastic, expiration).then(function() {
+                                console.log("REMOTE EXPIRATION:", expiration)
+                            });
+                        }
+                    });
+
+                }, function(error) {
+                    console.log("#ERROR:", error.stack)
+                }).done();
+
+            } else {
+                console.log("INVALID HASH", hash, value);
+                g_validLicense = false;
+            }
+        });
+    }, function() {
+        // We do not have a date saved locally. Let's write an expiration date 10 days from now
+        var expiration = new Date();
+
+        expiration.setDate(expiration.getDate() + g_TrialPeriod);
+        return _storeExpirationDate(scholastic, expiration).then(function() {
+            g_validLicense = true;
+        })
+    }).done(function() {
+        console.log("Done checking license validity =", g_validLicense);
+
+        if (g_validLicense !== true) {
+            _reportInvalidLicense();
+        }
+    });
+};
+
+var _invalidLicenseReported = false;
+var _reportInvalidLicense = function() {
+    if (!_invalidLicenseReported) {
+        // JFD TODO: Rewrite me properly
+        alert("Your copy of Plume has expired!\nYou won't be able to import document.");
+        _invalidLicenseReported = true;
+    }
+};
+
 exports.ScholasticExtension = Montage.create(ImportExtension, {
+    initialize: {
+        value: function(backend) {
+            // check the expiration date, if needed set a new expiration date 10 days from now. Later one we will retrieve the actual expiration date from our server
+            var scholastic = backend.get("scholastic"),
+                checkLicense = function() {
+                    _checkLicense(backend.get("scholastic"));
+                };
+
+            // In case the computer is offline, let setup a listener to do the check as soon the computer come online
+            window.addEventListener("online", checkLicense, false);
+
+            // check the license every hours
+            setInterval(checkLicense, 1000 * 3600);
+
+            // Check the license now
+            checkLicense();
+        }
+    },
+
+    canPerformOperation: {
+        value: function(backend, operation, params) {
+            var deferred = Promise.defer();
+
+            if (g_validLicense === null) {
+                // We need to wait we are done checking the license
+                var checkInterval;
+
+                _checkValidityPerformed = function() {
+                    if (g_validLicense !== null) {
+                        deferred.resolve(g_validLicense);
+                        clearInterval(checkInterval);
+                    }
+                }
+
+                checkInterval = setInterval(_checkValidityPerformed, 200);
+            } else {
+                deferred.resolve(g_validLicense);
+            }
+
+            return deferred.promise;
+        }
+    },
+
+
     getMetaData: {
         value: function(backend, item) {
             var deferred = Promise.defer();

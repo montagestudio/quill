@@ -2,6 +2,26 @@ var Montage = require("montage/core/core").Montage;
 var Promise = require("montage/core/promise").Promise;
 
 exports.ImportExtension = Montage.specialize({
+    /*
+        Initialize the extension (do not return a promise)
+     */
+    initialize: {
+        value: function(backend) {
+        }
+    },
+
+
+    /*
+        Return a promise which will return a boolean to indicated if the requested operation can be performed
+        (hook for checking user license)
+     */
+    canPerformOperation: {
+        value: function(backend, operation, params) {
+            var deferred = Promise.defer();
+            deferred.resolve(true);
+            return deferred.promise;
+        }
+    },
 
     /*
         Return a promise which will provide a dictionary of meta data for the specific item

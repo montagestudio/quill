@@ -6,7 +6,10 @@
 var Q = require("q"),
     QFS = require("q-io/fs"),
     PATH = require("path"),
-    HTTP = require("http");
+    HTTP = require("http"),
+    HTTPS = require("https"),
+    child_process = require('child_process'),
+    crypto = require('crypto');
 
 
 var guard = function(isbn) {
@@ -117,28 +120,20 @@ exports.setupCoverPage = function(item) {
     });
 };
 
-exports.fetchMetaData = function(isbn) {
-    var deferred = Q.defer();
+exports.fetchData = function(options, secure) {
+    var deferred = Q.defer(),
+        http = (secure === true) ? HTTPS : HTTP;
 
-    var options = {
-        host: 'dpd.scholastic.net',
-        path: "/services/DPDService.cfc?wsdl&method=getXPSMetadata&isbn_13=" + isbn,
-//        host: 'localhost',
-//        path: "/Projects/scholastic.xml?isbn=" + isbn,
-        port: 80
-    };
-
-    var request = HTTP.request(options, function(res) {
+    var request = http.request(options, function(res) {
         var data = "";
-//        res.setEncoding('utf8');
 
-        if (res.statusCode === 200) {
+        if (Math.floor(res.statusCode / 100) === 2) {
             res.on('data', function (chunk) {
                 data += chunk;
             });
 
             res.on('end', function () {
-                deferred.resolve(data);
+                deferred.resolve({data: data, headers: res.headers});
             });
         } else {
             deferred.reject("Cannot connect to " + options.host + ":" + options.port);
@@ -150,40 +145,54 @@ exports.fetchMetaData = function(isbn) {
         deferred.reject(e);
     });
 
-
     request.end();
 
     return deferred.promise;
 };
 
-//exports.scholastic = function() {
-//    return true;
-//};
-//
-//exports.preProcessing = function(item) {
-//    var filePath = pathFromURL(item.url),
-//        isbn = getISBNFromFile(filePath);
-//
-//    if (isbn) {
-//        return fetchMetaData(isbn).then(function(mataData) {
-//            // JFD TODO: fill up the metadata
-////            return item;
-//            return mataData;
-//        });
-//    }
-//
-//    return item;
-//}
-//
-//exports.postProcessing = function(item) {
-//    var filePath = pathFromURL(item.url),
-//        isbn = getISBNFromFile(filePath);
-//
-//    if (isbn) {
-//        return findCoverPage(item, isbn).then(function() {
-//            return item;
-//        });
-//    }
-//
-//    return item;
-//}
+exports.fetchMetaData = function(isbn) {
+    var options = {
+        host: 'dpd.scholastic.net',
+        path: "/services/DPDService.cfc?wsdl&method=getXPSMetadata&isbn_13=" + isbn,
+//        host: 'localhost',
+//        path: "/Projects/scholastic.xml?isbn=" + isbn,
+        port: 80
+    };
+
+    return exports.fetchData(options, false).then(function(response) {
+        return response.data;
+    });
+};
+
+exports.exec = function(command, options) {
+    var deferred = Q.defer(),
+        process;
+
+    options = options || {};
+    process = child_process.exec(command, options, function (error, stdout, stderr) {
+        if (error !== null) {
+            console.log("EXCEC COMMAND:", command)
+            console.log('exec error: ' + error);
+            console.log('stderr: ' + stderr);
+            deferred.reject(error);
+        } else {
+            deferred.resolve(stdout);
+        }
+    });
+
+    return deferred.promise;
+};
+
+exports.hash = function(data) {
+    var md5Hash = crypto.createHash('md5');
+    md5Hash.update(data);
+    return md5Hash.digest('hex');
+};
+
+exports.random = function(length) {
+    try {
+        return crypto.randomBytes(length).toString("hex");
+    } catch (error) {
+        return null;
+    }
+};

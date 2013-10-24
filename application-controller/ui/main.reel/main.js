@@ -78,6 +78,7 @@ exports.Main = Component.specialize({
                     // JFD TODO: we need a dynamic way to figure out which extension we want to load, for know we will default to Scholastic
                     return require.async("extensions/scholastic-extension.js").then(function(exported) {
                         self.extension = exported.ScholasticExtension.create();
+                        self.extension.initialize(backend);
 
                         return self.environmentBridge.userPreferences.then(function (prefs) {
                             if (typeof prefs.importDestinationPath !== "string" || !prefs.importDestinationPath.length) {
@@ -97,6 +98,7 @@ exports.Main = Component.specialize({
                 }).done(function() {
                     if (self.extension === null) {
                         self.extension = ImportExtension.create();
+                        self.extension.initialize(backend);
                     }
 
                     self.needsDraw = true;
@@ -298,75 +300,81 @@ exports.Main = Component.specialize({
             } else {
                 this._import_reentrant_lock = true;
             }
+            this.extension.canPerformOperation(self.environmentBridge.backend, "import").then(function(allowed) {
+                if (allowed) {
+                    self.environmentBridge.promptForOpen(options).then(function(urls) {
+                        var items = [],
+                            promises = [];
 
-            this.environmentBridge.promptForOpen(options).then(function(urls) {
-                var promises = [];
+                        if (!urls || !urls.length) {
+                            // user has canceled the prompt
+                            delete self._import_reentrant_lock;
+                            return;
+                        }
 
-                if (!urls || !urls.length) {
-                    // user has canceled the prompt
-                    delete self._import_reentrant_lock;
-                    return;
-                }
+                        if (!(urls instanceof Array)) {
+                            urls = [urls];
+                        }
 
-                if (!(urls instanceof Array)) {
-                    urls = [urls];
-                }
-
-                urls.map(function(url) {
-                    promises.push(self.environmentBridge.listTreeAtUrl(url, "*.plume").then(function(list){
-                        list = list.filter(function (item) {
-                            return item.name && (/.*\.pdf$/i).test(item.name);
-                        });
-
-                        var importItems = self.importItems,
-                            newContent = [];
-
-                        list.forEach(function(item) {
-                            // check if not already in the queue getting imported or waiting
-                            if (!importItems.some(function(object) {
-                                return item.fileUrl === object.url && object.status !== IMPORT_STATES.ready;
-                            })) {
-                                var currentTime = new Date();
-                                newContent.push({
-                                    name: item.name,
-                                    url: item.fileUrl,
-                                    status: IMPORT_STATES.unknown,
-                                    nbrPages: 0,
-                                    currentPage: 0,
-                                    processID: null,
-                                    lastContact: 0,
-                                    retries: 0,
-                                    error: null,
-                                    coverImage: null,
-                                    id: (currentTime.getTime() % (3600 * 24)) * 1000000 + currentTime.getMilliseconds() * 1000 + Math.floor(Math.random() * 1000)
+                        urls.map(function(url) {
+                            promises.push(self.environmentBridge.listTreeAtUrl(url, "*.plume").then(function(list){
+                                list = list.filter(function (item) {
+                                    return item.name && (/.*\.pdf$/i).test(item.name);
                                 });
-                            }
+
+                                var importItems = self.importItems,
+                                    newContent = [];
+
+                                list.forEach(function(item) {
+                                    // check if not already in the queue getting imported or waiting
+                                    if (!importItems.some(function(object) {
+                                        return item.fileUrl === object.url && object.status !== IMPORT_STATES.ready;
+                                    })) {
+                                        var currentTime = new Date();
+                                        newContent.push({
+                                            name: item.name,
+                                            url: item.fileUrl,
+                                            status: IMPORT_STATES.unknown,
+                                            nbrPages: 0,
+                                            currentPage: 0,
+                                            processID: null,
+                                            lastContact: 0,
+                                            retries: 0,
+                                            error: null,
+                                            coverImage: null,
+                                            id: (currentTime.getTime() % (3600 * 24)) * 1000000 + currentTime.getMilliseconds() * 1000 + Math.floor(Math.random() * 1000)
+                                        });
+                                    }
+                                });
+                                importItems.addEach(newContent);
+
+                            }, function(error) {
+                                console.log("ERROR", error.message, error.stack);
+                            }));
                         });
-                        importItems.addEach(newContent);
 
+                        Promise.allSettled(promises).then(function() {
+                            console.log("URLS:", self.importItems);
+                            var windowParams = {
+                                url:"http://client/import-activity/index.html",
+                                width:400,
+                                height:600,
+                                canResize:true,
+                                showToolbar:false,
+                                canOpenMultiple: false
+                            };
+
+                            self.upgradeItemsState();
+                            self.environmentBridge.backend.get("application").invoke("openWindow", windowParams).done();
+                        }).done();
+
+                        delete self._import_reentrant_lock;
                     }, function(error) {
-                        console.log("ERROR", error.message, error.stack);
-                    }));
-                });
-
-                Promise.allSettled(promises).then(function() {
-                    console.log("URLS:", self.importItems);
-                    var windowParams = {
-                        url:"http://client/import-activity/index.html",
-                        width:400,
-                        height:600,
-                        canResize:true,
-                        showToolbar:false,
-                        canOpenMultiple: false
-                    };
-
-                    self.upgradeItemsState();
-                    self.environmentBridge.backend.get("application").invoke("openWindow", windowParams).done();
-                }).done();
-
-                delete self._import_reentrant_lock;
-            }, function(error) {
-                delete self._import_reentrant_lock;
+                        delete self._import_reentrant_lock;
+                    });
+                } else {
+                    delete self._import_reentrant_lock;
+                }
             });
         }
     },
