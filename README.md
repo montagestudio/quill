@@ -1,4 +1,27 @@
-plume
+Plume
 =====
 
-ebook generator &amp; editor
+Plume is a PDF to epub converter, and epub editor.
+
+Installation
+============
+1. Clone Plume
+2. Run `npm install` inside of plume
+3. Build a Development build of Plume (See Lumieres Repository).
+
+
+Contributing
+============
+- Run `npm run lint` on your code to ensure it conforms to Plume standards
+
+- Make sure all commit messages follow the 50 character subject/72 character
+body [formatting used throughout git](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html)
+
+- Make sure commit messages start with uppercase present tense commands
+e.g. Prefer "Clear selection when clicking templateExplorer" over
+"Cleared selection when clicking templateExplorer"
+
+- When adding or updating dependencies list the EXACT version of the dependency
+to minimize differences when building at different times.
+i.e. treat package.json as a shrinkwrapped dependency specifier
+
