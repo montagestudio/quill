@@ -108,7 +108,7 @@ exports.Main = Component.specialize({
                     console.log("--- application-controller running ---");
                 });
             } else {
-                alert("Plume cannot be run outside of Lumieres!");
+                alert("Quill cannot be run outside of Lumieres!");
                 return;
             }
         }

@@ -59,7 +59,7 @@ exports.Main = Component.specialize({
                     });
                 });
             } else {
-                alert("Plume cannot be run outside of Lumieres!");
+                alert("Quill cannot be run outside of Lumieres!");
                 return;
             }
 
