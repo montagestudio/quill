@@ -78,7 +78,7 @@ exports.Main = Component.specialize({
                 }
 
                 require.async("adaptor/client/core/lumieres-bridge").then(function (exported) {
-                    self.environmentBridge = new exported.LumiereBridge().init("plume-backend");
+                    self.environmentBridge = new exported.LumiereBridge().init("quill-backend");
 
                     self.environmentBridge.connectionHandler = self;
                     var backend = self.environmentBridge.backend, // force open backend connection,
@@ -318,7 +318,7 @@ exports.Main = Component.specialize({
                 if (exists && !forceCreate) {
                     return outputPath;
                 } else  {
-                    return self.environmentBridge.backend.get("plume-backend").invoke("createFromTemplate", "pdf-converter/templates/epub3", outputPath).then(function(result) {
+                    return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate", "pdf-converter/templates/epub3", outputPath).then(function(result) {
                         return result.url;
                     });
                 }
@@ -353,8 +353,8 @@ exports.Main = Component.specialize({
                     var viewport = page.getViewport(self.scale),
                         folderPath = decodeURIComponent((self.outputURL).substring("fs://localhost".length));
 
-                    return self.environmentBridge.backend.get("plume-backend").invoke("appendImagesInfo", folderPath, self._document.imagesInfo).then(function() {
-                        return self.environmentBridge.backend.get("plume-backend").invoke("createFromTemplate",
+                    return self.environmentBridge.backend.get("quill-backend").invoke("appendImagesInfo", folderPath, self._document.imagesInfo).then(function() {
+                        return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate",
                             "/pdf-converter/templates/page.xhtml",
                             folderPath + "/OEBPS/pages/" + (page.pageInfo.pageIndex + 1) + ".xhtml",
                             {

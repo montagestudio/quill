@@ -1,6 +1,6 @@
 exports.setup = function(firstLoad, capabilities) {
     if (firstLoad) {
-        console.log("Initializing plume backend:", capabilities.application);
+        console.log("Initializing quill backend:", capabilities.application);
         capabilities.application.invoke("openWindow", {url:"http://client/application-controller/index.html", width:400, height:600, canOpenMultiple:false, showWindow: false}).done();
     }
 };

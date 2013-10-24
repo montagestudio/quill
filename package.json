@@ -1,10 +1,10 @@
 {
-  "name": "plume",
+  "name": "quill",
   "version": "0.1.0",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git@github.com:declarativ/plume.git"
+    "url": "git@github.com:declarativ/quill.git"
   },
   "dependencies": {
     "montage": "git://github.com/montagejs/montage.git#051679decf47ed60ee86db63101f2688fad5a15b",

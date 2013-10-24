@@ -7,7 +7,7 @@ shell to become the "Plume" product.
 Installation
 ============
 1. Clone Quill
-2. Run `npm install` inside of plume
+2. Run `npm install` inside of quill
 3. Build a Development build of Quill (See Lumieres Repository).
 
 
