@@ -1,18 +1,19 @@
-Plume
+Quill
 =====
 
-Plume is a PDF to epub converter, and epub editor.
+Quill is a PDF to epub converter, and epub editor. It runs inside the Beacon
+shell to become the "Plume" product.
 
 Installation
 ============
-1. Clone Plume
-2. Run `npm install` inside of plume
-3. Build a Development build of Plume (See Lumieres Repository).
+1. Clone Quill
+2. Run `npm install` inside of quill
+3. Build a Development build of Quill (See Lumieres Repository).
 
 
 Contributing
 ============
-- Run `npm run lint` on your code to ensure it conforms to Plume standards
+- Run `npm run lint` on your code to ensure it conforms to Quill standards
 
 - Make sure all commit messages follow the 50 character subject/72 character
 body [formatting used throughout git](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html)

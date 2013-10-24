@@ -187,7 +187,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                                 i,
                                 metadata = {};
 
-                            var scholasticNameToPlumeName = {
+                            var scholasticNameToQuillName = {
                                 "contributor_Statement": "document-author",
                                 "isbn_13": "book-id",
                                 "language": "document-language",
@@ -200,7 +200,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
                             for (i = 0; i < nbrNodes; i ++) {
                                 var node = nodes[i],
-                                    name = scholasticNameToPlumeName[node.nodeName] || node.nodeName,
+                                    name = scholasticNameToQuillName[node.nodeName] || node.nodeName,
                                     value = node.textContent;
 
                                 // Convert string to int or float

@@ -46,7 +46,7 @@ exports.Main = Component.specialize({
             var self = this;
             if (IS_IN_LUMIERES) {
                 require.async("adaptor/client/core/lumieres-bridge").then(function (exported) {
-                    self.environmentBridge = new exported.LumiereBridge().init("plume-backend");
+                    self.environmentBridge = new exported.LumiereBridge().init("quill-backend");
 
                     self.environmentBridge.connectionHandler = self;
                     //jshint -W030
@@ -59,7 +59,7 @@ exports.Main = Component.specialize({
                     });
                 });
             } else {
-                alert("Plume cannot be run outside of Lumieres!");
+                alert("Quill cannot be run outside of Lumieres!");
                 return;
             }
 

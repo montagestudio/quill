@@ -68,7 +68,7 @@ exports.Main = Component.specialize({
                 var self = this;
 
                 require.async("adaptor/client/core/lumieres-bridge").then(function (exported) {
-                    self.environmentBridge = new exported.LumiereBridge().init("plume-backend");
+                    self.environmentBridge = new exported.LumiereBridge().init("quill-backend");
 
                     self.environmentBridge.connectionHandler = self;
                     //jshint -W030
@@ -110,7 +110,7 @@ exports.Main = Component.specialize({
                     console.log("--- application-controller running ---");
                 });
             } else {
-                alert("Plume cannot be run outside of Lumieres!");
+                alert("Quill cannot be run outside of Lumieres!");
                 return;
             }
         }
@@ -689,15 +689,15 @@ exports.Main = Component.specialize({
             var self = this;
 
             // Retrieve cover image URL
-            return self.environmentBridge.backend.get("plume-backend").invoke("getCoverImage", item.destination).then(function(coverImage) {
+            return self.environmentBridge.backend.get("quill-backend").invoke("getCoverImage", item.destination).then(function(coverImage) {
                 console.log("COVER IMAGE:", coverImage);
                 if (coverImage) {
                     item.coverImage = coverImage;
                 }
 
                 self.updateItemState(item, IMPORT_STATES.generating);
-                return self.environmentBridge.backend.get("plume-backend").invoke("updateContentInfo", item.destination, item.meta).then(function() {
-                    return self.environmentBridge.backend.get("plume-backend").invoke("generateEPUB3", item.destination, item.name).then(function(stdout) {
+                return self.environmentBridge.backend.get("quill-backend").invoke("updateContentInfo", item.destination, item.meta).then(function() {
+                    return self.environmentBridge.backend.get("quill-backend").invoke("generateEPUB3", item.destination, item.name).then(function(stdout) {
                         self.updateItemState(item, IMPORT_STATES.ready);
                     });
                 });
@@ -784,8 +784,8 @@ exports.Main = Component.specialize({
             console.log("optimizeImages quality:", quality);
 
             // Before optimizing the images, let's duplicate them to save the originals
-            return this.environmentBridge.backend.get("plume-backend").invoke("saveOriginalAssets", folderURL).then(function() {
-                return self.environmentBridge.backend.get("plume-backend").invoke("getImagesInfo", folderURL).then(function(infos) {
+            return this.environmentBridge.backend.get("quill-backend").invoke("saveOriginalAssets", folderURL).then(function() {
+                return self.environmentBridge.backend.get("quill-backend").invoke("getImagesInfo", folderURL).then(function(infos) {
                     var urls = Object.keys(infos),
                         currentImage = 0,
                         nbrImages = urls.length;
@@ -815,7 +815,7 @@ exports.Main = Component.specialize({
                             }
 
                             originalURL = url.replace("/OEBPS/assets/", "/original-assets/");
-                            promises.push(self.environmentBridge.backend.get("plume-backend").invoke("optimizeImage",
+                            promises.push(self.environmentBridge.backend.get("quill-backend").invoke("optimizeImage",
                                 originalURL, url, {width:Math.round(info.width * ratio), height:Math.round(info.height * ratio)}, quality).then(function() {
                                     self.updateItemState(item, IMPORT_STATES.optimizing, ++ item.currentPage, item.nbrPages, item.destination, item.meta);
                                 }));

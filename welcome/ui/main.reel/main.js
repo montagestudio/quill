@@ -31,7 +31,7 @@ exports.Main = Component.specialize({
                 });
 
                 require.async("adaptor/client/core/lumieres-bridge").then(function (exported) {
-                    self.environmentBridge = new exported.LumiereBridge().init("plume-backend");
+                    self.environmentBridge = new exported.LumiereBridge().init("quill-backend");
                     self.environmentBridge.userPreferences.then(function (prefs) {
                         self.isFirstRun = prefs.firstRun;
                         //TODO I don't want firstrun to be set-able as an API, but this feels a little weird
