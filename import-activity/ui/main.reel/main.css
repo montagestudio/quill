@@ -54,38 +54,50 @@ body {
     background: hsl(0, 0%, 97%);
 }
 
-.Activity-list--clear {
+
+/* Footer --------------------------------------- */
+
+.Importer-footer {
     position: absolute;
-    width: 16px;
-    height: 16px;
-    min-width: 16px !important;
-    right: 14px;
-
-    background: url('../../assets/images/clear.svg') no-repeat;
-    background-size:16px 16px;
-    background-repeat:no-repeat;
-    background-position:left center;
-
-    opacity: 0.3;
-    border: none !important;
-}
-
-.Activity-list--clear:hover {
-    background-color: transparent !important;
-    opacity: 0.7;
-}
-
-.Activity-list--clear.active {
-    background-color: transparent !important;
-    opacity: 1;
-}
-
-.footer {
-    position: absolute;
+    display: -webkit-flex;
     width: 100%;
     left: 0;
     bottom: 0;
     padding: 14px;
     font-size: 12px;
     color: hsl(0, 0%, 70%);
+}
+
+.Importer-destinationLabel {
+    margin-right: .5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.Importer-destination {
+    -webkit-flex: 1;
+    color: hsl(0,0%,50%);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.Importer-clearButton {
+    outline: none;
+    width: 16px;
+    height: 16px;
+    background: url('../../assets/images/clear.svg') no-repeat left center;
+    background-size: 16px 16px;
+    opacity: .3;
+    border: none;
+    cursor: pointer;
+}
+
+.Importer-clearButton:hover {
+    opacity: 1;
+}
+
+.Importer-clearButton:active {
+    opacity: .3;
 }
