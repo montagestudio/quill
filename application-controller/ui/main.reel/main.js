@@ -78,7 +78,7 @@ exports.Main = Component.specialize({
                     // JFD TODO: we need a dynamic way to figure out which extension we want to load, for know we will default to Scholastic
                     return require.async("extensions/scholastic-extension.js").then(function(exported) {
                         self.extension = exported.ScholasticExtension.create();
-                        self.extension.initialize(backend);
+                        self.extension.initialize(self.environmentBridge.backend);
 
                         return self.environmentBridge.userPreferences.then(function (prefs) {
                             if (typeof prefs.importDestinationPath !== "string" || !prefs.importDestinationPath.length) {
@@ -98,7 +98,7 @@ exports.Main = Component.specialize({
                 }).done(function() {
                     if (self.extension === null) {
                         self.extension = ImportExtension.create();
-                        self.extension.initialize(backend);
+                        self.extension.initialize(self.environmentBridge.backend);
                     }
 
                     self.needsDraw = true;
