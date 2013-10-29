@@ -38,11 +38,13 @@
             },
 
 
-            "pageView": {
-                "prototype": "ui/page-view.reel",
+            "spreadView": {
+                "prototype": "ui/spread-view.reel",
                 "properties": {
-                    "element": {"#": "pageView"},
-                    "viewMode": "default"
+                    "element": {"#": "spreadView"},
+                    "viewMode": "default",
+                    "overlayUrl": "test",
+                    "overlayOpacity": 0.5
                 },
                 "bindings": {
                     "pages": {"<-": "@owner.pages"},
@@ -53,7 +55,7 @@
             "owner": {
                 "properties": {
                     "element": {"#": "main"},
-                    "pageView": {"@": "pageView"},
+                    "spreadView": {"@": "spreadView"},
                     "pagesList": {"@": "pagesList"}
                 },
                 "bindings": {
@@ -79,7 +81,7 @@
                 </ul>
             </nav>
             <article>
-                <section data-montage-id="pageView" class="pageView"></section>
+                <section data-montage-id="spreadView" class="spreadView"></section>
             </article>
         </div>
     </div>

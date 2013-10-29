@@ -63,7 +63,7 @@ body {
     padding: 4px 0px 16px 0px;
 }
 
-.pageView {
+.spreadView {
     position: relative;
     -webkit-flex: 1;
     padding: 0;

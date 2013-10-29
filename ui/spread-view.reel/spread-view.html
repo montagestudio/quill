@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+    <title>Page View</title>
+    <meta charset="utf-8">
+
+    <link href="spread-view.css" rel="stylesheet" />
+
+    <script type="text/montage-serialization">
+        {
+            "localizer": {
+                "object": "montage/core/localizer[defaultLocalizer]"
+            },
+
+            "leftPage": {
+                "prototype": "ui/page-view.reel",
+                "properties": {
+                    "element": {"#": "leftPage"}
+                }
+            },
+
+            "rightPage": {
+                "prototype": "ui/page-view.reel",
+                "properties": {
+                    "element": {"#": "rightPage"}
+                }
+            },
+
+            "owner": {
+                "properties": {
+                    "element": {"#": "spreadView"},
+                    "leftPage": {"@": "leftPage"},
+                    "rightPage": {"@": "rightPage"}
+                }
+            }
+
+        }
+    </script>
+
+</head>
+<body>
+    <section data-montage-id="spreadView" class="spread">
+        <div class="spread-page-wrapper">
+            <div data-montage-id="leftPage" class="spread-page spread-left"></div>
+        </div>
+        <div class="spread-page-wrapper">
+            <div data-montage-id="rightPage" class="spread-page spread-left"></div>
+        </div>
+        <div class="spread-divider"></div>
+    </section>
+</body>
+</html>

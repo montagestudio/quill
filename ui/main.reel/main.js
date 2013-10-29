@@ -30,6 +30,10 @@ exports.Main = Component.specialize({
         }
     },
 
+    spreadView: {
+        value: null
+    },
+
     pages: {
         value: null
     },
@@ -297,8 +301,8 @@ exports.Main = Component.specialize({
 
     handleResize: {
         value: function (event) {
-            if (this.pageView) {
-                this.pageView.needsDraw = true;
+            if (this.spreadView) {
+                this.spreadView.needsDraw = true;
             }
         }
     }
