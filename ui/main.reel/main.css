@@ -1,5 +1,5 @@
 .montage-invisible {
-    display: none;
+    display: none !important;
 }
 
 body {
@@ -70,4 +70,15 @@ body {
     -webkit-flex: 1;
     padding: 0;
     margin: 20px 40px;
+}
+
+.main-inspector {
+    display: -webkit-flex;
+    -webkit-align-items: center;
+}
+
+.main-inspector-title {
+    margin: 0;
+    padding: 0 1em 0;
+    font-size: 10pt;
 }
