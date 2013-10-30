@@ -95,6 +95,9 @@ exports.PageDocument = Montage.specialize({
                 this.hasCopyright = evt.data.result;
             } else if ("copyrightPosition" === evt.data.method) {
                 this.copyrightPosition = evt.data.result;
+            } else if ("documentContent" === evt.data.method) {
+                alert("Document content presented in console…");
+                console.log(evt.data.result);
             }
         }
     },
@@ -121,6 +124,15 @@ exports.PageDocument = Montage.specialize({
             }
 
             this._copyrightPosition = value;
+        }
+    },
+
+    save: {
+        value: function () {
+            if (this.agentPort) {
+                this.agentPort.postMessage({"method": "documentContent"});
+                //TODO well, do something with this when we get the content
+            }
         }
     }
 

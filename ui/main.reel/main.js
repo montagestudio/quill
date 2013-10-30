@@ -315,6 +315,16 @@ exports.Main = Component.specialize({
                 this.spreadView.needsDraw = true;
             }
         }
+    },
+
+    handleSaveButtonAction: {
+        value: function () {
+            //TODO this isn't exactly how I would expect this to work, this is just enough to exercise
+            // some of the next steps toward saving
+            if (this.currentPage) {
+                this.currentPage.save();
+            }
+        }
     }
 
 });

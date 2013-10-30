@@ -74,6 +74,10 @@ HtmlController.prototype = {
                 banner.classList.add("banner-left");
                 break;
         }
+    },
+
+    documentContent: function () {
+        return (new XMLSerializer()).serializeToString(this.document);
     }
 
 };

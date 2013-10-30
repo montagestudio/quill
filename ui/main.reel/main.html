@@ -88,6 +88,19 @@
                 "bindings": {
                     "object": {"<-": "@owner.currentPage"}
                 }
+            },
+
+            "saveButton": {
+                "prototype": "matte/ui/button.reel",
+                "properties": {
+                    "element": {"#": "saveButton"}
+                },
+                "listeners": [
+                    {
+                        "type": "action",
+                        "listener": {"@": "owner"}
+                    }
+                ]
             }
 
         }
@@ -100,6 +113,7 @@
         <header>
             <div data-montage-id="copyrightCondition">
                 <div data-montage-id="copyrightPosition"></div>
+                <button data-montage-id="saveButton">Save</button>
             </div>
         </header>
         <div class="content">
