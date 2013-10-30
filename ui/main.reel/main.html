@@ -49,7 +49,13 @@
                 "bindings": {
                     "pages": {"<-": "@owner.pages"},
                     "index": {"<-": "@owner.currentPageIndex"}
-                }
+                },
+                "listeners": [
+                    {
+                        "type": "loadedPage",
+                        "listener": {"@": "owner"}
+                    }
+                ]
             },
 
             "owner": {
@@ -61,6 +67,16 @@
                 "bindings": {
                     "currentPage": {"<-": "@owner.pagesList.selection.0"}
                 }
+            },
+
+            "copyrightCondition": {
+                "prototype": "montage/ui/condition.reel",
+                "properties": {
+                    "element": {"#": "foo"}
+                },
+                "bindings": {
+                    "condition": {"<-": "!!@owner.currentPage.pageWindow && @owner.currentPage.hasCopyright"}
+                }
             }
 
         }
@@ -70,7 +86,13 @@
 <body>
 
     <div data-montage-id="main" class="main">
-        <header></header>
+        <header>
+
+            <div data-montage-id="foo">
+                COPYRIGHT!
+            </div>
+
+        </header>
         <div class="content">
             <nav class="navigation">
                 <ul data-montage-id="pages-list" class="pages-list">
