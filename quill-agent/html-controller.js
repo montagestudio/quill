@@ -27,6 +27,53 @@ HtmlController.prototype = {
 
     hasCopyright: function () {
         return !!this.document.getElementById("scholastic-e-copyright");
+    },
+
+    copyrightPosition: function () {
+        var banner = this.document.querySelector(".copyright-banner"),
+            result;
+
+        if (!banner) {
+            result = null;
+        } else if (banner.classList.contains("banner-top")) {
+            result = "top";
+        } else if (banner.classList.contains("banner-right")) {
+            result = "right";
+        } else if (banner.classList.contains("banner-bottom")) {
+            result = "bottom";
+        } else if (banner.classList.contains("banner-left")) {
+            result = "left";
+        }
+
+        return result;
+    },
+
+    setCopyrightPosition: function (position) {
+        var banner = this.document.querySelector(".copyright-banner");
+
+        if (!banner) {
+            return;
+        }
+
+        banner.classList.remove("banner-top");
+        banner.classList.remove("banner-right");
+        banner.classList.remove("banner-bottom");
+        banner.classList.remove("banner-left");
+
+        switch (position) {
+            case "top":
+                banner.classList.add("banner-top");
+                break;
+            case "right":
+                banner.classList.add("banner-right");
+                break;
+            case "bottom":
+                banner.classList.add("banner-bottom");
+                break;
+            case "left":
+                banner.classList.add("banner-left");
+                break;
+        }
     }
 
 };

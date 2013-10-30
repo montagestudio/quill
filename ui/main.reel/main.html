@@ -72,10 +72,21 @@
             "copyrightCondition": {
                 "prototype": "montage/ui/condition.reel",
                 "properties": {
-                    "element": {"#": "foo"}
+                    "element": {"#": "copyrightCondition"},
+                    "removalStrategy": "hide"
                 },
                 "bindings": {
                     "condition": {"<-": "!!@owner.currentPage.pageWindow && @owner.currentPage.hasCopyright"}
+                }
+            },
+
+            "copyrightPosition": {
+                "prototype": "ui/tools/position-inspector.reel",
+                "properties": {
+                    "element": {"#": "copyrightPosition"}
+                },
+                "bindings": {
+                    "object": {"<-": "@owner.currentPage"}
                 }
             }
 
@@ -87,11 +98,9 @@
 
     <div data-montage-id="main" class="main">
         <header>
-
-            <div data-montage-id="foo">
-                COPYRIGHT!
+            <div data-montage-id="copyrightCondition">
+                <div data-montage-id="copyrightPosition"></div>
             </div>
-
         </header>
         <div class="content">
             <nav class="navigation">

@@ -1,0 +1,43 @@
+{
+  "blueprint_component_reference": {
+    "prototype": "filament-extension/montage/core/meta/blueprint-reference",
+    "properties": {
+      "valueReference": {
+        "blueprintName": "Component",
+        "blueprintModule": {
+          "%": "filament-extension/montage/ui/component.meta"
+        }
+      }
+    }
+  },
+  "blueprint_unnamed_object": {
+    "prototype": "filament-extension/montage/core/meta/property-blueprint",
+    "properties": {
+      "name": "object",
+      "blueprint": {"@": "root"},
+      "valueType": "object"
+    }
+  },
+  "root": {
+    "prototype": "filament-extension/montage/core/meta/module-blueprint",
+    "properties": {
+      "name": null,
+      "blueprintModule": {
+        "%": "ui/tools/position-inspector.reel/position-inspector.meta"
+      },
+      "parent": {"@": "blueprint_component_reference"},
+      "propertyBlueprints": [
+        {"@": "blueprint_unnamed_object"}
+      ],
+      "propertyBlueprintGroups": {
+        "PositionInspector": [
+          {"@": "blueprint_unnamed_object"}
+        ]
+      },
+      "module": {
+        "%": "ui/tools/position-inspector.reel"
+      },
+      "exportName": "PositionInspector"
+    }
+  }
+}

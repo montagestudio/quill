@@ -78,6 +78,7 @@ exports.PageDocument = Montage.specialize({
                 channel.port1.onmessage = this.handleAgentMessage.bind(this);
                 value.postMessage("openChannel", "fs://localhost", [channel.port2]);
                 this.agentPort.postMessage({"method": "hasCopyright"});
+                this.agentPort.postMessage({"method": "copyrightPosition"});
             }
 
             if (value !== this._pageWindow) {
@@ -88,16 +89,39 @@ exports.PageDocument = Montage.specialize({
 
     handleAgentMessage: {
         value: function (evt) {
-            console.log("parent: onmessage", evt);
+            console.log("parent: onmessage", evt.data);
 
             if ("hasCopyright" === evt.data.method) {
                 this.hasCopyright = evt.data.result;
+            } else if ("copyrightPosition" === evt.data.method) {
+                this.copyrightPosition = evt.data.result;
             }
         }
     },
 
     hasCopyright: {
         value: false
+    },
+
+    _copyrightPosition: {
+        value: null
+    },
+
+    copyrightPosition: {
+        get: function () {
+            return this._copyrightPosition;
+        },
+        set: function (value) {
+            if (value === this._copyrightPosition) {
+                return;
+            }
+
+            if (this.agentPort && null !== this._copyrightPosition) {
+                this.agentPort.postMessage({"method": "setCopyrightPosition", "args": [value]});
+            }
+
+            this._copyrightPosition = value;
+        }
     }
 
 });
