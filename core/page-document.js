@@ -1,4 +1,6 @@
-var Montage = require("montage").Montage;
+var Montage = require("montage").Montage,
+    Promise = require("montage/core/promise").Promise,
+    Map = require("montage/collections/map");
 
 /**
  * This represents a single physical page in an ebook.
@@ -15,8 +17,13 @@ exports.PageDocument = Montage.specialize({
 
     constructor: {
         value: function PageDocument () {
+            this._deferredMap = new Map();
             return this.super();
         }
+    },
+
+    _deferredMap: {
+        value: null
     },
 
     /**
@@ -96,8 +103,10 @@ exports.PageDocument = Montage.specialize({
             } else if ("copyrightPosition" === evt.data.method) {
                 this.copyrightPosition = evt.data.result;
             } else if ("documentContent" === evt.data.method) {
-                alert("Document content presented in console…");
-                console.log(evt.data.result);
+
+                var deferredContent = this._deferredMap.get("documentContent");
+                this._documentContent = evt.data.result;
+                deferredContent.resolve(this._documentContent);
             }
         }
     },
@@ -127,12 +136,22 @@ exports.PageDocument = Montage.specialize({
         }
     },
 
-    save: {
+    _documentContent: {
+        value: null
+    },
+
+    getDocumentContent: {
         value: function () {
-            if (this.agentPort) {
+
+            var deferredContent = this._deferredMap.get("documentContent");
+            if (!deferredContent || deferredContent.promise.isFulfilled()) {
+                deferredContent = Promise.defer();
+                this._deferredMap.set("documentContent", deferredContent);
+
                 this.agentPort.postMessage({"method": "documentContent"});
-                //TODO well, do something with this when we get the content
             }
+
+            return deferredContent.promise;
         }
     }
 
