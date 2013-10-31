@@ -117,6 +117,13 @@ var PageDocument = exports.PageDocument = Montage.specialize({
             if (this.agentPort) {
                 this.agentPort.close();
             }
+
+            // The pageWindow rarely changes as we're usually working with the same iframe
+            // So when that frame opens document A, B, and then back to A
+            // The pageWindow for documentA will not have changed, but the document will have
+            // changed, so we need to establish a new connection
+            // TODO react to the connection closing and only open a new channel when
+            // we have no open channel and we find a pageWindow
             if (value) {
                 var channel = new MessageChannel();
                 this.agentPort = channel.port1;
