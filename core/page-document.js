@@ -43,6 +43,19 @@ exports.PageDocument = Montage.specialize({
 
     height: {
         value: null
+    },
+
+    _text:{
+        value: null
+    },
+
+    text: {
+        get: function() {
+            return this._text || "(This page has no text)";
+        },
+        set: function(text) {
+            this._text = text;
+        }
     }
 
 });
