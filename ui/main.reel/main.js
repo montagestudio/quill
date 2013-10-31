@@ -322,7 +322,9 @@ exports.Main = Component.specialize({
             //TODO this isn't exactly how I would expect this to work, this is just enough to exercise
             // some of the next steps toward saving
             if (this.currentPage) {
-                this.currentPage.save();
+                this.currentPage.getDocumentContent().then(function (content) {
+                    console.log("content", content);
+                }).done();
             }
         }
     }

@@ -1,4 +1,6 @@
-var Montage = require("montage").Montage;
+var Montage = require("montage").Montage,
+    Promise = require("montage/core/promise").Promise,
+    Map = require("montage/collections/map");
 
 /**
  * This represents a single physical page in an ebook.
@@ -15,8 +17,25 @@ exports.PageDocument = Montage.specialize({
 
     constructor: {
         value: function PageDocument () {
+            this._deferredMap = new Map();
             return this.super();
         }
+    },
+
+    /**
+     * This is a map of deferreds keyed by name, typically the name of
+     * method that vended the deferred in the first place.
+     *
+     * This is a somewhat temporary thing that I'm sure is doing the
+     * same work as q-connection to make sure that invoking methods
+     * over a message channel maps back to the correct deferred.
+     *
+     * This facility also ensures that subsequent requests for the
+     * same information doesn't result in yet more traffic in the channel;
+     * if there is a deferred pending, that promise is returned.
+     */
+    _deferredMap: {
+        value: null
     },
 
     /**
@@ -96,8 +115,8 @@ exports.PageDocument = Montage.specialize({
             } else if ("copyrightPosition" === evt.data.method) {
                 this.copyrightPosition = evt.data.result;
             } else if ("documentContent" === evt.data.method) {
-                alert("Document content presented in console…");
-                console.log(evt.data.result);
+                var deferredContent = this._deferredMap.get("documentContent");
+                deferredContent.resolve(evt.data.result);
             }
         }
     },
@@ -127,12 +146,18 @@ exports.PageDocument = Montage.specialize({
         }
     },
 
-    save: {
+    getDocumentContent: {
         value: function () {
-            if (this.agentPort) {
+
+            var deferredContent = this._deferredMap.get("documentContent");
+            if (!deferredContent || deferredContent.promise.isFulfilled()) {
+                deferredContent = Promise.defer();
+                this._deferredMap.set("documentContent", deferredContent);
+
                 this.agentPort.postMessage({"method": "documentContent"});
-                //TODO well, do something with this when we get the content
             }
+
+            return deferredContent.promise;
         }
     }
 
