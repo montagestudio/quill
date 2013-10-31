@@ -13,7 +13,7 @@ var Montage = require("montage").Montage,
 
 var PAGE_TYPE = "page";
 
-exports.PageDocument = Montage.specialize({
+var PageDocument = exports.PageDocument = Montage.specialize({
 
     constructor: {
         value: function PageDocument () {
@@ -48,8 +48,33 @@ exports.PageDocument = Montage.specialize({
     /**
      * The URL of the document that houses the content for this page
      */
-    url: {
+    _url: {
         value: null
+    },
+    url: {
+        get: function() {
+            return this._url;
+        },
+        set: function(value) {
+            // inspired by http://james.padolsey.com/javascript/parsing-urls-with-the-dom/
+            var a =  document.createElement('a');
+            a.href = value;
+
+            if (!a.search) {
+                a.search = "?";
+            } else {
+                a.search += "&";
+            }
+
+            // Insert the script tags needed to communicate with the page
+            var search = Object.map(PageDocument.URL_PARAMS, function (value, key) {
+                return encodeURIComponent(key) + "=" + encodeURIComponent(value);
+            }).join("&");
+
+            a.search += search;
+
+            this._url = a.href;
+        }
     },
 
     type: {
@@ -161,4 +186,11 @@ exports.PageDocument = Montage.specialize({
         }
     }
 
+}, {
+    URL_PARAMS: {
+        value: {
+            find: "<head>",
+            insert: '<script src="http://client/quill-agent/quill-agent.js" /><script src="http://client/quill-agent/html-controller.js" />'
+        }
+    }
 });
