@@ -161,26 +161,6 @@ exports.Main = Component.specialize({
                 }).done();
             }
 
-////            setupLocalFileSystem(function(fs, error) {
-//                if (error === undefined) {
-//                    console.log('Opened file system: ' + fs.name, fs);
-//                    globalScope.fs = fs;
-//                }
-//
-//                loadPDFDocument("samples/hello.pdf", function(pdf, page) {
-//                   console.log("pdf document loaded", pdf, page);
-//               })
-////            });
-
-//            if (this.params.file) {
-//                windowParams = {
-//                    url: "http://client/importer.html?path=" + this.params.file
-//                };
-//                this.backend.get("application").invoke("openWindow", windowParams).then(function() {
-//
-//                });
-//            }
-
             // Register the window for IPC
             this.backend.get("ipc").invoke("register", 0, Promise.master(function() {
                 return self.onIPCMessage.apply(self, arguments);
@@ -206,8 +186,6 @@ exports.Main = Component.specialize({
         value: function(firstTime) {
             if (firstTime) {
                 window.addEventListener("resize", this);
-                // JFD TODO: add keyboard shortcut to navigate the pages
-//                document.addEventListener("keydown", this);
             }
         }
     },
