@@ -96,6 +96,17 @@ exports.PageView = Component.specialize({
                     // Regular page
                     if (frame.src !== this._pageDrawInfo.url) {
                         frame.src = this._pageDrawInfo.url;
+
+                        var self = this;
+                        var associatePage = function (evt) {
+                            frame.removeEventListener("load", associatePage);
+                            self.dispatchEventNamed("loadedPage", true, true, {
+                                pageWindow: frame.contentWindow,
+                                page: self.item
+                            });
+                        };
+
+                        frame.addEventListener("load", associatePage, false);
                     }
 
                     this._pageDrawInfo = null;
