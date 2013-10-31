@@ -192,10 +192,10 @@ exports.Main = Component.specialize({
 
     handleLoadedPage: {
         value: function (evt) {
-            var pageDocument = evt.detail.page,
-                pageWindow = evt.detail.pageWindow;
+            var detail = evt.detail,
+                pageDocument = detail.page;
 
-            pageDocument.pageWindow = pageWindow;
+            pageDocument.pageWindow = detail.pageWindow;
         }
     },
 
