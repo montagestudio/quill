@@ -64,10 +64,6 @@ exports.Main = Component.specialize({
         }
     },
 
-    contentInfo: {
-        value: null
-    },
-
     contentController: {
         value: null
     },
@@ -248,8 +244,6 @@ exports.Main = Component.specialize({
                     pageDocument.type = "image";
                     pageDocument.url = null;
                     pages.push(pageDocument);
-
-                    self.contentInfo = contentInfo;
 
                     // Get the document resolution
                     var resolution = contentInfo.getElementsByName("original-resolution");
