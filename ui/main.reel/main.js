@@ -212,9 +212,8 @@ exports.Main = Component.specialize({
 
     handleLoadedPage: {
         value: function (evt) {
-            console.log("Loaded Page!", evt)
-            var pageDocument = evt.detail.page;
-            var pageWindow = evt.detail.pageWindow;
+            var pageDocument = evt.detail.page,
+                pageWindow = evt.detail.pageWindow;
 
             pageDocument.pageWindow = pageWindow;
         }

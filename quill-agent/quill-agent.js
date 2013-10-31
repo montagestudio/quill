@@ -1,3 +1,4 @@
+/* global HtmlController */
 /**
  * The QuillAgent is injected into documents served by quill to have an object
  * inside the iframe that will respond to messages posted through the
