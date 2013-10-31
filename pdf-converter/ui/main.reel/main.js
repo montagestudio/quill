@@ -319,7 +319,15 @@ exports.Main = Component.specialize({
                     return outputPath;
                 } else  {
                     return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate", "pdf-converter/templates/epub3", outputPath).then(function(result) {
-                        return result.url;
+                        var source = decodeURI(self.url).substring("fs://localhost".length),
+                            dest = (result.url + "/original.pdf").substring("fs://localhost".length);
+
+//                        return self.environmentBridge.backend.get("fs").invoke("link", source, dest).then(function() {   // Use that for an hard link (copy the original)
+                        return self.environmentBridge.backend.get("fs").invoke("symbolicLink", dest, source, "file").then(function() {
+                            return result.url;
+                        }, function() {
+                            return result.url;
+                        });
                     });
                 }
             });

@@ -55,6 +55,30 @@
         "locations": [
             "welcome/ui/main.reel/main.html"
         ]
+    },
+
+    "dual-view-btn-label": {
+        "message": "Dual Pages",
+        "description": "view page as spread",
+        "locations": [
+            "ui/main.reel/main.html"
+        ]
+    },
+
+    "single-view-btn-label": {
+        "message": "Single Page",
+        "description": "view single page",
+        "locations": [
+            "ui/main.reel/main.html"
+        ]
+    },
+
+    "auto-opacity-tooltip": {
+        "message": "Auto opacity",
+        "description": "tooltip for the auto overlay opacity checkbox",
+        "locations": [
+            "ui/main.reel/main.html"
+        ]
     }
 
 }

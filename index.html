@@ -7,6 +7,27 @@
     <link href="../assets/fonts/fonts.css" rel="stylesheet" />
     <link href="../assets/styles/bootstrapping.css" rel="stylesheet" />
 
+    <!-- In production, only one script (pdf.js) is necessary -->
+    <!-- In production, change the content of PDFJS.workerSrc below -->
+    <script type="text/javascript" src="../node_modules/pdf.js/src/shared/util.js"></script>
+    <script type="text/javascript" src="../node_modules/pdf.js/src/shared/colorspace.js"></script>
+    <script type="text/javascript" src="../node_modules/pdf.js/src/shared/pattern.js"></script>
+    <script type="text/javascript" src="../node_modules/pdf.js/src/shared/function.js"></script>
+    <script type="text/javascript" src="../node_modules/pdf.js/src/shared/annotation.js"></script>
+    <script type="text/javascript" src="../node_modules/pdf.js/src/display/api.js"></script>
+    <script type="text/javascript" src="../node_modules/pdf.js/src/display/metadata.js"></script>
+    <script type="text/javascript" src="../node_modules/pdf.js/src/display/canvas.js"></script>
+    <script type="text/javascript" src="../node_modules/pdf.js/src/display/font_loader.js"></script>
+
+    <script type="text/javascript">
+      // Specify the main script used to create a new PDF.JS web worker.
+      // In production, change this to point to the combined `pdf.js` file.
+      PDFJS.workerSrc = '../node_modules/pdf.js/src/worker_loader.js';
+//      PDFJS.disableWorker = true;
+//      globalScope.pdfOpLogging = false;
+    </script>
+
+
     <script src="./node_modules/montage/montage.js" data-package="."></script>
     <script type="text/montage-serialization">
         {
