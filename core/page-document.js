@@ -12,6 +12,7 @@ var Montage = require("montage").Montage,
  */
 
 var PAGE_TYPE = "page";
+var INJECTED_CLASS_NAME = "quill-injected";
 
 var PageDocument = exports.PageDocument = Montage.specialize({
 
@@ -140,8 +141,17 @@ var PageDocument = exports.PageDocument = Montage.specialize({
             } else if ("copyrightPosition" === evt.data.method) {
                 this.copyrightPosition = evt.data.result;
             } else if ("documentContent" === evt.data.method) {
-                var deferredContent = this._deferredMap.get("documentContent");
-                deferredContent.resolve(evt.data.result);
+                var deferredContent = this._deferredMap.get("document");
+                var result = evt.data.result;
+                var pageDom = (new DOMParser()).parseFromString(result, "text/xml");
+                var injectedNodes = pageDom.getElementsByClassName(INJECTED_CLASS_NAME);
+
+                var injectedRange = pageDom.createRange();
+                injectedRange.setStartBefore(injectedNodes[0]);
+                injectedRange.setEndAfter(injectedNodes[injectedNodes.length - 1]);
+                injectedRange.deleteContents();
+
+                deferredContent.resolve(pageDom);
             }
         }
     },
@@ -171,18 +181,18 @@ var PageDocument = exports.PageDocument = Montage.specialize({
         }
     },
 
-    getDocumentContent: {
+    getDocument: {
         value: function () {
 
-            var deferredContent = this._deferredMap.get("documentContent");
-            if (!deferredContent || deferredContent.promise.isFulfilled()) {
-                deferredContent = Promise.defer();
-                this._deferredMap.set("documentContent", deferredContent);
+            var deferredDocument = this._deferredMap.get("document");
+            if (!deferredDocument || deferredDocument.promise.isFulfilled()) {
+                deferredDocument = Promise.defer();
+                this._deferredMap.set("document", deferredDocument);
 
                 this.agentPort.postMessage({"method": "documentContent"});
             }
 
-            return deferredContent.promise;
+            return deferredDocument.promise;
         }
     }
 
@@ -190,7 +200,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
     URL_PARAMS: {
         value: {
             find: "<head>",
-            insert: '<script src="http://client/quill-agent/quill-agent.js" /><script src="http://client/quill-agent/html-controller.js" />'
+            insert: '<script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/quill-agent.js" /><script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/html-controller.js" />'
         }
     }
 });

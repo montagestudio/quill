@@ -321,7 +321,8 @@ exports.Main = Component.specialize({
             //TODO this isn't exactly how I would expect this to work, this is just enough to exercise
             // some of the next steps toward saving
             if (this.currentPage) {
-                this.currentPage.getDocumentContent().then(function (content) {
+                this.currentPage.getDocument().then(function (doc) {
+                    var content = (new XMLSerializer()).serializeToString(doc);
                     console.log("content", content);
                 }).done();
             }
