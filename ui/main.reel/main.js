@@ -39,7 +39,7 @@ exports.Main = Component.specialize({
     },
 
     currentPageIndex: {
-        value: undefined
+        value: null
     },
 
     _currentPage: {
@@ -69,7 +69,7 @@ exports.Main = Component.specialize({
     },
 
     _processID: {
-        value: undefined
+        value: null
     },
 
     processID: {
