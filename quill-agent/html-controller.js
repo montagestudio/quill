@@ -61,18 +61,18 @@ HtmlController.prototype = {
         banner.classList.remove("banner-left");
 
         switch (position) {
-            case "top":
-                banner.classList.add("banner-top");
-                break;
-            case "right":
-                banner.classList.add("banner-right");
-                break;
-            case "bottom":
-                banner.classList.add("banner-bottom");
-                break;
-            case "left":
-                banner.classList.add("banner-left");
-                break;
+        case "top":
+            banner.classList.add("banner-top");
+            break;
+        case "right":
+            banner.classList.add("banner-right");
+            break;
+        case "bottom":
+            banner.classList.add("banner-bottom");
+            break;
+        case "left":
+            banner.classList.add("banner-left");
+            break;
         }
     },
 

@@ -85,7 +85,7 @@ exports.PageDocument = Montage.specialize({
 
     pageWindow: {
         get: function () {
-            return this._pageWindow
+            return this._pageWindow;
         },
         set: function (value) {
             if (this.agentPort) {
