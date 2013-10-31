@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-    <title>Page View</title>
+    <title>Spread View</title>
     <meta charset="utf-8">
 
     <link href="spread-view.css" rel="stylesheet" />
@@ -10,6 +10,26 @@
         {
             "localizer": {
                 "object": "montage/core/localizer[defaultLocalizer]"
+            },
+
+            "leftOverlay": {
+                "prototype": "ui/pdf-overlay.reel",
+                "properties": {
+                    "element": {"#": "leftOverlay"}
+                },
+                "bindings": {
+                    "originalUrl": {"<-": "@owner.overlayUrl"}
+                }
+            },
+
+            "rightOverlay": {
+                "prototype": "ui/pdf-overlay.reel",
+                "properties": {
+                    "element": {"#": "rightOverlay"}
+                },
+                "bindings": {
+                    "originalUrl": {"<-": "@owner.overlayUrl"}
+                }
             },
 
             "leftPage": {
@@ -29,6 +49,8 @@
             "owner": {
                 "properties": {
                     "element": {"#": "spreadView"},
+                    "leftOverlay": {"@": "leftOverlay"},
+                    "rightOverlay": {"@": "rightOverlay"},
                     "leftPage": {"@": "leftPage"},
                     "rightPage": {"@": "rightPage"}
                 }
@@ -41,10 +63,12 @@
 <body>
     <section data-montage-id="spreadView" class="spread">
         <div class="spread-page-wrapper">
-            <div data-montage-id="leftPage" class="spread-page spread-left"></div>
+            <div data-montage-id="leftOverlay" class="spread-overlay"></div>
+            <div data-montage-id="leftPage" class="spread-page"></div>
         </div>
         <div class="spread-page-wrapper">
-            <div data-montage-id="rightPage" class="spread-page spread-left"></div>
+            <div data-montage-id="rightOverlay" class="spread-overlay"></div>
+            <div data-montage-id="rightPage" class="spread-page"></div>
         </div>
         <div class="spread-divider"></div>
     </section>

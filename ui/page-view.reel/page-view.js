@@ -60,7 +60,8 @@ exports.PageView = Component.specialize({
 
     draw: {
         value: function() {
-            var item = this.item,
+            var self = this,
+                item = this.item,
                 pagesWrapper = this.element,
                 frame = pagesWrapper.getElementsByTagName("iFrame")[0],
                 innerWidth,
@@ -90,7 +91,11 @@ exports.PageView = Component.specialize({
                         this._pageDrawInfo = null;
                     } else {
                         frame.src = "about:blank";
-                        this.needsDraw = true;
+                        // Because of cross origin restriction, we must must "reset" the frame by setting it's source to about:blank.
+                        // We must use a timer to allow a full event loop before drawing the frame again.
+                        setTimeout(function() {
+                            self.needsDraw = true;
+                        }, 0);
                     }
                 } else if (this._pageDrawInfo.url) {
                     // Regular page

@@ -8,6 +8,15 @@
     position: absolute;
 }
 
+.spread-overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.spread-page {
+}
+
 .spread-divider {
     position: absolute;
     width: 1px;

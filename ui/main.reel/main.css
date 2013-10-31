@@ -27,8 +27,8 @@ body {
     height: 32px;
     background-color: #474747;
     background-image: linear-gradient(hsla(0,0%,32%,.99), hsla(0,0%,27%,.95));
-    xborder-bottom: 1px solid black;
     box-shadow: inset 1px 0 0 hsla(0,0%,100%,.08), inset 0 1px 1px hsla(0,0%,0%,.15), inset 0 -1px 0 hsla(0,0%,100%,.05), 0 1px 0 hsla(0,0%,0%,.15), 0 1px 1px hsla(0,0%,0%,.1);
+    overflow: hidden;
 }
 
 .main > .content {
@@ -68,4 +68,19 @@ body {
     -webkit-flex: 1;
     padding: 0;
     margin: 20px 40px;
+}
+
+
+.Action-button {
+    width: 120px;
+}
+
+.overlay-icon {
+    height: 24px;
+    vertical-align:middle;
+}
+
+.overlay-range {
+    position: relative;
+    top: 3px;
 }

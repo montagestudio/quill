@@ -12,6 +12,52 @@
                 "object": "montage/core/localizer[defaultLocalizer]"
             },
 
+            "viewmodeButton": {
+                "prototype": "matte/ui/toggle-button.reel",
+                "properties": {
+                    "element": {"#": "viewmodeButton"},
+                    "pressed": true
+                },
+                "localizations": {
+                    "unpressedLabel": {"key": "dual-view-btn-label"},
+                    "pressedLabel": {"key": "single-view-btn-label"}
+                },
+                "listeners": [
+                    {
+                        "type": "action",
+                        "listener": {"@": "owner"}
+                    }
+                ]
+            },
+
+            "opacityRange": {
+                "prototype": "native/ui/input-range.reel",
+                "properties": {
+                    "element": {"#": "opacity"},
+                    "name": "opacity",
+                    "min": 0,
+                    "max": 1,
+                    "step": 0.05
+                },
+                "bindings": {
+                    "value": {"<->": "@spreadView.overlayOpacity"}
+                }
+            },
+
+            "autoOpacityCheck": {
+                "prototype": "native/ui/input-checkbox.reel",
+                "properties": {
+                    "element": {"#": "autoOpacity"}
+                },
+                "localizations": {
+                    "title": {"key": "auto-opacity-tooltip"}
+                },
+
+                "bindings": {
+                    "checked": {"<->": "@spreadView.autoOverlayOpacity"}
+                }
+            },
+
             "pagesList": {
                 "prototype": "montage/ui/repetition.reel",
                 "properties": {
@@ -43,12 +89,13 @@
                 "properties": {
                     "element": {"#": "spreadView"},
                     "viewMode": "default",
-                    "overlayUrl": "test",
-                    "overlayOpacity": 0.5
+                    "showOverlay": false,
+                    "overlayOpacity": "1"
                 },
                 "bindings": {
                     "pages": {"<-": "@owner.pages"},
-                    "index": {"<-": "@owner.currentPageIndex"}
+                    "index": {"<-": "@owner.currentPageIndex"},
+                    "showOverlay": {"<->": "@spreadView.overlayOpacity != '1'"}
                 }
             },
 
@@ -70,7 +117,13 @@
 <body>
 
     <div data-montage-id="main" class="main">
-        <header></header>
+        <header>
+            <button data-montage-id="viewmodeButton" class="Action-button Action-button--viewmode"></button>
+            <img src="/import-activity/assets/images/pdf-icon.png" class="overlay-icon">
+            <input type="range" data-montage-id="opacity" class="overlay-range"/>
+            <img src="/import-activity/assets/images/epub-icon.png" class="overlay-icon">
+            <input type="checkbox" data-montage-id="autoOpacity" class="auto-opacity"/>
+        </header>
         <div class="content">
             <nav class="navigation">
                 <ul data-montage-id="pages-list" class="pages-list">

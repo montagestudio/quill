@@ -157,6 +157,12 @@ exports.Main = Component.specialize({
             if (this.params.file && this.params.file.slice(-6) === ".ebook") {
                 this.url = encodeURI(this.params.file);
                 this.loadContentInfo();
+
+                // Resolve the URL of the original PDF
+                var originalPath = this.params.file.substr("fs://localhost".length) + "/original.pdf";
+                this.backend.get("fs").invoke("canonical", originalPath).then(function(path) {
+                    self.spreadView.overlayUrl = encodeURI("fs://localhost" + path);
+                }).done();
             }
 
 ////            setupLocalFileSystem(function(fs, error) {
@@ -285,8 +291,6 @@ exports.Main = Component.specialize({
 
                             self.pages = pages;
                             self.contentController.content = pages;
-
-                            console.log("--- page:", self.pages);
                         }
                     }
 
@@ -303,6 +307,16 @@ exports.Main = Component.specialize({
         value: function (event) {
             if (this.spreadView) {
                 this.spreadView.needsDraw = true;
+            }
+        }
+    },
+
+    handleViewmodeButtonAction: {
+        value: function(event) {
+            if (event.target.pressed) {
+                this.spreadView.viewMode = "single"
+            } else {
+                this.spreadView.viewMode = "default"
             }
         }
     }
