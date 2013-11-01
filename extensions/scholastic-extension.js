@@ -326,6 +326,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                         var pageElem =  document.createElement("div"),
                             bannerElem = document.createElement("div"),
                             pageMetrics,
+                            bannerMetrics,
                             bannerVerticalHeight, bannerHorizontalHeight,
                             horizontalSpaces, verticalSpaces,
                             bannerStyle,
@@ -347,9 +348,9 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
                         bannerElem.style.position = "relative";
                         bannerElem.style.width = pageMetrics.width + "px";
-                        bannerHorizontalHeight = bannerElem.getElementsByClassName("copyright-banner")[0].getBoundingClientRect().height + 20;
-                        bannerElem.style.width = pageMetrics.height + "px";
-                        bannerVerticalHeight = bannerElem.getElementsByClassName("copyright-banner")[0].getBoundingClientRect().height + 20;
+                        bannerMetrics = bannerElem.getElementsByClassName("copyright-banner")[0].getBoundingClientRect();
+                        bannerHorizontalHeight = bannerMetrics.height + 20;
+                        bannerVerticalHeight = bannerMetrics.height + 20;
 
                         verticalSpaces = self._getSpaces(pageElem, bannerHorizontalHeight, false) || [];
                         horizontalSpaces = self._getSpaces(pageElem, bannerVerticalHeight, true) || [];
@@ -378,13 +379,13 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                                     bannerPosition = "right";
                                 }
                             } else {
-                                for (var i = verticalSpaces.length - 1; i >= 1; i --) {
-                                    if (verticalSpaces[i].start - verticalSpaces[i - 1].end >= bannerHorizontalHeight) {
-                                        bannerPosition = "middle";
-                                        bannerStyle = "top:" + horizontalSpaces[i].start - bannerHorizontalHeight + "px";
-                                        break;
-                                    }
-                                }
+//                                for (var i = verticalSpaces.length - 1; i >= 1; i --) {
+//                                    if (verticalSpaces[i].start - verticalSpaces[i - 1].end >= bannerHorizontalHeight) {
+//                                        bannerPosition = "middle";
+//                                        bannerStyle = "top:" + horizontalSpaces[i].start - bannerHorizontalHeight + "px";
+//                                        break;
+//                                    }
+//                                }
                             }
                         }
 
@@ -403,9 +404,13 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                             pos += "</svg>".length;
                             data = page.text.substring(0, pos) + "\n";
 
-                            bannerData = bannerData.replace(/{{height}}/g, pageMetrics.height);
+                            bannerData = bannerData.replace(/{{horizontal-left}}/g, Math.round((pageMetrics.width - bannerMetrics.width) / 2) + "px");
+                            bannerData = bannerData.replace(/{{vertical-top}}/g, Math.round((pageMetrics.height - bannerMetrics.width) / 2) + "px");
+                            bannerData = bannerData.replace(/{{vertical-bottom}}/g, bannerMetrics.width + Math.round((pageMetrics.height - bannerMetrics.width) / 2) + "px");
+
+//                            bannerData = bannerData.replace(/{{height}}/g, pageMetrics.height);
                             bannerData = bannerData.replace(/{{position}}/g, bannerPosition);
-                            bannerData = bannerData.replace(/{{style}}/g, bannerStyle);
+                            bannerData = bannerData.replace(/{{style}}/g, bannerStyle || "");
                             bannerData = bannerData.replace(/{{isbn}}/g, item.isbn || "0000000000000");
                             data += bannerData;
 

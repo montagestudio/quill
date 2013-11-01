@@ -5,13 +5,15 @@
         <style type="text/css" scoped="scoped">
             .copyright-banner {
                 position: absolute;
-                left: 0;
-                right: 0;
+                display: inline-block;
+
                 color: #347a95;
                 background-color: rgba(255, 255, 255, 0.8);
                 font-family: Verdana, Helvetica, sans-serif;
                 font-size: 1em;
                 text-align: center;
+
+                margin: 8px;
             }
             .banner-title {
                 border-top: 1px solid #d6efff;
@@ -25,36 +27,34 @@
             }
             .copyright-banner.banner-top {
                 top: 0;
-                width: 100%;
+                left: {{horizontal-left}};
             }
             .copyright-banner.banner-bottom {
                 bottom: 0;
-                width: 100%;
-            }
-            .copyright-banner.banner-middle {
-                top: 0;
-                width: 100%;
-            }
-            .copyright-banner.banner-right {
-                left: 100%;
-                bottom: 0;
-                width: {{height}}px;
-                -webkit-transform: rotate(-90deg);
-                -webkit-transform-origin: left bottom;
-                -moz-transform: rotate(-90deg);
-                -moz-transform-origin: left bottom;
-                -ms-transform: rotate(-90deg);
-                -ms-transform-origin: left bottom;
+                left: {{horizontal-left}};
             }
             .copyright-banner.banner-left {
-                top: 100%;
-                width: {{height}}px;
-                -webkit-transform: rotate(-90deg);
+                top: {{vertical-bottom}};
                 -webkit-transform-origin: left top;
-                -moz-transform: rotate(-90deg);
+                -webkit-transform: rotate(-90deg);
                 -moz-transform-origin: left top;
-                -ms-transform: rotate(-90deg);
+                -moz-transform: rotate(-90deg);
                 -ms-transform-origin: left top;
+                -ms-transform: rotate(-90deg);
+                transform-origin: left top;
+                transform: rotate(-90deg);
+            }
+            .copyright-banner.banner-right {
+                top: {{vertical-top}};
+                right: 0;
+                -webkit-transform-origin: right bottom;
+                -webkit-transform: rotate(-90deg);
+                -moz-transform-origin: right bottom;
+                -moz-transform: rotate(-90deg);
+                -ms-transform-origin: right bottom;
+                -ms-transform: rotate(-90deg);
+                transform-origin: right bottom;
+                transform: rotate(-90deg);
             }
         </style>
         <div class="copyright-banner banner-{{position}}" style="{{style}}">
