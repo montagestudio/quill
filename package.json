@@ -18,7 +18,7 @@
   "devDependencies": {
     "jasmine-node": "1.2.2",
     "sandboxed-module": "0.1.4",
-    "montage-testing": "git+ssh://git@github.com:montagejs/montage-testing.git#edge",
+    "montage-testing": "0.2.0",
     "jshint": "2.3.0"
   },
   "mappings": {

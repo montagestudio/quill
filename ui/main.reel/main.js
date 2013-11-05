@@ -137,6 +137,9 @@ exports.Main = Component.specialize({
             this.contentController = RangeController.create().initWithContent([]);
             this.contentController.avoidsEmptySelection = true;
             this.contentController.multiSelect = false;
+
+            this.addBeforePathChangeListener("currentPage", this, "handleBeforeCurrentPageChange");
+            this.addPathChangeListener("currentPage", this, "handleCurrentPageChange");
         }
     },
 
@@ -339,6 +342,25 @@ exports.Main = Component.specialize({
                 this.spreadView.viewMode = "single"
             } else {
                 this.spreadView.viewMode = "default"
+            }
+        }
+    },
+
+    handleBeforeCurrentPageChange: {
+        value: function (oldPage) {
+            //TODO eventually this check should be unnecessary
+            //right now simply adding the listener triggers calling this
+            if (oldPage && oldPage !== this._currentPage) {
+                oldPage.disconnect();
+            }
+        }
+    },
+
+    handleCurrentPageChange: {
+        value: function (newPage) {
+            if (newPage) {
+                newPage.refresh();
+                newPage.connect();
             }
         }
     }

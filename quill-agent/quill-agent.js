@@ -30,14 +30,31 @@ QuillAgent.prototype = {
     },
 
     handleChannelMessage: function (evt) {
-        console.log("agent: onmessage", evt.data);
+        console.log("agent: onmessage", evt.data, evt.data.args);
 
         var method,
-            result;
+            result,
+            message,
+            success;
 
         if ((method = evt.data.method) && typeof this.htmlController[method] === "function") {
-            result = this.htmlController[method].apply(this.htmlController, evt.data.args);
-            this.remotePort.postMessage({"method": method, "result": result});
+
+            message = {identifier: evt.data.identifier, method: method};
+
+            // TODO when performing an operation we should probably always return the relevant result
+            // right now we're preserving the "setting returns undefined"
+            try {
+                result = this.htmlController[method].apply(this.htmlController, evt.data.args);
+                success = true;
+            } catch (e) {
+                result = void 0; //TODO read from the controller some appropriate value?
+                success = false;
+            }
+
+            message.result = result;
+            message.success = success;
+
+            this.remotePort.postMessage(message);
         }
     }
 };
