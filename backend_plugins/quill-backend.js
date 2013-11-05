@@ -131,8 +131,10 @@ exports.createFromTemplate = function(template, destination, options, replaceExi
     });
 };
 
-exports.updateContentInfo = function(rootDirectory, options) {
-    var root = PATH.join(pathFromURL(rootDirectory), "OEBPS"),
+exports.updateContentInfo = function(item) {
+    var rootDirectory = item.destination,
+        options = item.meta,
+        root = PATH.join(pathFromURL(rootDirectory), "OEBPS"),
         directories = ["assets", "pages", "styles"],
         listPromises = [];
 
@@ -220,13 +222,13 @@ exports.updateContentInfo = function(rootDirectory, options) {
             });
         });
 
-        var prefixLength = "page".length,
-            pageSpreads = ["page-spread-left", "page-spread-right"],
-            pageNumber = 0;
+        var prefixLength = "page".length;
 
         pages.sort(function(a, b) {
-            a = parseInt(a.substr(prefixLength), 10);
-            b = parseInt(b.substr(prefixLength), 10);
+            if (a.indexOf("page") === 0 && b.indexOf("page") === 0) {
+                a = parseInt(a.substr(prefixLength), 10);
+                b = parseInt(b.substr(prefixLength), 10);
+            }
 
             if (a < b) {
                 return -1;
@@ -236,8 +238,20 @@ exports.updateContentInfo = function(rootDirectory, options) {
                 return 0;
             }
         }).map(function(name) {
-            pageNumber ++;
-            spine.push('<itemref idref="' + name + '" properties="' + pageSpreads[pageNumber % 2] + '"/>');
+            var attributes = item.pagesAttributes[name.substr("page".length) + ".xhtml"] || item.pagesAttributes[name + ".xhtml"],
+                spineItem;
+
+            spineItem = '<itemref idref="' + name + '"';
+
+            if (attributes) {
+                for (var property in attributes) {
+                    if (attributes.hasOwnProperty(property)) {
+                        spineItem += ' ' + property + '="' + attributes[property] + '"';
+                    }
+                }
+            }
+            spineItem += '/>';
+            spine.push(spineItem);
         });
 
         options.manifest = manifest;
@@ -281,9 +295,11 @@ exports.updateContentInfo = function(rootDirectory, options) {
     });
 };
 
-exports.generateEPUB3 = function(rootDirectory, name) {
-    var root = pathFromURL(rootDirectory),
+exports.generateEPUB3 = function(item, name) {
+    var name = item.name,
+        root = pathFromURL(item.destination),
         options = {cwd: root},
+        command,
         result = "",
         i;
 
@@ -293,15 +309,11 @@ exports.generateEPUB3 = function(rootDirectory, name) {
     }
     name += ".epub";
 
-    return exec("zip -X '" + name + "' mimetype", options).then(function(stdout) {
-        result += stdout;
-        return exec("zip -rg '" + name + "' META-INF -x \\*/.*", options).then(function(stdout) {
-            result += stdout;
-            return exec("zip -rg '" + name + "' OEBPS -x \\*/.*", options).then(function(stdout) {
-                return result + stdout;
-            });
-        });
-    });
+    command = "zip -X '" + name + "' mimetype; ";
+    command += "zip -rg '" + name + "' META-INF -x \\*/.*; ";
+    command += "zip -rg '" + name + "' OEBPS -x \\*/.*";
+
+    return exec(command, options);
 };
 
 exports.saveOriginalAssets = function(rootDirectory) {
@@ -388,8 +400,8 @@ exports.optimizeImage = function(sourceURL, destURL, imageSize, quality) {
     }
 };
 
-exports.getCoverImage = function(rootDirectory) {
-    var root = pathFromURL(rootDirectory),
+exports.getCoverImage = function(item) {
+    var root = pathFromURL(item.destination),
         coverImagePath = PATH.join(root, "OEBPS", "assets", "cover.jpeg");
 
     return QFS.exists(coverImagePath).then(function(exists) {

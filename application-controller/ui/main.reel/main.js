@@ -232,6 +232,7 @@ exports.Main = Component.specialize({
                         item = this._importItemForID(data[1].id);
                         if (item) {
                             item.meta = data[1].meta;
+                            item.pagesAttributes = {};
 
                             this.extension.customizePages(self.environmentBridge.backend, item).then(function() {
                                 item.lastContact = new Date().getTime() / 1000;
@@ -689,15 +690,16 @@ exports.Main = Component.specialize({
             var self = this;
 
             // Retrieve cover image URL
-            return self.environmentBridge.backend.get("quill-backend").invoke("getCoverImage", item.destination).then(function(coverImage) {
+            return self.environmentBridge.backend.get("quill-backend").invoke("getCoverImage", item).then(function(coverImage) {
                 console.log("COVER IMAGE:", coverImage);
                 if (coverImage) {
-                    item.coverImage = coverImage;
+                    item.coverImage = item.coverImage || coverImage;
                 }
 
                 self.updateItemState(item, IMPORT_STATES.generating);
-                return self.environmentBridge.backend.get("quill-backend").invoke("updateContentInfo", item.destination, item.meta).then(function() {
-                    return self.environmentBridge.backend.get("quill-backend").invoke("generateEPUB3", item.destination, item.name).then(function(stdout) {
+
+                return self.environmentBridge.backend.get("quill-backend").invoke("updateContentInfo", item).then(function() {
+                    return self.environmentBridge.backend.get("quill-backend").invoke("generateEPUB3", item).then(function(stdout) {
                         self.updateItemState(item, IMPORT_STATES.ready);
                     });
                 });

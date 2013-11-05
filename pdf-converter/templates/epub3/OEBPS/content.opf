@@ -18,6 +18,8 @@
         <meta property="dcterms:modified">{{modification-date}}</meta>
         <meta name="cover" content="cover.jpeg" />
         <meta property="rendition:layout">pre-paginated</meta>
+        <meta property="rendition:orientation">auto</meta>
+        <meta property="rendition:spread">auto</meta>
         <meta property="ibooks:specified-fonts">true</meta>
         <meta property="ibooks:version">1.0</meta>
     </metadata>

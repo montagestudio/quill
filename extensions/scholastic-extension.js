@@ -249,7 +249,8 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
             // Let's add a copyright banner
             this.addCopyrightBanner(backend, item).then(function(success) {
                 // Let's setup a cover image
-                backend.get("scholastic").invoke("setupCoverPage", item).then(function(success) {
+                backend.get("scholastic").invoke("setupCoverPage", item).then(function(coverImage) {
+                    item.coverImage = coverImage ? coverImage.url : null;
                     deferred.resolve(item.id);
                 }, function(error) {
                     deferred.reject(error);
@@ -267,7 +268,6 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
             var deferred = Promise.defer();
 
             console.log("*** customizeAssets");
-            // JFD TODO: write me
 
             deferred.resolve(item.id);
             return deferred.promise;
@@ -276,12 +276,113 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
     customizeEbook: {
         value: function(backend, item) {
+            var self = this,
+                deferred = Promise.defer();
+
+            console.log("*** customizeEbook", item);
+
+            this.insertCoverPage(backend, item).then(function() {
+                return self.adjustSpread(backend, item).then(function() {
+                    deferred.resolve(item.id);
+                }, function(error) {
+                    deferred.reject(error);
+                });
+            }, function(error) {
+                deferred.reject(error);
+            }).done();
+
+            return deferred.promise;
+        }
+    },
+
+    insertCoverPage: {
+        value: function(backend, item) {
             var deferred = Promise.defer();
 
-            console.log("*** customizeEbook");
-            // JFD TODO: write me
+            if (item.coverImage) {
+                var folderPath = decodeURIComponent((item.destination).substring("fs://localhost".length)),
+                    viewport = item.meta && item.meta["original-resolution"] ? item.meta["original-resolution"].split("x") : ["100%", "100%"];
 
-            deferred.resolve(item.id);
+                backend.get("quill-backend").invoke("createFromTemplate",
+                    "/pdf-converter/templates/page.xhtml",
+                    folderPath + "/OEBPS/pages/coverPage.xhtml",
+                    {
+                        "page-width": Math.round(viewport[0]),
+                        "page-height": Math.round(viewport[1]),
+                        "page-title": "cover page",
+                        "page-headers": "",
+                        "page-style": ".coverImage {width: 100%;}",
+                        "page-content": '<img src="../assets/cover.jpeg" class="coverImage"/>'
+                    },
+                    true
+                ).then(function() {
+                    // Set page properties
+                    item.pagesAttributes["coverPage.xhtml"] = item.pagesAttributes["coverPage.xhtml"] || {};
+                    item.pagesAttributes["coverPage.xhtml"].linear = "no";
+                    deferred.resolve();
+                }, function(error) {
+                    deferred.reject(error);
+                });
+            } else {
+                deferred.resolve();
+            }
+
+            return deferred.promise;
+        }
+    },
+
+    adjustSpread: {
+        value: function(backend, item) {
+            var self = this,
+                deferred = Promise.defer();
+
+            var toc = item.meta.toc,
+                pageOneNbr = 1;
+
+            if (toc) {
+                toc.some(function(entry) {
+                    if (entry.title === "_pageone") {
+                        pageOneNbr = entry.pageNumber;
+                        return true;
+                    }
+                    return false;
+                });
+            }
+
+            if (item.coverImage) {
+                pageOneNbr ++;
+            }
+
+            if ((pageOneNbr & 1) === 0) {
+                console.log("NEED TO CHANGE THE SPREAD");
+                var folderPath = decodeURIComponent((item.destination).substring("fs://localhost".length)),
+                    viewport = item.meta && item.meta["original-resolution"] ? item.meta["original-resolution"].split("x") : ["100%", "100%"];
+
+                backend.get("quill-backend").invoke("createFromTemplate",
+                    "/pdf-converter/templates/page.xhtml",
+                    folderPath + "/OEBPS/pages/0.xhtml",
+                    {
+                        "page-width": Math.round(viewport[0]),
+                        "page-height": Math.round(viewport[1]),
+                        "page-title": "page 0",
+                        "page-headers": "",
+                        "page-style": "",
+                        "page-content": ""
+                    },
+                    true
+                ).then(function() {
+                    // Set page properties
+                    item.pagesAttributes["0.xhtml"] = item.pagesAttributes["0.xhtml"] || {};
+                    item.pagesAttributes["0.xhtml"].linear = "no";
+                    deferred.resolve();
+                }, function(error) {
+                    deferred.reject(error);
+                });
+            } else {
+                deferred.resolve();
+            }
+
+
             return deferred.promise;
         }
     },

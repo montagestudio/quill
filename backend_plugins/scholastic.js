@@ -97,7 +97,6 @@ exports.setupCoverPage = function(item) {
                 destURL = (item.destination + "/OEBPS/assets/cover.jpeg").replace(/ /g, "%20");
             return QFS.copy(paths[0], destPath).then(function() {
                 return global.sendCommandToParentProcess("getImageInfo", {url: destURL}, true).then(function(info) {
-                    console.log("IMAGE INFO:", info);
                     var width = info.width,
                         height = info.height,
                         ratio = 1024 / Math.max(width, height);
@@ -107,16 +106,11 @@ exports.setupCoverPage = function(item) {
                         height = Math.round(height * ratio);
                         return global.sendCommandToParentProcess("scaleImage", {sourceURL: destURL, destinationURL: destURL, size: {width: width, height: height}, quality: 0.6}, true);
                     }
-                    return true;
+
+                    return {url: item.destination + "/OEBPS/assets/cover.jpeg"};
                 });
             });
         }
-        return paths;
-//        return Q.all(paths.map(function (path) {
-//            return QFS.stat(path).then(function (stat) {
-//                return {url: "fs://localhost" + path, stat: stat};
-//            });
-//        }));
     });
 };
 
