@@ -11,40 +11,42 @@
                 "element": {"#": "positionInspector"}
             }
         },
+        "positionController": {
+            "prototype": "montage/core/radio-button-controller",
+            "bindings": {
+                "value": {"<->": "@owner.object.copyrightPosition"}
+            }
+        },
         "bottomPosition": {
             "prototype": "matte/ui/radio-button.reel",
             "properties": {
-                "element": {"#": "bottomPosition"}
-            },
-            "bindings": {
-                "checked": {"<->": "@owner.object.copyrightPosition == 'bottom'"}
+                "element": {"#": "bottomPosition"},
+                "value": "bottom",
+                "radioButtonController": {"@": "positionController"}
             }
         },
         "leftPosition": {
             "prototype": "matte/ui/radio-button.reel",
             "properties": {
-                "element": {"#": "leftPosition"}
-            },
-            "bindings": {
-                "checked": {"<->": "@owner.object.copyrightPosition == 'left'"}
+                "element": {"#": "leftPosition"},
+                "value": "left",
+                "radioButtonController": {"@": "positionController"}
             }
         },
         "rightPosition": {
             "prototype": "matte/ui/radio-button.reel",
             "properties": {
-                "element": {"#": "rightPosition"}
-            },
-            "bindings": {
-                "checked": {"<->": "@owner.object.copyrightPosition == 'right'"}
+                "element": {"#": "rightPosition"},
+                "value": "right",
+                "radioButtonController": {"@": "positionController"}
             }
         },
         "topPosition": {
             "prototype": "matte/ui/radio-button.reel",
             "properties": {
-                "element": {"#": "topPosition"}
-            },
-            "bindings": {
-                "checked": {"<->": "@owner.object.copyrightPosition == 'top'"}
+                "element": {"#": "topPosition"},
+                "value": "top",
+                "radioButtonController": {"@": "positionController"}
             }
         }
     }
