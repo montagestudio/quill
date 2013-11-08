@@ -43,10 +43,11 @@
 }
 
 .Intro-logo {
-    width: 180px;
-    height: 180px;
+    width: 256px;
+    height: 256px;
+    margin-left: -60px;
     /* Using background image to fix Flexbox + Image resize issue. */
-    background: url(../../../assets/img/logo.png) no-repeat center;    
+    background: url(../../../assets/img/logo.png) no-repeat center;
     background-size: auto 100%;
 }
 
@@ -67,6 +68,13 @@
 
 .Intro-meta {
     font-size: 11px;
+    color: hsl(0, 0%, 70%);
+    text-align: center;
+}
+
+.Intro-attribution {
+    margin-top: -0.8em;
+    font-size: 9px;
     color: hsl(0, 0%, 70%);
     text-align: center;
 }
