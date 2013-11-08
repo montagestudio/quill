@@ -85,10 +85,13 @@ exports.getISBNFromFile = function (filePath) {
     return isbn;
 };
 
-exports.setupCoverPage = function(item) {
+exports.setupCoverImage = function(item) {
     var filePath = pathFromURL(item.url),
-        isbn = item.isbn,
+        isbn,
         root = PATH.dirname(filePath);
+
+    item.isbn = item.isbn || exports.getISBNFromFile(filePath);
+    isbn = item.isbn;
 
     return QFS.listTree(root, guard(isbn)).then(function (paths) {
         if (paths && paths.length) {
