@@ -96,6 +96,10 @@ exports.ActivityListItem = Component.specialize({
                 this.statusLabel = "Optimizing images";
             }
 
+            else if (item.status === IMPORT_STATES.generating) {
+                this.statusLabel = "Generating book";
+            }
+
             else if (item.status === IMPORT_STATES.error) {
                 this.statusLabel = "Error: " + item.error;
             }
