@@ -105,13 +105,29 @@ exports.PDF2HTMLCache = Montage.specialize({
         value: null
     },
 
+    _log: {
+        value: null
+    },
+
+    log: {
+        value: function() {
+            if (this._log) {
+                this._log.apply(arguments);
+            }
+        }
+    },
+
     initialize: {
-        value: function(path, pdf) {
+        value: function(path, pdf, log) {
             var self = this,
                 deferred = Promise.defer();
 
             if (IS_IN_LUMIERES) {
 //                console.log(">>> SETUP CACHE FOR", decodeURIComponent(path.substring("fs://localhost".length)), pdf.pdfInfo.fingerprint);
+
+                if (typeof log === "function") {
+                    self._log = log;
+                }
 
                 if (path.indexOf("fs://localhost") === 0) {
                     var fs = self.backend.get("fs");
@@ -176,9 +192,13 @@ exports.PDF2HTMLCache = Montage.specialize({
                         }
 
 //                        return Promise.all(chunks).then(writeNextChunk);
-                        return chunks[0].then(writeNextChunk);
+                        return chunks[0].then(writeNextChunk, function(error) {
+                            writer.close();
+                            return error;
+                        });
                     } else {
-                        return;
+                        // We must close the file to release the file descriptor and writer
+                        writer.close();
                     }
                 };
 
@@ -202,6 +222,9 @@ exports.PDF2HTMLCache = Montage.specialize({
 
 //            console.log(">>> CACHE SET OBJECT", name, pageNbr, type, typeof data[3], data[3].length, data[4]);
 //            console.log(">>> ID:", page.objs.resolve(data[0]))
+
+            self.log("setObject", name, type)
+
             switch (type) {
             case "JpegStream":
                 filePath += ".jpeg";
@@ -249,6 +272,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                         console.warn("Cannot save image to disk:", error);
                     }
                 }).done(function() {
+                    self.log("objectWritten", url);
                     callback(url);
                 });
             } else {
@@ -281,6 +305,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                     if (!exists) {
                         return self.writeToDisk(filePath, font.data).then(function() {
                             font.url = fontURL;
+                            self.log("fontWritten", fontURL)
                             if (++ fontIndex < nbrFonts) {
                                 return writeFontToDisk(fontIndex);
                             }
@@ -294,6 +319,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                 });
             };
 
+            self.log("setFonts")
             writeFontToDisk(0).then(function() {
                 if (callback) {
                     callback();
@@ -333,15 +359,16 @@ exports.PDF2HTMLCache = Montage.specialize({
 
 //            console.log(">>> CACHE GET OBJECT URL:", filePath, type);
             switch (type) {
-            case "JpegStream":
-                filePath += hasMask ? ".png" : ".jpeg";
-                break;
-            case "Image":
-                filePath += hasMask ? ".png" : ".jpeg";
-                break;
+                case "JpegStream":
+                    filePath += hasMask ? ".png" : ".jpeg";
+                    break;
+                case "Image":
+                    filePath += hasMask ? ".png" : ".jpeg";
+                    break;
             }
 
             this._checkFile(filePath).then(function(valid) {
+                self.log("getObject", filePath, valid)
                 if (valid) {
                     url = encodeURI("fs://localhost" + filePath);
                 } else {

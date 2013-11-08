@@ -249,7 +249,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
             // Let's add a copyright banner
             this.addCopyrightBanner(backend, item).then(function(success) {
                 // Let's setup a cover image
-                backend.get("scholastic").invoke("setupCoverPage", item).then(function(coverImage) {
+                backend.get("scholastic").invoke("setupCoverImage", item).then(function(coverImage) {
                     item.coverImage = coverImage ? coverImage.url : null;
                     deferred.resolve(item.id);
                 }, function(error) {
@@ -421,7 +421,7 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                         banner = result;
                     });
                 }, function(error) {
-                    deferred.reject(error);
+                    console.warn("Cannot retrieve the copyright page");
                 }).done(function() {
                     if (page && banner) {
                         var pageElem =  document.createElement("div"),

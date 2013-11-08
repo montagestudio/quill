@@ -8,6 +8,9 @@ var Component = require("montage/ui/component").Component,
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
+var MAX_PAGES_PER_RUN  = 8;
+
+
 exports.Main = Component.specialize({
 
     environmentBridge: {
@@ -53,6 +56,19 @@ exports.Main = Component.specialize({
     constructor: {
         value: function PDFConverter() {
             var self = this;
+
+            // Make stack traces from promise errors easily available in the
+            // console. Otherwise you need to manually inspect the error.stack
+            // in the debugger.
+            Promise.onerror = function (error) {
+                if (error.stack) {
+                    console.groupCollapsed("%c Uncaught promise rejection: " + (error.message || error), "color: #F00; font-weight: normal");
+                    console.log(error.stack);
+                    console.groupEnd();
+                } else {
+                    throw error;
+                }
+            };
 
             this.super();
 
@@ -141,7 +157,7 @@ exports.Main = Component.specialize({
                                             "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z"
                                     };
 
-                                    return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", pdf).then(function(cache) {
+                                    return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", pdf, function(){ self.idle() }).then(function(cache) {
                                         PDFJS.objectsCache = cache;
                                         PDFJS.jpegQuality = 1.0;
 
@@ -209,7 +225,10 @@ exports.Main = Component.specialize({
                 ipc.invoke("namedProcesses", "app-controller").then(function(processID) {
                     console.log("--- update", processID);
                     if (processID) {
-                        return ipc.invoke("send", self.processID, processID[0], ["converterInfo", {processID: self.processID, id: self.id}]);
+                        return ipc.invoke("send", self.processID, processID[0], ["converterInfo", {processID: self.processID, id: self.id}]).then(function() {
+                        }, function(e) {
+                            console.log("ERROR:", e.message, e.stack);
+                        });
                     }
                 }).fail(function(e) {
                     console.log("ERROR:", e.message, e.stack);
@@ -261,6 +280,22 @@ exports.Main = Component.specialize({
         }
     },
 
+    _lastIdle: {
+        value: 0
+    },
+
+    idle: {
+        value: function() {
+            var now = new Date().getTime() / 1000;
+
+            // Send an message back to the controller no more than once every 10 seconds to signal the converter is still running
+            if (now - this._lastIdle > 10) {
+                this.sendMessage("idle", {id: this.id}).done();
+                this._lastIdle = now;
+            }
+        }
+    },
+
     updateState: {
         value: function(status, meta) {
             var self = this,
@@ -283,11 +318,12 @@ exports.Main = Component.specialize({
                 destination: self.outputURL,
                 meta: meta
             }).then(function(result) {
-                self._pendingStatus = -1;
                 deferred.resolve(result);
             }, function(e) {
-                self._pendingStatus = -1;
                 deferred.reject(e);
+            }).done(function() {
+                self._pendingStatus = -1;
+                self._lastIdle = new Date().getTime() / 1000;
             });
 
             return deferred.promise;
@@ -348,16 +384,16 @@ exports.Main = Component.specialize({
 
                 self._page = page;
 
-                var canvas = document.createElement("canvas"),
-                    output = document.createElement("div");
+                var canvasElem = document.createElement("canvas"),
+                    outputElem = document.createElement("div");
 
-                document.body.appendChild(output);
+                document.body.appendChild(outputElem);
 
                 // Calculate the optimum scale to fit the maxResolution
                 var viewPort = page.getViewport(1);
                 self.scale = self.maxResolution / Math.min(viewPort.width, viewPort.height);
 
-                return self._converter.renderPage(page, canvas, output, self.scale, true).then(function(output) {
+                return self._converter.renderPage(page, canvasElem, outputElem, self.scale, true).then(function(output) {
                     var viewport = page.getViewport(self.scale),
                         folderPath = decodeURIComponent((self.outputURL).substring("fs://localhost".length));
 
@@ -373,23 +409,29 @@ exports.Main = Component.specialize({
                                 "page-style": output.style,
                                 "page-content": output.data
                             },
-                            true).then(function() {
-                                if (self._pageNumber < self.numberOfPages) {
-                                    self._pageNumber ++;
-                                    self.params.p = self._pageNumber;
+                            true
+                        ).then(function() {
+                            if (self._pageNumber < self.numberOfPages) {
+                                self._pageNumber ++;
+                                self.params.p = self._pageNumber;
 
+                                lumieres.powerManager.allowIdleSleep();
+                                if (self._pageNumber % MAX_PAGES_PER_RUN) {
+                                    document.body.removeChild(outputElem);
+                                    return self.convertNextPage();
+                                } else {
+                                    // Reload the window every 8 pages to reduce memory crash
                                     var newLoc = window.location.origin + window.location.pathname,
-                                        sep = "?",
-                                        params = Object.keys(self.params);
+                                        sep = "?";
 
-                                    params.forEach(function(param) {
+                                    for (param in self.params) {
                                         newLoc += sep + param + "=" + encodeURIComponent(self.params[param]);
                                         sep = "&";
-                                    });
-                                    lumieres.powerManager.allowIdleSleep();
+                                    }
                                     window.location.href = newLoc;
                                     return false;
                                 }
+                            }
 
                                 lumieres.powerManager.allowIdleSleep();
                                 return true;

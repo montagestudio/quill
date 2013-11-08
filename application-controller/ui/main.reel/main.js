@@ -238,21 +238,40 @@ exports.Main = Component.specialize({
                                 item.lastContact = new Date().getTime() / 1000;
                                 return self.optimize(item).then(function() {
                                     item.lastContact = new Date().getTime() / 1000;
+                                    self.updateItemState(item, IMPORT_STATES.generating, 0, 3, item.destination, item.meta);
                                     return self.extension.customizeAssets(self.environmentBridge.backend, item).then(function() {
+                                        self.updateItemState(item, IMPORT_STATES.generating, 1, 3, item.destination, item.meta);
                                         item.lastContact = new Date().getTime() / 1000;
                                         self.buildTableOfContent(item.meta);
                                         return self.extension.customizeEbook(self.environmentBridge.backend, item).then(function() {
+                                            self.updateItemState(item, IMPORT_STATES.generating, 2, 3, item.destination, item.meta);
                                             return self.generateEpub(item).then(function() {
                                                 item.lastContact = new Date().getTime() / 1000;
                                                 return true;
-                                            }, function(e) {
-                                                console.log("ERROR:", e.message, e.stack);
+                                            }, function(error) {
+                                                console.log("generateEpub error:", e.message, e.stack);
+                                                item.error = error.message || error.error;
+                                                self.updateItemState(item, IMPORT_STATES.error);
                                             });
+                                        }, function(error) {
+                                            console.log("customizeEbook error:", error.message);
+                                            item.error = error.message || error.error;
+                                            self.updateItemState(item, IMPORT_STATES.error);
                                         });
+                                    }, function(error) {
+                                        console.log("customizeAssets error:", error.message);
+                                        item.error = error.message || error.error;
+                                        self.updateItemState(item, IMPORT_STATES.error);
                                     });
+                                }, function(error) {
+                                    console.log("optimize error:", error.message);
+                                    item.error = errormessage || error.error;
+                                    self.updateItemState(item, IMPORT_STATES.error);
                                 });
                             }, function(error) {
-                                console.log("import error:", error.message);
+                                console.log("customizePages error:", error.message);
+                                item.error = error.message || error.error;
+                                self.updateItemState(item, IMPORT_STATES.error);
                             }).done();
 
                             item.lastContact = new Date().getTime() / 1000;
@@ -265,6 +284,16 @@ exports.Main = Component.specialize({
                         this.handleMenuActionImportDocument();
                         return true;
                     }
+
+                    else if (command === "idle") {
+                        item = this._importItemForID(data[1].id);
+                        if (item) {
+                            item.lastContact = new Date().getTime() / 1000;
+                            return true;
+                        }
+                        return false;
+                    }
+
                 }
 
                 throw new Error("Message refused, invalid data!");
@@ -433,7 +462,7 @@ exports.Main = Component.specialize({
                     for (index in sortedTable[retries]) {
                         item = sortedTable[retries][index];
 
-                        if (self.extension && typeof self.extension.getMetaData === "function") {
+                        if (false && self.extension && typeof self.extension.getMetaData === "function") {
                             console.log("***** START FETCHING:", item.name, item.status, item.retries);
                             self.updateItemState(item, IMPORT_STATES.fetching);
 
@@ -562,7 +591,8 @@ exports.Main = Component.specialize({
             var application = this.environmentBridge.backend.get("application");
             application.invoke("windowList").then(function(result) {
                 var windows = result.windows,
-                    promises = [];
+                    promises = [],
+                    itemID = parseInt(item.id, 10);
 
                 windows.forEach(function(url) {
                     if (decodeURI(url).indexOf("http://client/pdf-converter/index.html") === 0) {
@@ -572,7 +602,7 @@ exports.Main = Component.specialize({
                             params[param[0]] = param[1] !== undefined ? decodeURIComponent(param[1]) : null;
                         });
 
-                        if (params.id === item.id) {
+                        if (parseInt(params.id, 10) === itemID) {
                             promises.push(application.invoke("closeWindow", url));
                         }
                     }
@@ -746,9 +776,9 @@ exports.Main = Component.specialize({
 
     checkImporters: {
         value: function() {
-            var self = this;
+            var self = this,
+                now = new Date().getTime() / 1000;
 
-            var now = new Date().getTime() / 1000;
             this.importItems.map(function(item) {
                 if (item.status === IMPORT_STATES.converting && item.lastContact) {
                     if (Math.round(now - item.lastContact) >= STALL_TIMEOUT) {
@@ -756,22 +786,29 @@ exports.Main = Component.specialize({
                     }
 
                 } else if (item.status === IMPORT_STATES.stalled) {
-                    if (Math.round(now - item.lastContact) >= RESTART_TIMEOUT && item.processID) {
-                        // jumpstart the import...
-                        self.environmentBridge.backend.get("ipc").invoke("send", self.processID, item.processID, ["close"]).then(function() {
-                            item.retries = (item.retries || 0) + 1;
-                            item.lastContact = now;
-                            item.processID = 0;
-                            setTimeout(function() {
+                    if (Math.round(now - item.lastContact) >= RESTART_TIMEOUT) {
+                        if (item.processID) {
+                            // jumpstart the import...
+                            self.environmentBridge.backend.get("ipc").invoke("send", self.processID, item.processID, ["close"]).then(function() {
+                                item.retries = (item.retries || 0) + 1;
+                                item.lastContact = now;
+                                item.processID = 0;
+                                setTimeout(function() {
+                                    self.updateItemState(item, IMPORT_STATES.waiting, item.currentPage, item.nbrPages, item.destination, item.meta);
+                                }, 500);    // We need to give some time for the window to go away
+                            }, function(e){
+                                // JFD TODO: Kill the old process
+                                item.retries = (item.retries || 0) + 1;
+                                item.lastContact = now;
+                                item.processID = 0;
                                 self.updateItemState(item, IMPORT_STATES.waiting, item.currentPage, item.nbrPages, item.destination, item.meta);
-                            }, 500);    // We need to give some time for the window to go away
-                        }, function(e){
-                            // JFD TODO: Kill the old process
+                            }).done();
+                        } else {
                             item.retries = (item.retries || 0) + 1;
                             item.lastContact = now;
                             item.processID = 0;
                             self.updateItemState(item, IMPORT_STATES.waiting, item.currentPage, item.nbrPages, item.destination, item.meta);
-                        }).done();
+                        }
                     }
                 }
             });
