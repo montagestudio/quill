@@ -1580,6 +1580,20 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     scaleFactor,
                     needTransform;
 
+                if (globalScope.pdfOpLogging) {
+                    var text = "";
+                    data.forEach(function(item) {
+                        if (item && typeof item == "object") {
+                            item.forEach(function(letter) {
+                                if (letter && typeof letter == "object") {
+                                    text += letter.unicode;
+                                }
+                            })
+                        }
+                    })
+                }
+
+
                 // Export the font
                 if (this.owner._pdf.cssFonts[fontName] == null) { // TODO DRY
                     if (font.url) {
@@ -1620,8 +1634,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 data.forEach(function(item) {
                     if (typeof item === "number") {
                         // Spacer
-                        offsets[index] += - item * current.fontMatrix[0] * fontSize * textHScale;
-                        current.x += - item * current.fontMatrix[0] * textHScale;
+                        offsets[index] += -item * current.fontMatrix[0] * fontSize * textHScale;
+                        current.x += -item * current.fontMatrix[0] * fontSize * textHScale / scaleFactor;
                     } else {
                         glyphs = typeof item === "string" ? font.charsToGlyphs(item) : item;
                         if (glyphs) {
@@ -1636,7 +1650,6 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                         charWidth = (width * current.fontMatrix[0] * fontSize) + (charSpacing * scaleFactor),
                                         character = font.remaped ? glyph.unicode : glyph.fontChar;
 
-                                    character = font.remaped ? glyph.unicode : glyph.fontChar;
                                     if (character.charCodeAt(0) === 0) {
                                         character = " ";
                                     }
@@ -1648,7 +1661,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                     }
                                     text += character;
                                     offsets[++ index] = charWidth * textHScale;
-                                    current.x += charWidth * textHScale / fontSize;
+                                    current.x += charWidth * textHScale / scaleFactor;
                                 }
                             });
                         }
