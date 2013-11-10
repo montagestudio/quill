@@ -2,6 +2,20 @@ var PageDocument = require("core/page-document").PageDocument,
     Promise = require("montage/core/promise").Promise,
     WAITSFOR_TIMEOUT = 2500;
 
+var connectDocumentToWindow = function (doc, aWindow) {
+    var deferredDocumentConnection = Promise.defer();
+
+    doc.addPathChangeListener("_channelReady", function (ready) {
+        if (ready) {
+            deferredDocumentConnection.resolve(doc);
+        }
+    });
+
+    doc.pageWindow = aWindow;
+
+    return deferredDocumentConnection.promise;
+};
+
 describe("core/page-document-spec", function () {
 
     var pageDocument,
@@ -10,6 +24,7 @@ describe("core/page-document-spec", function () {
     
     beforeEach(function () {
         pageDocument = new PageDocument();
+
         mockResponses = {
             hasCopyright: {result: false, success: true},
             copyrightPosition: {result: null, success: true}
@@ -25,6 +40,7 @@ describe("core/page-document-spec", function () {
                         self.handleChannelMessage(message);
                     };
 
+                    this.remotePort.postMessage("ready");
                 }
             },
             handleChannelMessage: function (message) {
@@ -55,197 +71,220 @@ describe("core/page-document-spec", function () {
         
     });
 
-    describe("the copyright position API", function () {
+    describe("with an open channel", function () {
 
-        var newPosition;
+        var connectedDocumentPromise;
 
-        beforeEach(function () {
-            newPosition = "bottom";
+        describe("the copyright position API", function () {
 
-            mockResponses.hasCopyright = {result: true, success: true};
-            mockResponses.copyrightPosition = {result: "top", success: true};
-            mockResponses.setCopyrightPosition = {result: newPosition, success: true};
-            pageDocument.pageWindow = mockWindow;
-        });
+            var newPosition;
 
-        describe("via the optimistic property", function () {
-            it ("should immediately set the specified value", function () {
-                pageDocument.copyrightPosition = newPosition;
-                expect(pageDocument.copyrightPosition).toBe(newPosition);
+            beforeEach(function () {
+                newPosition = "bottom";
+
+                mockResponses.hasCopyright = {result: true, success: true};
+                mockResponses.copyrightPosition = {result: "top", success: true};
+                mockResponses.setCopyrightPosition = {result: newPosition, success: true};
+                connectedDocumentPromise = connectDocumentToWindow(pageDocument, mockWindow);
             });
 
-            it("should eventually update with the latest value", function () {
-                var deferredUpdateFromChannel = Promise.defer();
+            describe("via the optimistic property", function () {
+                it ("should immediately set the specified value", function () {
+                    return connectedDocumentPromise.then(function () {
+                        pageDocument.copyrightPosition = newPosition;
+                        expect(pageDocument.copyrightPosition).toBe(newPosition);
+                    }).timeout(WAITSFOR_TIMEOUT);
+                });
 
-                spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
-                    expect(message.data.method).toBe("copyrightPosition");
+                it("should eventually update with the latest value", function () {
+                    return connectedDocumentPromise.then(function () {
+                        var deferredUpdateFromChannel = Promise.defer();
 
-                    // Plant a response that the agent knows a new value
-                    var responseMessage = {
-                        method: message.data.method,
-                        result: newPosition,
-                        success: true,
-                        identifier: message.data.identifier
-                    };
+                        spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
+                            expect(message.data.method).toBe("copyrightPosition");
 
-                    spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
-                        var deferredResult = this._deferredMap.get(message.data.identifier);
+                            // Plant a response that the agent knows a new value
+                            var responseMessage = {
+                                method: message.data.method,
+                                result: newPosition,
+                                success: true,
+                                identifier: message.data.identifier
+                            };
 
-                        deferredResult.promise.then(function (success) {
-                            // Test is done when the page has received the actual value
-                            deferredUpdateFromChannel.resolve();
+                            spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
+                                var deferredResult = this._deferredMap.get(message.data.identifier);
+
+                                deferredResult.promise.then(function (success) {
+                                    // Test is done when the page has received the actual value
+                                    deferredUpdateFromChannel.resolve();
+                                });
+
+                                return this.handleAgentMessage.originalValue.call(this, message);
+                            });
+
+                            mockWindow.remotePort.postMessage(responseMessage);
                         });
 
-                        return this.handleAgentMessage.originalValue.call(this, message);
-                    });
+                        expect(pageDocument.copyrightPosition).toBe(pageDocument._copyrightPosition);
 
-                    mockWindow.remotePort.postMessage(responseMessage);
-                });
-
-                expect(pageDocument.copyrightPosition).toBe(pageDocument._copyrightPosition);
-
-                return deferredUpdateFromChannel.promise.then(function () {
-                    expect(pageDocument._copyrightPosition).toBe(newPosition);
-                }).timeout(WAITSFOR_TIMEOUT);
-            });
-
-            it("should submit the specified value to the quill agent for applying", function () {
-                var deferredSetPosition = Promise.defer();
-
-                spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
-                    expect(message.data.method).toBe("setCopyrightPosition");
-                    deferredSetPosition.resolve();
-                });
-
-                pageDocument.copyrightPosition = newPosition;
-
-                return deferredSetPosition.promise.timeout(WAITSFOR_TIMEOUT);
-            });
-
-            //TODO we should actually update with whatever the quill agent tells us we should upon rejection
-            it("must be updated with the original value if the quill agent rejects the change", function () {
-                mockResponses.setCopyrightPosition = {result: null, success: false};
-                var deferredSetPosition = Promise.defer();
-
-                // prep document without accessing channel; original is "top," as the backend would answer
-                var originalPosition = pageDocument._copyrightPosition = mockResponses.copyrightPosition.result;
-
-                spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
-                    var deferredResult = this._deferredMap.get(message.data.identifier);
-
-                    deferredResult.promise.fail(function (error) {
-                        //Original internal promise rejected, test is done; verify rollback
-                        deferredSetPosition.resolve();
-                    });
-
-                    return this.handleAgentMessage.originalValue.call(this, message);
-                });
-
-                pageDocument.copyrightPosition = newPosition;
-                expect(pageDocument._copyrightPosition).toBe(newPosition);
-
-                return deferredSetPosition.promise.then(function () {
-                    expect(pageDocument._copyrightPosition).toBe(originalPosition);
-                }).timeout(WAITSFOR_TIMEOUT);
-            });
-
-        });
-
-    });
-
-    describe("the copyright presence API", function () {
-
-        beforeEach(function () {
-            pageDocument.pageWindow = mockWindow;
-        });
-
-        describe("via the optimistic property", function () {
-
-            it("should eventually update with the latest value", function () {
-                mockResponses.hasCopyright = {result: false, success: true};
-                var deferredUpdateFromChannel = Promise.defer();
-
-                spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
-                    expect(message.data.method).toBe("hasCopyright");
-
-                    // Plant a response that the agent knows a new value
-                    var responseMessage = {
-                        method: message.data.method,
-                        result: true,
-                        success: true,
-                        identifier: message.data.identifier
-                    };
-
-                    spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
-                        var deferredResult = this._deferredMap.get(message.data.identifier);
-
-                        deferredResult.promise.then(function (success) {
-                            // Test is done when the page has received the actual value
-                            deferredUpdateFromChannel.resolve();
+                        return deferredUpdateFromChannel.promise.then(function () {
+                            expect(pageDocument._copyrightPosition).toBe(newPosition);
                         });
 
-                        return this.handleAgentMessage.originalValue.call(this, message);
-                    });
-
-                    mockWindow.remotePort.postMessage(responseMessage);
+                    }).timeout(WAITSFOR_TIMEOUT);
                 });
 
-                expect(pageDocument.hasCopyright).toBe(pageDocument._hasCopyright);
+                it("should submit the specified value to the quill agent for applying", function () {
+                    return connectedDocumentPromise.then(function () {
+                        var deferredSetPosition = Promise.defer();
 
-                return deferredUpdateFromChannel.promise.then(function () {
-                    expect(pageDocument._hasCopyright).toBe(true);
-                }).timeout(WAITSFOR_TIMEOUT);
+                        spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
+                            expect(message.data.method).toBe("setCopyrightPosition");
+                            deferredSetPosition.resolve();
+                        });
+
+                        pageDocument.copyrightPosition = newPosition;
+
+                        return deferredSetPosition.promise;
+                    }).timeout(WAITSFOR_TIMEOUT);
+                });
+
+                //TODO we should actually update with whatever the quill agent tells us we should upon rejection
+                it("must be updated with the original value if the quill agent rejects the change", function () {
+                    return connectedDocumentPromise.then(function () {
+                        mockResponses.setCopyrightPosition = {result: null, success: false};
+                        var deferredSetPosition = Promise.defer();
+
+                        // prep document without accessing channel; original is "top," as the backend would answer
+                        var originalPosition = pageDocument._copyrightPosition = mockResponses.copyrightPosition.result;
+
+                        spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
+
+                            var deferredResult = this._deferredMap.get(message.data.identifier);
+
+        //                    debugger
+                            if (deferredResult) {
+                                deferredResult.promise.fail(function (error) {
+                                    //Original internal promise rejected, test is done; verify rollback
+                                    deferredSetPosition.resolve();
+                                });
+                            }
+
+                            return this.handleAgentMessage.originalValue.call(this, message);
+                        });
+
+                        pageDocument.copyrightPosition = newPosition;
+                        expect(pageDocument._copyrightPosition).toBe(newPosition);
+
+                        return deferredSetPosition.promise.then(function () {
+                            expect(pageDocument._copyrightPosition).toBe(originalPosition);
+                        });
+                    }).timeout(WAITSFOR_TIMEOUT);
+                });
+
             });
 
         });
 
-    });
+        describe("the copyright presence API", function () {
 
-    describe("the document API", function () {
+            beforeEach(function () {
+                connectedDocumentPromise = connectDocumentToWindow(pageDocument, mockWindow);
+            });
 
-        var documentContent;
+            describe("via the optimistic property", function () {
 
-        beforeEach(function () {
-            pageDocument.pageWindow = mockWindow;
-            documentContent = '<html><head><title>Foo</title></head><body>Bar</body></html>';
-        });
+                it("should eventually update with the latest value", function () {
+                    return connectedDocumentPromise.then(function () {
+                        mockResponses.hasCopyright = {result: false, success: true};
+                        var deferredUpdateFromChannel = Promise.defer();
 
-        describe("via the optimistic property", function () {
+                        spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
+                            expect(message.data.method).toBe("hasCopyright");
 
-            it("should eventually update with the latest value", function () {
-                mockResponses.documentContent = {result: documentContent, success: true};
-                var deferredUpdateFromChannel = Promise.defer();
+                            // Plant a response that the agent knows a new value
+                            var responseMessage = {
+                                method: message.data.method,
+                                result: true,
+                                success: true,
+                                identifier: message.data.identifier
+                            };
 
-                spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
-                    expect(message.data.method).toBe("documentContent");
+                            spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
+                                var deferredResult = this._deferredMap.get(message.data.identifier);
 
-                    // Plant a response that the agent knows a new value
-                    var responseMessage = {
-                        method: message.data.method,
-                        result: '<html><head><title>Baz</title></head><body>Quz</body></html>',
-                        success: true,
-                        identifier: message.data.identifier
-                    };
+                                deferredResult.promise.then(function (success) {
+                                    // Test is done when the page has received the actual value
+                                    deferredUpdateFromChannel.resolve();
+                                });
 
-                    spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
-                        var deferredResult = this._deferredMap.get(message.data.identifier);
+                                return this.handleAgentMessage.originalValue.call(this, message);
+                            });
 
-                        deferredResult.promise.then(function (success) {
-                            // Test is done when the page has received the actual value
-                            deferredUpdateFromChannel.resolve();
+                            mockWindow.remotePort.postMessage(responseMessage);
                         });
 
-                        return this.handleAgentMessage.originalValue.call(this, message);
-                    });
+                        expect(pageDocument.hasCopyright).toBe(pageDocument._hasCopyright);
 
-                    mockWindow.remotePort.postMessage(responseMessage);
+                        return deferredUpdateFromChannel.promise.then(function () {
+                            expect(pageDocument._hasCopyright).toBe(true);
+                        });
+                    }).timeout(WAITSFOR_TIMEOUT);
                 });
 
-                expect(pageDocument.document).toBeNull();
+            });
 
-                return deferredUpdateFromChannel.promise.then(function () {
-                    expect(pageDocument._document).toBeTruthy();
-                }).timeout(WAITSFOR_TIMEOUT);
+        });
+
+        describe("the document API", function () {
+
+            var documentContent;
+
+            beforeEach(function () {
+                documentContent = '<html><head><title>Foo</title></head><body>Bar</body></html>';
+                connectedDocumentPromise = connectDocumentToWindow(pageDocument, mockWindow);
+            });
+
+            describe("via the optimistic property", function () {
+
+                it("should eventually update with the latest value", function () {
+                    return connectedDocumentPromise.then(function () {
+                        mockResponses.documentContent = {result: documentContent, success: true};
+                        var deferredUpdateFromChannel = Promise.defer();
+
+                        spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
+                            expect(message.data.method).toBe("documentContent");
+
+                            // Plant a response that the agent knows a new value
+                            var responseMessage = {
+                                method: message.data.method,
+                                result: '<html><head><title>Baz</title></head><body>Quz</body></html>',
+                                success: true,
+                                identifier: message.data.identifier
+                            };
+
+                            spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
+                                var deferredResult = this._deferredMap.get(message.data.identifier);
+
+                                deferredResult.promise.then(function (success) {
+                                    // Test is done when the page has received the actual value
+                                    deferredUpdateFromChannel.resolve();
+                                });
+
+                                return this.handleAgentMessage.originalValue.call(this, message);
+                            });
+
+                            mockWindow.remotePort.postMessage(responseMessage);
+                        });
+
+                        expect(pageDocument.document).toBeNull();
+
+                        return deferredUpdateFromChannel.promise.then(function () {
+                            expect(pageDocument._document).toBeTruthy();
+                        });
+                    }).timeout(WAITSFOR_TIMEOUT);
+                });
+
             });
 
         });

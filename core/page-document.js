@@ -125,25 +125,27 @@ var PageDocument = exports.PageDocument = Montage.specialize({
             return this._pageWindow;
         },
         set: function (value) {
-
-            if (this._agentPort) {
-                this.disconnect();
+            if (value === this._pageWindow) {
+                return;
             }
 
-            if (value !== this._pageWindow) {
-                this._pageWindow = value;
-            }
+            this._pageWindow = value;
 
-            // The pageWindow rarely changes as we're usually working with the same iframe
-            // So when that frame opens document A, B, and then back to A
-            // The pageWindow for documentA will not have changed, but the document will have
-            // changed, so we need to establish a new connection
             if (value) {
                 this.connect();
+            } else {
+                this.disconnect();
             }
         }
     },
 
+    _channelReady: {
+        value: false
+    },
+
+    // We need to reconnect when
+    // we get a new pageWindow we didn't know of before
+    // we get back the same pagewindow
     connect: {
         value: function () {
             if (!this._pageWindow) {
@@ -161,9 +163,14 @@ var PageDocument = exports.PageDocument = Montage.specialize({
                 }
             })(this);
 
+            this._channelReady = false;
             this._pageWindow.postMessage("openChannel", "fs://localhost", [channel.port2]);
+        }
+    },
 
-            //TODO improve queue management; it's probably very brittle as implemented
+    //TODO improve queue management; it's probably very brittle as implemented
+    _sendQueuedMessages: {
+        value: function() {
             var self = this;
             this._operationQueue.forEach(function (message) {
                 console.log("PERFORM QUEUED:", message);
@@ -176,6 +183,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
     disconnect: {
         value: function () {
             if (this._agentPort) {
+                this._channelReady = false;
                 this._agentPort.close();
                 this._agentPort = null;
             }
@@ -196,9 +204,17 @@ var PageDocument = exports.PageDocument = Montage.specialize({
                 deferredIdentifier = data.identifier,
                 deferredResult;
 
-            console.log("parent: onmessage", data);
+            console.log("parent" + this.name + ": onmessage", data);
 
-            if (deferredIdentifier) {
+            if ("disconnect" === data) {
+                this.pageWindow = null;
+            } else if ("ready" === data) {
+                this._channelReady = true;
+
+                //TODO opportunity to clean this up; it sends multiple messages unnecessarily
+                this.refresh();
+                this._sendQueuedMessages();
+            } else if (deferredIdentifier) {
                 deferredResult = this._deferredMap.get(deferredIdentifier);
 
                 if (deferredResult) {
@@ -248,7 +264,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
                 message.args = args;
             }
 
-            if (this._agentPort) {
+            if (this._agentPort && this._channelReady) {
                 this._agentPort.postMessage(message);
             } else {
                 //TODO improve this whole queueing when there's no connection open

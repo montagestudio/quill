@@ -19,12 +19,21 @@ QuillAgent.prototype = {
     handleEvent: function (evt) {
         if ("load" === evt.type) {
             this.htmlController = new HtmlController(evt.target);
-
             window.addEventListener("message", this, false);
+        } else if ("beforeunload" === evt.type && this.remotePort) {
+
+            this.remotePort.postMessage("disconnect");
+
+            window.removeEventListener("message", this, false);
+            window.addEventListener("load", this, false);
+            this.remotePort.close();
+            this.remotePort = null;
+
         } else if ("message" === evt.type || "http://client" === evt.origin) {
             if ("openChannel" === evt.data && evt.ports && evt.ports.length > 0) {
                 this.remotePort = evt.ports[0];
                 this.remotePort.onmessage = this.handleChannelMessage.bind(this);
+                this.remotePort.postMessage("ready");
             }
         }
     },
@@ -61,3 +70,4 @@ QuillAgent.prototype = {
 
 var agent = new QuillAgent();
 window.addEventListener("load", agent, false);
+window.addEventListener("beforeunload", agent, false);
