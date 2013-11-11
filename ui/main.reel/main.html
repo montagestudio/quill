@@ -96,7 +96,13 @@
                     "pages": {"<-": "@owner.pages"},
                     "index": {"<-": "@owner.currentPageIndex"},
                     "showOverlay": {"<->": "@spreadView.overlayOpacity != '1'"}
-                }
+                },
+                "listeners": [
+                    {
+                        "type": "loadedPage",
+                        "listener": {"@": "owner"}
+                    }
+                ]
             },
 
             "owner": {
@@ -108,6 +114,40 @@
                 "bindings": {
                     "currentPage": {"<-": "@owner.pagesList.selection.0"}
                 }
+            },
+
+            "copyrightCondition": {
+                "prototype": "montage/ui/condition.reel",
+                "properties": {
+                    "element": {"#": "copyrightCondition"},
+                    "removalStrategy": "hide"
+                },
+                "bindings": {
+                    "condition": {"<-": "!!@owner.currentPage.pageWindow && @owner.currentPage.hasCopyright"}
+                }
+            },
+
+            "copyrightPosition": {
+                "prototype": "ui/tools/position-inspector.reel",
+                "properties": {
+                    "element": {"#": "copyrightPosition"}
+                },
+                "bindings": {
+                    "object": {"<-": "@owner.currentPage"}
+                }
+            },
+
+            "saveButton": {
+                "prototype": "matte/ui/button.reel",
+                "properties": {
+                    "element": {"#": "saveButton"}
+                },
+                "listeners": [
+                    {
+                        "type": "action",
+                        "listener": {"@": "owner"}
+                    }
+                ]
             }
 
         }
@@ -118,11 +158,19 @@
 
     <div data-montage-id="main" class="main">
         <header>
+
+            <section data-montage-id="copyrightCondition" class="main-inspector">
+                <h1 class="main-inspector-title">Copyright</h1>
+                <div data-montage-id="copyrightPosition"></div>
+                <button data-montage-id="saveButton">Save</button>
+            </section>
+
             <button data-montage-id="viewmodeButton" class="Action-button Action-button--viewmode"></button>
             <img src="/import-activity/assets/images/pdf-icon.png" class="overlay-icon">
             <input type="range" data-montage-id="opacity" class="overlay-range"/>
             <img src="/import-activity/assets/images/epub-icon.png" class="overlay-icon">
             <input type="checkbox" data-montage-id="autoOpacity" class="auto-opacity"/>
+
         </header>
         <div class="content">
             <nav class="navigation">

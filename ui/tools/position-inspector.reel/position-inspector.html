@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <link rel="stylesheet" type="text/css" href="position-inspector.css">
+    <script type="text/montage-serialization">
+    {
+        "owner": {
+            "prototype": "ui/tools/position-inspector.reel",
+            "properties": {
+                "element": {"#": "positionInspector"}
+            }
+        },
+        "positionController": {
+            "prototype": "montage/core/radio-button-controller",
+            "bindings": {
+                "value": {"<->": "@owner.object.copyrightPosition"}
+            }
+        },
+        "bottomPosition": {
+            "prototype": "matte/ui/radio-button.reel",
+            "properties": {
+                "element": {"#": "bottomPosition"},
+                "value": "bottom",
+                "radioButtonController": {"@": "positionController"}
+            }
+        },
+        "leftPosition": {
+            "prototype": "matte/ui/radio-button.reel",
+            "properties": {
+                "element": {"#": "leftPosition"},
+                "value": "left",
+                "radioButtonController": {"@": "positionController"}
+            }
+        },
+        "rightPosition": {
+            "prototype": "matte/ui/radio-button.reel",
+            "properties": {
+                "element": {"#": "rightPosition"},
+                "value": "right",
+                "radioButtonController": {"@": "positionController"}
+            }
+        },
+        "topPosition": {
+            "prototype": "matte/ui/radio-button.reel",
+            "properties": {
+                "element": {"#": "topPosition"},
+                "value": "top",
+                "radioButtonController": {"@": "positionController"}
+            }
+        }
+    }
+    </script>
+</head>
+<body>
+    <div data-montage-id="positionInspector" class="PositionInspector">
+        <section>
+            <label>
+                <input type="radio" data-montage-id="topPosition">
+                Top
+            </label>
+            <label>
+                <input type="radio" data-montage-id="rightPosition">
+                Right
+            </label>
+            <label>
+                <input type="radio" data-montage-id="bottomPosition">
+                Bottom
+            </label>
+            <label>
+                <input type="radio" data-montage-id="leftPosition">
+                Left
+            </label>
+        </section>
+    </div>
+</body>
+</html>
