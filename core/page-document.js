@@ -59,24 +59,28 @@ var PageDocument = exports.PageDocument = Montage.specialize({
             return this._url;
         },
         set: function(value) {
-            // inspired by http://james.padolsey.com/javascript/parsing-urls-with-the-dom/
-            var a =  document.createElement('a');
-            a.href = value;
+            if (value) {
+                // inspired by http://james.padolsey.com/javascript/parsing-urls-with-the-dom/
+                var a =  document.createElement('a');
+                a.href = value;
 
-            if (!a.search) {
-                a.search = "?";
+                if (!a.search) {
+                    a.search = "?";
+                } else {
+                    a.search += "&";
+                }
+
+                // Insert the script tags needed to communicate with the page
+                var search = Object.map(PageDocument.URL_PARAMS, function (value, key) {
+                    return encodeURIComponent(key) + "=" + encodeURIComponent(value);
+                }).join("&");
+
+                a.search += search;
+
+                this._url = a.href;
             } else {
-                a.search += "&";
+                this._url = value;
             }
-
-            // Insert the script tags needed to communicate with the page
-            var search = Object.map(PageDocument.URL_PARAMS, function (value, key) {
-                return encodeURIComponent(key) + "=" + encodeURIComponent(value);
-            }).join("&");
-
-            a.search += search;
-
-            this._url = a.href;
         }
     },
 
