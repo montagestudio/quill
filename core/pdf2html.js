@@ -1928,7 +1928,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
 
                 if (typeof fillRule === "string") {
-                    pathElem.style.fileRule = fillRule;
+                    pathElem.style.fillRule = fillRule;
                 }
                 pathElem.style.fill = context.current.fillColor;
 // JFD TODO: check if the canvas color already include the alpha information!
@@ -2333,7 +2333,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 gElem.style.fill = current.fillColor;
                 gElem.style.stoke = "none";             // In case we do not call stoke after calling fill
                 if (fillRule !== undefined) {
-                    gElem.style.fileRule = fillRule;
+                    gElem.style.fillRule = fillRule;
                 }
                 this._svgHasDrawnElements = true;
                 this._svgElementDrawn = true;
