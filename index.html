@@ -23,6 +23,8 @@
       // Specify the main script used to create a new PDF.JS web worker.
       // In production, change this to point to the combined `pdf.js` file.
       PDFJS.workerSrc = '../node_modules/pdf.js/src/worker_loader.js';
+      PDFJS.useTrimBox = true;
+
 //      PDFJS.disableWorker = true;
 //      globalScope.pdfOpLogging = false;
     </script>
