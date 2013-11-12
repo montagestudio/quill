@@ -176,8 +176,13 @@ exports.Main = Component.specialize({
                                                 options["original-resolution"] = Math.round((view[2] - view[0]) * self.scale) + "x" +
                                                     Math.round((view[3] - view[1]) * self.scale);
 
-                                                options["book-id"] = options["book-id"] || self._document.pdfInfo.fingerprint;
-                                                options["document-title"] = options["document-title"] || title;
+                                                if (options["book-id"] === "0" || !options["book-id"]) {
+                                                    options["book-id"] = self._document.pdfInfo.fingerprint;
+                                                }
+
+                                                if (options["document-title"] === "Untitled" || !options["document-title"]) {
+                                                    options["document-title"] = title;
+                                                }
 
                                                 // Time to get the table of content
                                                 return self._converter.getOutline(self._document).then(function(toc) {
