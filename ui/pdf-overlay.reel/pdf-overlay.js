@@ -113,67 +113,69 @@ exports.PdfOverlay = Component.specialize({
                 item = this.item,
                 canvas = this.element,
                 ctx = canvas.getContext('2d'),
-                pageNumber = item.url.match(/\/([0-9]*).xhtml$/)[1];
+                pageNumber = parseInt(item.url.match(/\/([0-9]*).xhtml/)[1], 10);
 
-            if (!_renderingPage) {
-                _renderingPage = item;
+            if (pageNumber) {
+                if (!_renderingPage) {
+                    _renderingPage = item;
 
-                var finalize = function() {
-                    var object = _renderingQueue.splice(0, 1)[0];
+                    var finalize = function() {
+                        var object = _renderingQueue.splice(0, 1)[0];
 
-                    _renderingPage = null;
-                    if (object) {
-                        object.needsDraw = true;
-                    }
-                };
+                        _renderingPage = null;
+                        if (object) {
+                            object.needsDraw = true;
+                        }
+                    };
 
-                self._getDocument(this.originalUrl).then(
-                    function(pdf) {
-                        pdf.getPage(pageNumber).then(
-                            function(page) {
-                                var viewport = page.getViewport(1.0),
-                                    scale = canvas.width /viewport.width,
-                                    renderContext;
+                    self._getDocument(this.originalUrl).then(
+                        function(pdf) {
+                            pdf.getPage(pageNumber).then(
+                                function(page) {
+                                    var viewport = page.getViewport(1.0),
+                                        scale = canvas.width /viewport.width,
+                                        renderContext;
 
-                                //Adjust the viewport to fit the canvas size
-                                renderContext = {
-                                    canvasContext: ctx,
-                                    viewport: page.getViewport(scale)
-                                },
-
-                                page.render(renderContext).then(
-                                    finalize,
-                                    function(exception) {
-                                        console.log("ERROR:", exception.message);
-                                        finalize();
+                                    //Adjust the viewport to fit the canvas size
+                                    renderContext = {
+                                        canvasContext: ctx,
+                                        viewport: page.getViewport(scale)
                                     },
-                                    function(progress) {
-                                    });
-                            },
-                            function(exception) {
-                                console.log("ERROR:", exception.message);
-                                finalize();
-                            },
-                            function(progress) {
-                            });
-                    },
-                    function(exception) {
-                        console.log("ERROR:", exception.message)
-                        finalize();
+
+                                    page.render(renderContext).then(
+                                        finalize,
+                                        function(exception) {
+                                            console.log("ERROR:", exception.message);
+                                            finalize();
+                                        },
+                                        function(progress) {
+                                        });
+                                },
+                                function(exception) {
+                                    console.log("ERROR:", exception.message);
+                                    finalize();
+                                },
+                                function(progress) {
+                                });
+                        },
+                        function(exception) {
+                            console.log("ERROR:", exception.message)
+                            finalize();
+                        });
+                } else {
+                    var found = false;
+
+                    _renderingQueue.some(function(queueItem) {
+                        if (queueItem.uuid == self.uuid) {
+                            found = true;
+                            return true;
+                        }
+                        return false;
                     });
-            } else {
-                var found = false;
 
-                _renderingQueue.some(function(queueItem) {
-                    if (queueItem.uuid == self.uuid) {
-                        found = true;
-                        return true;
+                    if (!found) {
+                        _renderingQueue.push(this);
                     }
-                    return false;
-                });
-
-                if (!found) {
-                    _renderingQueue.push(this);
                 }
             }
         }

@@ -268,7 +268,8 @@ exports.SpreadView = Component.specialize({
                 pagesWrapper = this.element.getElementsByClassName("spread-page-wrapper"),
                 divider = this.element.getElementsByClassName("spread-divider")[0],
                 top = Math.floor((this._clientHeight - Math.max(leftPage.height, rightPage.height)) / 2),
-                style;
+                style,
+                pageNumber;
 
             // Update the size an position of the wrappers
             style = pagesWrapper[0].style;
@@ -310,8 +311,15 @@ exports.SpreadView = Component.specialize({
             } else {
                 leftPage.element.style.opacity = 1;
             }
+
+            // If page number is 0, ignore the overlay (ideally, the opacity should be set by the overlay components)
             if (this.showOverlay && rightPage.item && rightPage.item.type === "page" && rightPage.item !== this._dummyPage) {
-                rightPage.element.style.opacity = this.overlayOpacity;
+                pageNumber = parseInt(rightPage.item.url.match(/\/([0-9]*).xhtml/)[1], 10);
+                if (pageNumber) {
+                    rightPage.element.style.opacity = this.overlayOpacity;
+                } else {
+                    rightPage.element.style.opacity = 1;
+                }
             } else {
                 rightPage.element.style.opacity = 1;
             }
