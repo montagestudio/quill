@@ -35,6 +35,7 @@ body {
     background-image: linear-gradient(hsla(0,0%,32%,.99), hsla(0,0%,27%,.95));
     box-shadow: inset 1px 0 0 hsla(0,0%,100%,.08), inset 0 1px 1px hsla(0,0%,0%,.15), inset 0 -1px 0 hsla(0,0%,100%,.05), 0 1px 0 hsla(0,0%,0%,.15), 0 1px 1px hsla(0,0%,0%,.1);
     overflow: hidden;
+    -webkit-user-select: none;
 }
 
 .Toolbar-group {
@@ -45,10 +46,10 @@ body {
 /* Buttons */
 
 .Toolbar-button.matte-Button {
-    color: hsla(0,0%,100%,.6);
+    color: hsla(0,0%,100%,.8);
     text-shadow: 0 1px 0 hsla(0,0%,0%,.2);
     border-color: hsl(0,0%,15%);
-    background-image: -webkit-linear-gradient(top, hsl(0,0%,30%), hsl(0,0%,24%) );
+    background-image: -webkit-linear-gradient(top, hsl(0,0%,44%), hsl(0,0%,34%) );
     box-shadow: inset 0 1px 1px hsla(0,0%,100%,.1), inset 0 -1px 1px hsla(0,0%,0%,.06), 0 1px 0 hsla(0,0%,100%,.1);
 }
 
@@ -90,12 +91,34 @@ body {
 }
 
 .Overlay-range {
-    position: relative;
-    top: 3px;
+    vertical-align: middle;
+    border-radius: 3px;
+    border-color: hsl(0,0%,15%);
+    background-color: hsla(0,0%,0%,.1);
+    box-shadow: inset 0 -1px 1px hsla(0,0%,0%,.06), 0 1px 0 hsla(0,0%,100%,.1);
 }
 
-.Overlay-autoOpacity {
-    
+.Overlay-range .matte-InputRange-thumb {
+    width: 14px;
+    border-radius: inherit;
+    border-color: hsl(160,80%,12%);
+    background-image: -webkit-linear-gradient(top, hsl(160,80%,42%), hsl(160,80%,32%) );
+    background-clip: content-box;
+    box-shadow: inset 0 1px 1px hsla(0,0%,100%,.1), inset 0 -1px 1px hsla(0,0%,0%,.06), 0 3px 3px hsla(0,0%,0%,0.2);
+}
+
+.Overlay-autoOpacity.matte-InputCheckbox {
+    margin: 0 0 0 10px;
+    border-color: hsl(0,0%,15%);
+    background-image: -webkit-linear-gradient(top, hsl(0,0%,44%), hsl(0,0%,34%) );
+    box-shadow: inset 0 1px 1px hsla(0,0%,100%,.1), inset 0 -1px 1px hsla(0,0%,0%,.06), 0 1px 0 hsla(0,0%,100%,.1);
+}
+
+.Overlay-autoOpacity.matte-InputCheckbox:checked {
+    background-image: none;
+    border-width: 5px;
+    background-color: hsl(160,80%,50%);
+    box-shadow: inset 0 -1px 1px hsla(0,0%,0%,.06), 0 1px 0 hsla(0,0%,100%,.1);
 }
 
 
