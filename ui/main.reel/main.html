@@ -157,21 +157,25 @@
 <body>
 
     <div data-montage-id="main" class="main">
-        <header>
-
-            <section data-montage-id="copyrightCondition" class="main-inspector">
-                <h1 class="main-inspector-title">Copyright</h1>
-                <div data-montage-id="copyrightPosition"></div>
-                <button data-montage-id="saveButton">Save</button>
+        <header class="Toolbar">
+            <section class="Toolbar-group">
+                <button data-montage-id="viewmodeButton" class="Button--viewmode"></button>
+                <div class="Overlay">
+                    <img class="Overlay-icon" src="/import-activity/assets/images/pdf-icon.png">
+                    <input data-montage-id="opacity" class="Overlay-range" type="range">
+                    <img class="Overlay-icon" src="/import-activity/assets/images/epub-icon.png">
+                    <label>
+                        <input data-montage-id="autoOpacity" class="Overlay-autoOpacity" type="checkbox">auto
+                    </label>
+                </div>
             </section>
-
-            <button data-montage-id="viewmodeButton" class="Action-button Action-button--viewmode"></button>
-            <img src="/import-activity/assets/images/pdf-icon.png" class="overlay-icon">
-            <input type="range" data-montage-id="opacity" class="overlay-range"/>
-            <img src="/import-activity/assets/images/epub-icon.png" class="overlay-icon">
-            <input type="checkbox" data-montage-id="autoOpacity" class="auto-opacity"/>
-
+            <section data-montage-id="copyrightCondition" class="Toolbar-group Copyright">
+                <label class="Copyright-title">Copyright</label>
+                <div data-montage-id="copyrightPosition"></div>
+                <button data-montage-id="saveButton" class="Copyright-saveButton">Save</button>
+            </section>
         </header>
+        
         <div class="content">
             <nav class="navigation">
                 <ul data-montage-id="pages-list" class="pages-list">
