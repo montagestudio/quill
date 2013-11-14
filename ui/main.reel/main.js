@@ -297,9 +297,23 @@ exports.Main = Component.specialize({
             //TODO this isn't exactly how I would expect this to work, this is just enough to exercise
             // some of the next steps toward saving
             if (this.currentPage) {
-                this.currentPage.getDocument().then(function (doc) {
+                var pageToSave = this.currentPage,
+                    self = this;
+
+                pageToSave.getDocument().then(function (doc) {
                     var content = (new XMLSerializer()).serializeToString(doc);
-                    console.log("content", content);
+
+                    //TODO actually use an environment bridge
+                    var pathMatch = pageToSave.url.match(/fs:\/\/localhost(.*)\?/);
+
+                    if (pathMatch || !pathMatch[1]) {
+                        var path = pathMatch[1];
+                        var flags = {flags: "w", charset: 'utf-8'};
+                        console.log("Saving to ", path);
+                        return self.backend.get("fs").invoke("write", path, content, flags);
+                    } else {
+                        throw new Error("Could not find path to save" + pageToSave.url);
+                    }
                 }).done();
             }
         }
