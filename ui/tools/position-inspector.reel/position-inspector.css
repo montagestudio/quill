@@ -1,3 +1,53 @@
 .PositionInspector {
-
+    display: flex;
 }
+
+.PositionInspector-radio.matte-RadioButton {
+    position: relative;
+    margin: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 0;
+    color: hsla(0,0%,100%,.8);
+    text-shadow: 0 1px 0 hsla(0,0%,0%,.2);
+    border-color: hsl(0,0%,15%);
+    border-left-width: 0;
+    background-image: -webkit-linear-gradient(top, hsl(0,0%,44%), hsl(0,0%,34%) );
+    box-shadow: inset 0 1px 1px hsla(0,0%,100%,.1), inset 0 -1px 1px hsla(0,0%,0%,.06), 0 1px 0 hsla(0,0%,100%,.1);
+}
+
+.PositionInspector .PositionInspector-radio:first-child {
+    border-left-width: 1px;
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+}
+
+.PositionInspector .PositionInspector-radio:last-child {
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+.PositionInspector-radio:before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: url(position.svg) no-repeat;
+    opacity: .6;
+}
+
+.PositionInspector-radio--top:before { background-position-x: 0; }
+.PositionInspector-radio--right:before { background-position-x: -28px; }
+.PositionInspector-radio--bottom:before { background-position-x: -56px; }
+.PositionInspector-radio--left:before { background-position-x: -84px; }
+
+.PositionInspector-radio.matte-RadioButton.montage-RadioButton--checked {
+    color: hsla(0,0%,100%,.3);
+    border-color: hsl(0,0%,15%);
+    background-image: -webkit-linear-gradient(top, hsl(0,0%,24%), hsl(0,0%,18%) );
+    box-shadow: inset 0 1px 3px hsla(0,0%,0%,.3), 0 1px 0 hsla(0,0%,100%,.1);
+}
+
+.PositionInspector-radio.montage-RadioButton--checked:before {
+    opacity: 1;
+}
+
