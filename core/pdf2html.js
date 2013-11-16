@@ -941,6 +941,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     miterLimit: 10,
                     lineDash: "",
                     lineDashOffset: 0,
+                    mask: null,
+                    filter: null,
 
                     //Text States
                     x: 0,
@@ -989,14 +991,22 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             // Group
 
             beginGroup: function(context, group) {
-                var currentState = this._svgStates[0],
-                    gElem = document.createElementNS(xmlns, "g"),
-                    groupID = this.owner._getNextElementUID("group");
+                var isMaskGroup = group.smask,
+                    currentState = this._svgStates[0],
+                    gElem = document.createElementNS(xmlns, isMaskGroup ? "mask" : "g"),
+                    groupID = this.owner._getNextElementUID(isMaskGroup ? "mask" : "group");
 
                 // JFD TODO: set group transform
+
                 gElem.setAttribute("id", groupID);
                 if (currentState.fillAlpha !== 1) {
                     gElem.style.opacity = currentState.fillAlpha;
+                }
+
+                if (isMaskGroup) {
+                    currentState.mask = groupID;
+                } else {
+                    this.setupElementStyle(gElem, currentState);
                 }
 
                 this.owner._rootNodeStack[0].appendChild(gElem);
@@ -1190,16 +1200,40 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         break;
                     case 'BM':
                         if (value && value.name && (value.name !== 'Normal')) {
-                            var mode = value.name.replace(/([A-Z])/g, function(c) {
-                                return '-' + c.toLowerCase();
-                            }).substring(1);
-//                                self.ctx.globalCompositeOperation = mode;
-//                                if (self.ctx.globalCompositeOperation !== mode) {
-                            console.warn('globalCompositeOperation "' + mode + '" is not supported');
-//                                }
-                        }// else {
-//                                self.ctx.globalCompositeOperation = 'source-over';
-                        //}
+                            var supportedBlendMode = ["multiply"],
+                                mode = value.name.replace(/([A-Z])/g, function(c) {
+                                    return '-' + c.toLowerCase();
+                                }).substring(1)
+
+                            if (supportedBlendMode.indexOf(mode) !== -1) {
+                                var defs = self._svgElement.getElementsByTagName("defs")[0],
+                                    filter,
+                                    feBlend;
+
+                                if (!defs) {
+                                    defs = document.createElementNS(xmlns, "defs");
+                                    self._svgElement.insertBefore(defs, self._svgElement.firstChild);
+                                }
+                                filter = document.getElementById("filter-" + mode);
+                                if (!filter) {
+                                    filter = document.createElementNS(xmlns, "filter");
+                                    filter.setAttribute("id", "filter-" + mode);
+
+                                    feBlend = document.createElementNS(xmlns, "feBlend");
+                                    feBlend.setAttribute("mode", mode);
+                                    feBlend.setAttribute("in1", "BackgroundImage");          // JFD TODO: not 100% sure this is the right value to use!
+
+                                    filter.appendChild(feBlend);
+                                    defs.appendChild(filter);
+                                }
+                                self._svgStates[0].filter = "filter-" + mode;
+                                console.log("set blend mode:", mode);
+                            } else {
+                                console.warn("unsupported blend mode", mode);
+                            }
+                        } else {
+                            self._svgStates[0].filter = null;
+                        }
                         break;
                     }
                 });
@@ -1425,6 +1459,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     }
                     rectElem.style.stroke = "none";
 
+                    this.setupElementStyle(rectElem, currentState);
+
                     this.owner._rootNodeStack[0].appendChild(maskElem);
                     this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
                     this.owner._rootNodeStack[0].appendChild(rectElem);
@@ -1442,6 +1478,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         imageElem.setAttribute("width", roundValue(width * geometry.scaleX, 5));
                         imageElem.setAttribute("height", roundValue(height * geometry.scaleY, 5));
                     }
+
+                    this.setupElementStyle(imageElem, currentState);
 
                     this.owner._rootNodeStack[0].appendChild(imageElem);
                 }
@@ -1590,7 +1628,9 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                 }
                             })
                         }
-                    })
+                    });
+
+                    console.log("    text:", text)
                 }
 
 
@@ -1738,6 +1778,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         unsupportedFeature.lineWidth ++;
                     }
                 }
+
+                this.setupElementStyle(textElem, current);
 
                 if (needTransform) {
                     textElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
@@ -1939,9 +1981,10 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 }
                 pathElem.style.stoke = "none";             // In case we do not call stoke after calling fill
 
+                this.setupElementStyle(pathElem, current);
+
                 this.owner._rootNodeStack[0].appendChild(pathElem);
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
-
                 return pathElem;
             },
 
@@ -1993,6 +2036,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     }
                 }
 
+                this.setupElementStyle(pathElem, current);
+
                 if (needNewPathElem) {
                     this.owner._rootNodeStack[0].appendChild(pathElem);
                     this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
@@ -2032,6 +2077,19 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
 
             // Utilities
+
+            setupElementStyle: function(element, state) {
+                if (state.mask) {
+                    element.style.mask = "url(#" + state.mask + ")";
+                    // You can only apply the mask once. Therefore if the element is a group, clear the mask from the state
+                    if (element.tagName === "g") {
+                        state.mask = null;
+                    }
+                }
+                if (state.filter) {
+                    element.style.filter = "url(#" + state.filter + ")";
+                }
+            },
 
             applyTransform: function(p, m) {
                 var xt = p[0] * m[0] + p[1] * m[2] + m[4];

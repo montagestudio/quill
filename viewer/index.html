@@ -28,10 +28,12 @@
       PDFJS.workerSrc = '../node_modules/pdf.js/src/worker_loader.js';
       PDFJS.disableWorker = true;
 //      globalScope.verbosity = INFOS;
+      globalScope.pdfOpLogging = true;
 
       PDFJS.disableAutoFetch = true;
       PDFJS.disableImagePrescale = true;
       PDFJS.useExternalDiskCache = false;     // Needed in order to be able to cache/save to disk all images
+      PDFJS.enableSoftMask = true;
 
     </script>
 
