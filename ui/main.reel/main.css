@@ -92,6 +92,7 @@ body {
 }
 
 .Overlay-range {
+    width: 75px;
     vertical-align: middle;
     border-radius: 3px;
     border-color: hsl(0,0%,15%);

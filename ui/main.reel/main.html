@@ -89,13 +89,11 @@
                 "properties": {
                     "element": {"#": "spreadView"},
                     "viewMode": "default",
-                    "showOverlay": false,
                     "overlayOpacity": "1"
                 },
                 "bindings": {
                     "pages": {"<-": "@owner.pages"},
-                    "index": {"<-": "@owner.currentPageIndex"},
-                    "showOverlay": {"<->": "@spreadView.overlayOpacity != '1'"}
+                    "index": {"<-": "@owner.currentPageIndex"}
                 },
                 "listeners": [
                     {
@@ -109,7 +107,8 @@
                 "properties": {
                     "element": {"#": "main"},
                     "spreadView": {"@": "spreadView"},
-                    "pagesList": {"@": "pagesList"}
+                    "pagesList": {"@": "pagesList"},
+                    "opacityRange": {"@": "opacityRange"}
                 },
                 "bindings": {
                     "currentPage": {"<-": "@owner.pagesList.selection.0"}
@@ -161,9 +160,9 @@
             <section class="Toolbar-group">
                 <button data-montage-id="viewmodeButton" class="Toolbar-button Toolbar-button--viewmode"></button>
                 <div class="Overlay">
-                    <img class="Overlay-icon" src="/assets/img/icon-pdf.png">
-                    <input data-montage-id="opacity" class="Overlay-range" type="range">
                     <img class="Overlay-icon" src="/assets/img/icon-epub.png">
+                    <input data-montage-id="opacity" class="Overlay-range" type="range">
+                    <img class="Overlay-icon" src="/assets/img/icon-pdf.png">
                     <label>
                         <input data-montage-id="autoOpacity" class="Overlay-autoOpacity" type="checkbox"> auto
                     </label>

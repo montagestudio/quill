@@ -93,7 +93,10 @@ exports.SpreadView = Component.specialize({
         set: function(value) {
             if (value >= 0.0 && value <= 1.0) {
                 this._overlayOpacity = value;
+                this.showOverlay = (value !== 0.0);
                 this.needsDraw = true;
+            } else {
+                this.showOverlay = false;
             }
         }
     },
@@ -103,15 +106,15 @@ exports.SpreadView = Component.specialize({
     },
 
     _autoOverlayOpacityStep: {
-        value: 0.05
+        value: /*0.05*/1
     },
 
     _autoOverlayOpacityDirection: {
-        value: -1
+        value: 1
     },
 
     _savedOverlayOpacity: {
-        value: -1
+        value: 0
     },
 
     _autoOverlayOpacity: {
@@ -141,7 +144,7 @@ exports.SpreadView = Component.specialize({
                             self._autoOverlayOpacityDirection = 1;
                         }
                         self.overlayOpacity = opacity;
-                    }, 50);
+                    }, /*50*/150);
                     this._savedOverlayOpacity = this.overlayOpacity;
                 }
             } else {
@@ -155,7 +158,7 @@ exports.SpreadView = Component.specialize({
         }
     },
 
-    _dummyPage : {
+    _dummyPage: {
         value: null
     },
 
@@ -307,7 +310,7 @@ exports.SpreadView = Component.specialize({
 
             // Set the overlay opacity
             if (this.showOverlay && leftPage.item && leftPage.item.type === "page" && leftPage.item !== this._dummyPage) {
-                leftPage.element.style.opacity = this.overlayOpacity;
+                leftPage.element.style.opacity = 1 - this.overlayOpacity;
             } else {
                 leftPage.element.style.opacity = 1;
             }
@@ -316,7 +319,7 @@ exports.SpreadView = Component.specialize({
             if (this.showOverlay && rightPage.item && rightPage.item.type === "page" && rightPage.item !== this._dummyPage) {
                 pageNumber = parseInt(rightPage.item.url.match(/\/([0-9]*).xhtml/)[1], 10);
                 if (pageNumber) {
-                    rightPage.element.style.opacity = this.overlayOpacity;
+                    rightPage.element.style.opacity = 1 - this.overlayOpacity;
                 } else {
                     rightPage.element.style.opacity = 1;
                 }
