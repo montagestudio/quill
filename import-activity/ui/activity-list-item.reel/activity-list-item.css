@@ -28,10 +28,10 @@
     padding: 4px 12px 4px 8px;
 }
 .Activity-item--icon {
-    width: 48px;
+    width: 35px;
     height: 48px;
 
-    background: url('../../assets/images/pdf-icon.png') no-repeat;
+    background: url('/assets/img/icon-pdf.png') no-repeat;
     background-size: contain;
     background-repeat:no-repeat;
     background-position:center center;
@@ -157,7 +157,7 @@
 }
 
 .Activity-ready .Activity-item--icon {
-    background: url('../../assets/images/epub-icon.png') no-repeat;
+    background: url('/assets/img/icon-epub.png') no-repeat;
     background-size: contain;
 }
 
