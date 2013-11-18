@@ -85,8 +85,10 @@ body {
 
 .Importer-clearButton {
     outline: none;
+    padding: 0;
     width: 16px;
     height: 16px;
+    min-width: 16px;
     background: url('../../assets/images/clear.svg') no-repeat left center;
     background-size: 16px 16px;
     opacity: .3;
@@ -96,6 +98,7 @@ body {
 
 .Importer-clearButton:hover {
     opacity: 1;
+    background-color: transparent;
 }
 
 .Importer-clearButton:active {
