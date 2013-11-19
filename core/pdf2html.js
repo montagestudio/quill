@@ -927,7 +927,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                 // Initialize the SVG state and save it...
                 var initialSVGState = {
-                    transform: [1, 0, 0, 1, 0, 0],
+                    transform: [1, 0, 0, -1, 0, this._viewBoxHeight],   // Flip Y origin
                     clippingPath: null,
                     clippingPathMode: null,
                     fill: "#000000",
@@ -1243,18 +1243,13 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             // Clipping
             clip: function(context, clipRule) {
                 var currentState = this._svgStates[0],
-                    transform = currentState.transform.slice(),     // Make a copy, so that we can alter it
+                    transform = currentState.transform,
                     gElem = document.createElementNS(xmlns, "g"),
                     clipElem = document.createElementNS(xmlns, "clipPath"),
                     pathElem = document.createElementNS(xmlns, "path"),
                     clippingID = this.owner._getNextElementUID("clip");
 
                 pathElem.setAttribute("d", this._svgPath);
-
-                // Flip Y origin
-                this.scaleTransform(1, -1, transform);
-                transform[5] = this._viewBoxHeight - transform[5];
-
                 pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
 
                 clipElem.setAttribute("id", clippingID);
@@ -1289,14 +1284,10 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
             shadingFill: function (context, patternIR) {
                 var currentState = this._svgStates[0],
-                    transform = currentState.transform.slice(),     // Make a copy, so that we can alter it
+                    transform = currentState.transform,
                     transformInverse,
                     width = this._viewBoxWidth,
                     height = this._viewBoxHeight;
-
-                // Flip Y origin
-                this.scaleTransform(1, -1, transform);
-                transform[5] = this._viewBoxHeight - transform[5];
 
                 transformInverse = this.getTransformInverse(transform);
 
@@ -1423,9 +1414,11 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                 geometry = this.getGeometry.apply(null, transform);
 
-                // Flip Y origin and adjust x origin (PDF rotate image from the bottom-left corner while SVG does it from the top-left
-                transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
-                this.rotateTransform(geometry.rotateX, transform);
+                // Flip image and adjust x origin (PDF rotate image from the bottom-left corner while SVG does it from the top-left
+//                transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
+//                this.rotateTransform(geometry.rotateX, transform);
+//                this.translateTransform(0, - height, transform);
+                this.scaleTransform(1, -1, transform);
                 this.translateTransform(0, - height, transform);
 
                 // Set the image attributes
@@ -1661,8 +1654,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 transform = this.applyTextMatrix(current, textMatrix, this._svgStates[0].transform);
                 this.scaleTransform(1/scaleFactor, 1/scaleFactor, transform);       // Adjust the scaling to reflect the new computed fontsize
 
-                // Adjust Y origin
-                transform = this.getAdjustedTransform(transform);
+                // flip text
+                transform = this.scaleTransform(1, -1, transform);
 
                 geometry = this.getGeometry.apply(null, transform);
                 needTransform = !(geometry.rotateX === 0 && geometry.rotateY === 0 && geometry.scaleX == geometry.scaleY);
@@ -1962,10 +1955,6 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     this._svgPath = null;
                 }
 
-                // Flip Y origin
-                this.scaleTransform(1, -1, transform);
-                transform[5] = this._viewBoxHeight - transform[5];
-
                 // JFD TODO: use transform only if needed, else use x/y attribute
                 pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
 
@@ -2003,10 +1992,6 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     pathElem = document.createElementNS(xmlns, "path");
                     pathElem.setAttribute("d", this._svgPath);
                     pathElem.style.fill = "none";
-
-                    // Flip Y origin
-                    this.scaleTransform(1, -1, transform);
-                    transform[5] = this._viewBoxHeight - transform[5];
 
                     // JFD TODO: use transform only if needed, else use x/y attribute
                     pathElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
@@ -2207,20 +2192,20 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 return geometry;
             },
 
-            getAdjustedTransform: function(transform) {
-                var geometry = this.getGeometry.apply(null, transform);
-
-                if (Math.abs(roundValue(geometry.rotateX, 5)) !== Math.abs(roundValue(geometry.rotateY, 5))) {
-                    transform[1] *= -1;     // JFD TODO does not sound right, but does work!!!
-                    transform[2] *= -1;     // JFD TODO does not sound right, but does work!!!
-                    transform[5] = this._viewBoxHeight - transform[5];
-
-                } else {
-                    transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
-                    this.rotateTransform(geometry.rotateX, transform);
-                }
-                return transform;
-            }
+//            getAdjustedTransform: function(transform) {
+//                var geometry = this.getGeometry.apply(null, transform);
+//
+//                if (Math.abs(roundValue(geometry.rotateX, 5)) !== Math.abs(roundValue(geometry.rotateY, 5))) {
+//                    transform[1] *= -1;     // JFD TODO does not sound right, but does work!!!
+//                    transform[2] *= -1;     // JFD TODO does not sound right, but does work!!!
+//                    transform[5] = this._viewBoxHeight - transform[5];
+//
+//                } else {
+//                    transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
+//                    this.rotateTransform(geometry.rotateX, transform);
+//                }
+//                return transform;
+//            }
         }
     },
 
