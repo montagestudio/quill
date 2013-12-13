@@ -81,20 +81,6 @@
     -ms-transform-origin: 0 0;
 }
 
-.pdf-viewer-html span, img {
-    position: absolute;
-
-    transform-origin: 0 0;
-    -webkit-transform-origin: 0 0;
-    -moz-transform-origin: 0 0;
-    -ms-transform-origin: 0 0;
-
-    user-select: text;
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text
-}
-
 .pdf-viewer-html svg {
     position: absolute;
 
@@ -102,4 +88,39 @@
     -webkit-transform-origin: 0 0;
     -moz-transform-origin: 0 0;
     -ms-transform-origin: 0 0;
+}
+
+.pdf-viewer-html #textOverlay {
+    position: absolute;
+}
+
+/* DOM overlay */
+#textOverlay {
+    position: absolute;
+    overflow: hidden;
+
+    transform-origin: 0px 0px;
+    -webkit-transform-origin: 0px 0px;
+    -moz-transform-origin: 0px 0px;
+    -ms-transform-origin: 0px 0px;
+}
+
+#textOverlay div {
+    position: absolute;
+    white-space: nowrap;
+    overflow: hidden;
+
+    transform-origin: 0px 0px;
+    -webkit-transform-origin: 0px 0px;
+    -moz-transform-origin: 0px 0px;
+    -ms-transform-origin: 0px 0px;
+}
+
+/* overlay types */
+.overlayDomText svg text {
+    display: none !important;
+}
+
+.overlaySvgText div span {
+    color: transparent !important;
 }

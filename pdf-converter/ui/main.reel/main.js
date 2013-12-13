@@ -76,9 +76,6 @@ exports.Main = Component.specialize({
                 this._converter = PDF2HTML.create();
                 this._converter.bypassPFDJSRendering = true;
 
-//                this._converter.renderingMode = PDF2HTML.RENDERING_MODE.hybrid;
-                this._converter.renderingMode = PDF2HTML.RENDERING_MODE.svg;
-
                 this.params = [];
                 window.location.search.substr(1).split("&").forEach(function(query) {
                     var param = query.split("=", 2);
@@ -92,6 +89,9 @@ exports.Main = Component.specialize({
                     console.error("you must specify an item's id!");
                     return;
                 }
+
+//                this._converter.renderingMode = this.params.m ? parseInt(this.params.m) : PDF2HTML.RENDERING_MODE.svg;
+                this._converter.renderingMode = PDF2HTML.RENDERING_MODE.svg_dom;
 
                 require.async("adaptor/client/core/lumieres-bridge").then(function (exported) {
                     self.environmentBridge = new exported.LumiereBridge().init("quill-backend");
@@ -132,7 +132,7 @@ exports.Main = Component.specialize({
                                     self.numberOfPages = pdf.pdfInfo.numPages;
 //self.numberOfPages = 3;
 //if (!self.params.p)
-//self.params.p = 2;
+//self.params.p = 3;
 
                                     self._pageNumber = parseInt(self.params.p, 10) || 1;
 
@@ -412,6 +412,7 @@ exports.Main = Component.specialize({
                                 "page-title": "page " + (page.pageInfo.pageIndex + 1),
                                 "page-headers": "",
                                 "page-style": output.style,
+                                "page-class": output.className ? output.className : "",
                                 "page-content": output.data
                             },
                             true

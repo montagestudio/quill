@@ -9,7 +9,7 @@ var Montage = require("montage/core/core").Montage,
 var xmlns = "http://www.w3.org/2000/svg",
     xmlns_xlink = "http://www.w3.org/1999/xlink";
 
-var RENDERING_MODE = {hybrid: 4, svg: 5};
+var RENDERING_MODE = {hybrid: 4, svg: 5, svg_dom:6};
 
 var LINE_CAP_STYLES = ['butt', 'round', 'square'];
 var LINE_JOIN_STYLES = ['miter', 'round', 'bevel'];
@@ -27,6 +27,44 @@ var TextRenderingMode = {
     FILL_STROKE_MASK: 3,
     ADD_TO_PATH_FLAG: 4
 };
+
+var WordSeparators = [
+    ' ',
+    '\xa0',
+    '~',
+    '!',
+    '?',
+    '@',
+    '^',
+    '&',
+    '*',
+    '(',
+    ')',
+    '=',
+    '+',
+    '{',
+    '}',
+    '[',
+    ']',
+    '\\',
+    '|',
+    '/',
+    ':',
+    ';',
+    '',
+    '"',
+    ',',
+    '.',
+    '\t',
+    '\n',
+    '\r',
+    '\f',
+    '\u201d',
+    '\u201c',
+    '\u201f'
+]
+
+var OVERLAY_SCALE_FACTOR = 20;
 
 var unsupportedFeature = {};
 
@@ -366,7 +404,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     this._preProcessor_DOM.page = page;
                     this._preProcessor_DOM.scale = scale;
                     renderContext.preprocessor = this._preProcessor_DOM;
-                } else if (self.renderingMode === PDF2HTML.RENDERING_MODE.svg) {
+                } else if (self.renderingMode >= PDF2HTML.RENDERING_MODE.svg) {
                     // Emit SVG
                     this._preProcessor_SVG.owner = this; // TODO ever used?
                     this._preProcessor_SVG.page = page;
@@ -393,7 +431,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         if (returnOutput) {
                             var data,
                                 styleNode,
-                                style;
+                                style,
+                                className;
 
                             styleNode = rootNode.getElementsByTagName("style")[0];
                             if (styleNode) {
@@ -413,6 +452,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                             // Get the style as text
                             style = styleNode.innerHTML;
                             data = rootNode.innerHTML;
+                            className = rootNode.className;
 
                             // Put the style back
                             if (styleNode) {
@@ -428,9 +468,6 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                     replacementURI = "",
                                     searchURI,
                                     i = 0;
-
-                                console.log("--- baseURI:", baseURI);
-                                console.log("--- sourceURI:", sourceURI);
 
                                 if (baseURI.charAt(baseLength - 1) === '/') {
                                     baseURI = baseURI.substr(0, baseLength - 1);
@@ -493,7 +530,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                             });
 
                             page.destroy();
-                            deferred.resolve({data: data, style: style});
+                            deferred.resolve({data: data, style: style, className: className});
                         } else {
                             page.destroy();
                             deferred.resolve();
@@ -717,7 +754,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     if (this.owner._pdf.cssFonts[fontName] == null) { // TODO DRY
                         if (font.url) {
                             self.owner._pdf.cssFonts[fontName] = {
-                                style: '@font-face {font-family: "' + fontName + '"; src: url(\'' + font.url + '\');}',
+                                style: '@font-face {font-family: "' + fontName + '"; src: url("' + font.url + '") format("opentype")}',
                                 loadedFontName: font.loadedName,
                                 fontName: font.name
                             };
@@ -848,7 +885,7 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                                     x += charWidth;
                                 } else {
-    //                                console.log("==========> * word separator *");
+//                                    console.log("==========> * word separator *");
                                     x += fontDirection * wordSpacing;
     //                                previousSpan = null;
                                     previousX = x;
@@ -877,6 +914,9 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 console.log.apply(console, args);
             },
 
+            _overlayElement: null,
+            _overlayLines: {},
+
             _svgElement: null,
 
             _svgStates: [],
@@ -885,14 +925,14 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             _viewBoxHeight: 0,
             _viewBoxWidth: 0,
 
+            _overlayHorizontalScale: 1,
+            _overlayVerticalScale: 1,
+
             beginLayout: function() {
                 this.log("beginLayout:", this._svgStates);
                 var view = this.page.pageInfo.view.slice(),
                     scale = this.scale;
 
-//                view[2] = roundValue(view[2] - view[0], 0);
-//                view[3] = roundValue(view[3] - view[1], 0);;
-//                view[0] = view[1] = 0;
                 console.log("PAGE:", (view[2] - view[0]) * scale, (view[3] - view[1]) * scale);
 
                 // save the viewBox height, will be needed to flip the coordinate
@@ -911,13 +951,34 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 gElem.setAttribute("id", "layer_main");
 
                 if (view[0] !== 0 || view[1] !== 0) {
-                    gElem.setAttribute("transform", "translate(" + (-view[0]) + "," + view[1] + ")");
+                    gElem.setAttribute("transform", "translate(" + (-view[0]) + ", " + view[1] + ")");
                 }
 
                 svgElem.appendChild(gElem);
 
                 this.owner._rootNodeStack[0].appendChild(svgElem);
                 this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+                if (this.owner.renderingMode === PDF2HTML.RENDERING_MODE.svg_dom) {
+                    // Add the DOM overlay
+                    var overlayElement = document.createElement("div"),
+                        overlayStyle = overlayElement.style,
+                        height = svgElem.getAttribute("height"),
+                        width = svgElem.getAttribute("width");
+
+                    this._overlayHorizontalScale = 1 / OVERLAY_SCALE_FACTOR * width / this._viewBoxWidth;
+                    this._overlayVerticalScale = 1 / OVERLAY_SCALE_FACTOR * height / this._viewBoxHeight;
+
+                    overlayElement.setAttribute("id", "textOverlay");
+                    overlayStyle.width = (parseFloat(svgElem.getAttribute("width")) * OVERLAY_SCALE_FACTOR) + "px";
+                    overlayStyle.height = (parseFloat(svgElem.getAttribute("height")) * OVERLAY_SCALE_FACTOR) + "px";
+                    overlayStyle.webkitTransform = "scale(" + roundValue(this._overlayHorizontalScale, 4) + ", "
+                                                            +  roundValue(this._overlayVerticalScale, 4) + ")";
+                    this._overlayElement = overlayElement;
+
+                    this.owner._rootNodeStack[0].appendChild(overlayElement);
+                    this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+                }
+
                 this.owner._rootNodeStack.unshift(gElem);
 
                 //Reset the element UID generator
@@ -976,7 +1037,110 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             },
 
             endLayout: function() {
+                var self = this,
+                    wordIndex = 1;
+
                 this.log("endLayout:");
+
+                // Remove any not visible SVG elements
+                this._removeInvisibleSVGElements(this._svgElement);
+
+                // Add DOM overlay
+                if (this._overlayElement) {
+                    var textElements = this._svgElement.getElementsByTagName("text"),
+                        textElementsArray = [];
+
+                    // convert the nodeList into an array in order to be able to sort them
+                    Array.prototype.forEach.call(textElements, function(elem) {
+                        textElementsArray.push(elem);
+                    });
+
+                    // sort lines per reading order
+                    textElementsArray.sort(function(a, b) {
+                        var lineHeight = Math.min(a.offsetHeight, b.offsetHeight);
+
+                        if (Math.abs(a.offsetTop - b.offsetTop) <  (lineHeight * 0.75)) {
+                            if ((a.offsetLeft < b.offsetLeft && (a.offsetLeft + a.offsetWidth) < (b.offsetLeft + b.offsetWidth)) ||
+                                (b.offsetLeft < a.offsetLeft && (b.offsetLeft + b.offsetWidth) < (a.offsetLeft + a.offsetWidth))) {
+
+                                // Sound like the same line, sort per x position
+                                return a.offsetLeft - b.offsetLeft;
+                            }
+                        }
+
+                        return a.offsetTop - b.offsetTop;
+                    });
+
+                    textElementsArray.forEach(function(elem) {
+//                        console.log(">", elem.textContent);
+//                        console.log("top:", elem.offsetTop, "left:", elem.offsetLeft);
+//                        console.log("BoundingRect:", elem.getBoundingClientRect());
+
+                        var lineDomElem = document.createElement("div"),
+                            lineDomStyle = lineDomElem.style,
+                            textTransform = self.getSVGComputedTransform(elem),
+                            textBoundingRect = elem.getBoundingClientRect(),
+                            words = elem.getElementsByTagName("tspan");
+
+                        lineDomStyle.width = elem.offsetWidth * OVERLAY_SCALE_FACTOR + "px";
+
+                        // set the line transform
+                        lineDomStyle.webkitTransform = "matrix(" + textTransform + ")";
+
+                        Array.prototype.forEach.call(words, function(word) {
+                            var wordStyle = window.getComputedStyle(word),
+                                wordDomElem = document.createElement("span"),
+                                wordDomStyle = wordDomElem.style,
+                                subWords = word.getElementsByTagName("tspan");
+
+                            // set the style
+                            wordDomStyle.fontSize = parseFloat(wordStyle.fontSize) * OVERLAY_SCALE_FACTOR + "px";
+                            wordDomStyle.fontFamily = wordStyle.fontFamily;
+
+                            if (wordStyle.fill !== "none") {
+                                wordDomStyle.color = wordStyle.fill;
+                            } else if (wordStyle.stroke !== "none") {
+                                wordDomStyle.color = wordStyle.stroke;
+                            } else {
+                                wordDomStyle.color = "transparent";
+                            }
+//wordDomStyle.color = "red"
+                            if (subWords.length) {
+                                lineDomElem.appendChild(wordDomElem);
+                            } else {
+                                if (word.parentNode.tagName === "tspan") {
+                                    wordDomElem.appendChild(document.createTextNode(word.textContent));
+                                    lineDomElem.lastChild.appendChild(wordDomElem);
+
+                                } else {
+                                    var content = word.textContent;
+
+                                    // Is is a word or a separator?
+                                    if (content.length && WordSeparators.indexOf(content.charAt(0)) === -1) {
+                                        wordDomElem.id = "w" + wordIndex;
+                                    } else {
+                                        wordDomElem.id = "s" + wordIndex;
+                                    }
+                                    wordIndex ++;
+
+                                    wordDomElem.appendChild(document.createTextNode(word.textContent));
+                                    lineDomElem.appendChild(wordDomElem);
+                                }
+                            }
+
+                        })
+                        self._overlayElement.appendChild(lineDomElem);
+
+                        // Adjust the position of the DOM element
+                        var lineDomBoundingRect = lineDomElem.getBoundingClientRect();
+                        lineDomStyle.left = (textBoundingRect.left - lineDomBoundingRect.left) / self._overlayHorizontalScale + "px";
+                        lineDomStyle.top = (textBoundingRect.top - lineDomBoundingRect.top) / self._overlayVerticalScale + "px";
+                    });
+
+                    // Set the overlay type
+//                    this._overlayElement.parentNode.classList.add("overlayDomText");
+                    this._overlayElement.parentNode.classList.add("overlaySvgText");
+                }
             },
 
             beginMarkedContentProps: function(context, tag, properties) {
@@ -1596,7 +1760,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
             },
 
             showSpacedText: function(context, data) {
-                var current = this._svgStates[0],
+                var self = this,
+                    current = this._svgStates[0],
                     font = current.font,
                     fontName = font.loadedName,
                     fontSize = current.fontSize,
@@ -1604,7 +1769,8 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     wordSpacing = current.wordSpacing,
                     textHScale = current.textHScale,
                     glyphs,
-                    textElem = document.createElementNS(xmlns, "text"),
+                    textElem,
+                    wrapperElem,
                     transform,
                     textMatrix = current.textMatrix.slice(),
                     geometry,
@@ -1623,15 +1789,14 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                         }
                     });
 
-                    console.log("    text:", text)
+                    console.log("    text:", text, current.y);
                 }
-
 
                 // Export the font
                 if (this.owner._pdf.cssFonts[fontName] == null) { // TODO DRY
                     if (font.url) {
                         this.owner._pdf.cssFonts[fontName] = {
-                            style: '@font-face {font-family: "' + fontName + '"; src: url(\'' + font.url + '\');}',
+                            style: '@font-face {font-family: "' + fontName + '"; src: url("' + font.url + '") format("opentype")}',
                             loadedFontName: font.loadedName,
                             fontName: font.name
                         };
@@ -1647,9 +1812,6 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 geometry = this.getGeometry.apply(null, textMatrix);
                 scaleFactor = Math.abs(geometry.scaleY);
                 fontSize *= scaleFactor;
-
-//                this.scaleTransform(1/scaleFactor, 1/scaleFactor, textMatrix);       // Adjust the scaling to reflect the new computed fontsize
-//                console.log("========== showText[SVG]:", data, fontSize, "(" + current.fontSize + ")", charSpacing, wordSpacing, fontDirection, textHScale, textMatrix);
 
                 transform = this.applyTextMatrix(current, textMatrix, this._svgStates[0].transform);
                 this.scaleTransform(1/scaleFactor, 1/scaleFactor, transform);       // Adjust the scaling to reflect the new computed fontsize
@@ -1701,90 +1863,170 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                     }
                 });
 
-                // Replace the leading and trailing space characters by a nbsp as SVG will ignore them by default
-                text = text.replace(/^ | $/g, "\xA0");   // &nbsp == 0xA0
-                // If the string contains continous white spaces, convert them to nbsp, else SVG will concatenate them
-                if (text.indexOf("  ") !== -1) {
-                    text = text.replace(/ /g, "\xA0");   // &nbsp == 0xA0
-                }
+                // Split the text into words and separators
+                var xPos = needTransform ? 0 : transform[4],
+                    startXPos = xPos + offsets[0],
+                    segments = [],
+                    segment = {data: "", dx: "", isASeparator: undefined};
 
-                var dx = "",
-                    delimiter = "",
-                    xPos = needTransform ? 0 : transform[4];
+                for (var i = 0, textLength = text.length, data = ""; i < textLength; i ++) {
+                    var aChar = text.charAt(i),
+                        isASeparator = (WordSeparators.indexOf(aChar) !== -1);
 
-                offsets.pop();     // no need for the last offset
+                    xPos = xPos + offsets[i];   // Advance the current position
 
-                offsets.forEach(function(offset) {
-                    xPos += offset;
-                    dx += delimiter + roundValue(xPos, 2);
-                    delimiter = ",";
-                });
-                textElem.setAttribute("x", dx);
-                textElem.style.font = current.rule;
-                textElem.style.fontSize = fontSize;
-
-                // JFD TODO: remove dependency on canvas for color
-                // JFD TODO: add colorspace support
-                switch (current.textRenderingMode) {
-                case TextRenderingMode.FILL:
-                    textElem.style.fill = context.current.fillColor;
-                    textElem.style.stroke = "none";
-                    if (current.fillAlpha !== 1) {
-                        textElem.style.opacity = current.fillAlpha;
-                        // JFD TODO: should we remove that text node all together when alpha = 0?
-                    }
-                    break;
-                case TextRenderingMode.STROKE:
-                    textElem.style.fill = "none";
-                    textElem.style.stroke = context.current.strokeColor;
-                    if (current.strokeAlpha !== 1) {
-                        textElem.style.opacity = current.strokeAlpha;
-                        // JFD TODO: should we remove that text node all together when alpha = 0?
-                    }
-                    break;
-                case TextRenderingMode.FILL_STROKE:
-                    textElem.style.fill = context.current.fillColor;
-                    textElem.style.stroke = context.current.strokeColor;
-                    if (current.strokeAlpha !== 1) {
-                        textElem.style.strokeOpacity = current.strokeAlpha;
-                    }
-                    if (current.fillAlpha !== 1) {
-                        textElem.style.fillOpacity = current.fillAlpha;
-                    }
-                    // JFD TODO: should we remove that text node all together when alpha = 0?
-                    break;
-                case TextRenderingMode.INVISIBLE:
-                    textElem.style.fill = "none";
-                    textElem.style.stroke = "none";
-                    // JFD TODO: should we remove that text node all together?
-                    break;
-
-                default:
-                    console.warn("unsuported text rendering mode:", current.textRenderingMode);
-                }
-
-                if (current.lineWidth !== 1) {
-                    if (unsupportedFeature.lineWidth === undefined) {
-                        unsupportedFeature.lineWidth = 1;
-                        console.warn("text line width not yet supported:", current.lineWidth);
+                    if (segment.isASeparator !== undefined && isASeparator !== segment.isASeparator) {
+                        segment.nx = roundValue(xPos, 2);
+                        segments.push(segment);
+                        segment = {data: aChar, dx: roundValue(xPos, 2), isASeparator: isASeparator};
                     } else {
-                        unsupportedFeature.lineWidth ++;
+                        segment.data += aChar;
+                        if (segment.dx === "") {
+                            segment.dx = roundValue(xPos, 2);
+                        } else {
+                            segment.dx += "," + roundValue(xPos, 2);
+                        }
+                        segment.isASeparator = isASeparator;
                     }
                 }
 
-                this.setupElementStyle(textElem, current);
+                segment.nx = roundValue(xPos + offsets[i], 2);
+                segments.push(segment);
 
-                if (needTransform) {
-                    textElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+                // Let's start from where we left of...
+                textElem = this._currentLine(this.owner._rootNodeStack[0]);
+                if (textElem && this._canReuseLineElement(textElem, needTransform ? transform : transform[5])) {
+                    var currentWord = this._currentWord(textElem),
+                        content = currentWord ? currentWord.textContent : null,
+                        contentLength = content ? content.length : 0;
+
+                    wrapperElem = textElem;
+                    if (contentLength) {
+                        var t1 = (WordSeparators.indexOf(content.charAt(contentLength - 1)) === -1),
+                            t2 = (WordSeparators.indexOf(text.charAt(0)) === -1);
+
+                        if (t1 === t2) {
+                            // Looks like we can complete the existing tspan, just create a sub tspan
+                            // Just make sure the gap between the two pieces is not too wide, else they probably not the
+                            // same word
+
+                            // JFD TODO: we need a better way to estimate the maximum gap than doing a dumb 30% of the height
+                            if (Math.abs(parseFloat(currentWord.getAttribute("nx")) - startXPos) <= (fontSize * 0.3)) {
+                                console.log("*** TSPAN CAN BE MERGE ***", currentWord, currentWord.getAttribute("nx"), startXPos, fontSize);
+
+                                if (currentWord.getElementsByTagName("tspan").length === 0) {
+                                    currentWord.parentNode.removeChild(currentWord);
+                                    wrapperElem = document.createElementNS(xmlns, "tspan");
+                                    wrapperElem.appendChild(currentWord);
+                                    textElem.appendChild(wrapperElem);
+                                } else {
+                                    wrapperElem = currentWord;
+                                }
+                            }
+                        }
+                    }
                 } else {
-//                    textElem.setAttribute("x", transform[4]);
-                    textElem.setAttribute("y", transform[5]);
+                    textElem = document.createElementNS(xmlns, "text");
+                    wrapperElem = textElem;
+
+                    if (needTransform) {
+                        if (!textElem.hasAttribute("transform")) {
+                            textElem.setAttribute("transform", "matrix(" + transform.join(", ") + ")");
+                        }
+                    } else {
+                        textElem.setAttribute("y", roundValue(transform[5], 2));
+                    }
+
+                    this.owner._rootNodeStack[0].appendChild(textElem);
+                    this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
                 }
 
-                textElem.appendChild(document.createTextNode(text));    // JFD TODO: we need to translate to unicode the text
+                segments.forEach(function(segment) {
+                    var tspanElem = document.createElementNS(xmlns, "tspan"),
+                        tspanStyle = tspanElem.style;
 
-                this.owner._rootNodeStack[0].appendChild(textElem);
-                this.owner._rootNodeStack[0].appendChild(document.createTextNode("\r\n"));
+                    var text = segment.data;
+                    // Replace the leading and trailing space characters by a nbsp as SVG will ignore them by default
+                    text = text.replace(/^ | $/g, "\xA0");   // &nbsp == 0xA0
+                    // If the string contains continuous white spaces, convert them to non-breaking spaces,
+                    // else SVG will concatenate them
+                    if (text.indexOf("  ") !== -1) {
+                        text = text.replace(/ /g, "\xA0");   // &nbsp == 0xA0
+                    }
+
+                    tspanElem.appendChild(document.createTextNode(text));
+                    tspanElem.setAttribute("x", segment.dx);
+                    tspanElem.setAttribute("nx", segment.nx);
+
+                    tspanStyle.font = current.rule;
+                    tspanStyle.fontSize = fontSize;
+
+                    // Cleanup style attributes to reduce payload
+                    if (tspanStyle.fontStyle === "normal") {
+                        tspanStyle.fontStyle = "";
+                    }
+                    if (tspanStyle.fontVariant === "normal") {
+                        tspanStyle.fontVariant = "";
+                    }
+                    if (tspanStyle.fontWeight === "normal") {
+                        tspanStyle.fontWeight = "";
+                    }
+                    if (tspanStyle.lineHeight === "normal") {
+                        tspanStyle.lineHeight = "";
+                    }
+
+                    switch (current.textRenderingMode) {
+                        case TextRenderingMode.FILL:
+                            // JFD TODO: remove dependency on canvas for color
+                            // JFD TODO: add colorspace support
+                            tspanStyle.fill = context.current.fillColor;
+                            tspanStyle.stroke = "none";
+                            if (current.fillAlpha !== 1) {
+                                tspanStyle.opacity = current.fillAlpha;
+                                // JFD TODO: should we remove that text node all together when alpha = 0?
+                            }
+                            break;
+                        case TextRenderingMode.STROKE:
+                            tspanStyle.fill = "none";
+                            tspanStyle.stroke = context.current.strokeColor;
+                            if (current.strokeAlpha !== 1) {
+                                tspanStyle.opacity = current.strokeAlpha;
+                                // JFD TODO: should we remove that text node all together when alpha = 0?
+                            }
+                            break;
+                        case TextRenderingMode.FILL_STROKE:
+                            tspanStyle.fill = context.current.fillColor;
+                            tspanStyle.stroke = context.current.strokeColor;
+                            if (current.strokeAlpha !== 1) {
+                                tspanStyle.strokeOpacity = current.strokeAlpha;
+                            }
+                            if (current.fillAlpha !== 1) {
+                                tspanStyle.fillOpacity = current.fillAlpha;
+                            }
+                            // JFD TODO: should we remove that text node all together when alpha = 0?
+                            break;
+                        case TextRenderingMode.INVISIBLE:
+                            tspanStyle.fill = "none";
+                            tspanStyle.stroke = "none";
+                            // JFD TODO: should we remove that text node all together?
+                            break;
+
+                        default:
+                            console.warn("unsuported text rendering mode:", current.textRenderingMode);
+                    }
+
+                    if (current.lineWidth !== 1) {
+                        if (unsupportedFeature.lineWidth === undefined) {
+                            unsupportedFeature.lineWidth = 1;
+                            console.warn("text line width not yet supported:", current.lineWidth);
+                        } else {
+                            unsupportedFeature.lineWidth ++;
+                        }
+                    }
+
+                    self.setupElementStyle(tspanElem, current);
+                    wrapperElem.appendChild(tspanElem);
+                });
 
                 return this.owner.bypassPFDJSRendering;
             },
@@ -1891,6 +2133,55 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
 
                 current.x = current.lineX = 0;
                 current.y = current.lineY = 0;
+            },
+
+            _currentLine: function(rootElem) {
+                var textElems = rootElem.getElementsByTagName("text"),
+                    nbrTextElems = textElems ? textElems.length : 0;
+
+                return nbrTextElems ? textElems[nbrTextElems - 1] : null;
+            },
+
+            _currentWord: function(lineElem) {
+                var tspanElems = lineElem.getElementsByTagName("tspan"),
+                    nbrTspanElems = tspanElems ? tspanElems.length : 0;
+
+                return nbrTspanElems ? tspanElems[nbrTspanElems - 1] : null;
+            },
+
+            _canReuseLineElement: function(lineElem, transform) {
+                    var elemTransform,
+                        i;
+
+                    if (transform.length === 6) {
+                        elemTransform = lineElem.getAttribute("transform");
+
+                        if (elemTransform) {
+                            elemTransform = elemTransform.match(/matrix\((.*)\)/);
+                            if (typeof elemTransform[1] === "string") {
+                                elemTransform = elemTransform[1].split(", ");
+                                if (elemTransform.length === 6 && parseFloat(elemTransform[5]) === transform[5]) {
+                                    for (i = 0; i < 4; i ++) {
+                                        if (parseFloat(elemTransform[i]) !== transform[i]) {
+                                            break;
+                                        }
+                                    }
+
+                                    if (i === 4) {
+                                        console.log("**** RECYCLE PREVIOUS TEXT ELEMENT");
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if (parseFloat(lineElem.getAttribute("y")) === roundValue(transform, 2)) {
+                            console.log("**** RECYCLE PREVIOUS TEXT ELEMENT");
+                            return true;
+                        }
+                    }
+
+                return false;
             },
 
 
@@ -2082,6 +2373,17 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 return [xt, yt];
             },
 
+            mergeTransforms: function(m1, m2) {
+                return  [
+                    m1[0] * m2[0] + m1[2] * m2[1],
+                    m1[1] * m2[0] + m1[3] * m2[1],
+                    m1[0] * m2[2] + m1[2] * m2[3],
+                    m1[1] * m2[2] + m1[3] * m2[3],
+                    m1[0] * m2[4] + m1[2] * m2[5] + m1[4],
+                    m1[1] * m2[4] + m1[3] * m2[5] + m1[5]
+                ];
+            },
+
             applyTextMatrix: function (current, textMatrix, transform) {
                 var m = transform,
                     a = textMatrix[0], b = textMatrix[1], c = textMatrix[2], d = textMatrix[3], e = textMatrix[4], f = textMatrix[5];
@@ -2192,20 +2494,170 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                 return geometry;
             },
 
-//            getAdjustedTransform: function(transform) {
-//                var geometry = this.getGeometry.apply(null, transform);
-//
-//                if (Math.abs(roundValue(geometry.rotateX, 5)) !== Math.abs(roundValue(geometry.rotateY, 5))) {
-//                    transform[1] *= -1;     // JFD TODO does not sound right, but does work!!!
-//                    transform[2] *= -1;     // JFD TODO does not sound right, but does work!!!
-//                    transform[5] = this._viewBoxHeight - transform[5];
-//
-//                } else {
-//                    transform = [geometry.scaleX, 0, 0, geometry.scaleY, geometry.translateX, this._viewBoxHeight - geometry.translateY];
-//                    this.rotateTransform(geometry.rotateX, transform);
-//                }
-//                return transform;
-//            }
+            getGlobalTransform: function() {
+                var self = this,
+                    result;
+
+                this._svgStates.forEach(function(state, index) {
+                    if (index == 0) {
+                        var viewBox = self._svgElement.getAttribute("viewBox").split(" "),
+                            width = self._svgElement.getAttribute("width"),
+                            height = self._svgElement.getAttribute("height");
+
+                        result = [width / (viewBox[2] - viewBox[0]), 0, 0, height / (viewBox[3] - viewBox[1]), 0, 0];
+                    } else {
+                        result = self.mergeTransforms(result, state.transform);
+                    }
+                })
+                console.log("overall transform:", result);
+                return result;
+            },
+
+            getSVGComputedTransform: function(svgElem) {
+                var self = this,
+                    viewBox = this._svgElement.getAttribute("viewBox").split(" "),
+                    width = this._svgElement.getAttribute("width"),
+                    height = this._svgElement.getAttribute("height"),
+                    computedTtansform = [1, 0, 0, 1, 0, 0],
+                    transforms = [],
+                    result;
+
+                while (svgElem && svgElem !== this._svgElement) {
+                    var transform = svgElem.getAttribute("transform"),
+                        match;
+
+                    if (typeof transform === "string") {
+                        match = transform.match(/matrix\((.*)\)/);
+                        if (match && typeof match[1] === "string") {
+                            var matrix = match[1].split(", ");
+                            if (matrix.length === 6) {
+                                transform = [1, 0, 0, 1, 0, 0];
+                                matrix.forEach(function(value, index) {
+                                    transform[index] = parseFloat(value);
+                                });
+
+                                transforms.unshift(transform);
+                            }
+                        } else {
+                            match = transform.match(/translate\((.*)\)/);
+                            if (match && typeof match[1] === "string") {
+                                var translate = match[1].split(", ");
+                                if (translate.length === 2) {
+                                    transform = [1, 0, 0, 1, 0, 0];
+                                    translate.forEach(function(value, index) {
+                                        transform[4 + index] = parseFloat(value);
+                                    });
+
+                                    transforms.unshift(transform);
+                                }
+                            }
+                        }
+                    }
+
+                    svgElem = svgElem.parentNode;
+                }
+
+//                console.log("TRANSFORMS:", transforms);
+                transforms.forEach(function(transform) {
+                    computedTtansform = self.mergeTransforms(computedTtansform, transform);
+                });
+
+                computedTtansform.forEach(function(value) {
+                    if (result) {
+                        result += ", " + roundValue(value, 5);
+                    } else {
+                        result = roundValue(value, 5);
+                    }
+                });
+
+
+                return result;
+            },
+
+            _intersect: function(rectA, rectB) {
+                var result = {};
+
+                result.top = Math.max(rectA.top, rectB.top);
+                result.left = Math.max(rectA.left, rectB.left);
+                result.bottom = Math.min(rectA.bottom, rectB.bottom);
+                result.right = Math.min(rectA.right, rectB.right);
+
+                if (result.top >= result.bottom || result.left >= result.right) {
+                    result = {top: 0, left: 0, bottom: 0, right: 0};
+                }
+
+                return result;
+            },
+
+            _doIntersect: function(rectA, rectB) {
+                var result = this._intersect(rectA, rectB);
+
+                return (result.left < result.right && result.top < result.bottom);
+            },
+
+            _getBoundingRect: function(element) {
+                var rect = element.getBoundingClientRect();
+
+                return {
+                    top: Math.floor(rect.top),
+                    left: Math.floor(rect.left),
+                    bottom: Math.ceil(rect.bottom),
+                    right: Math.ceil(rect.right)
+                }
+            },
+
+            _removeInvisibleSVGElements: function(svgElement) {
+                var self = this,
+                    exceptionTags = ["defs", "clipPath", "mask"];
+
+                var _walker = function(root, clipRect) {
+                    clipRect = clipRect || self._getBoundingRect(root);
+
+                    if (exceptionTags.indexOf(root.tagName) !== -1) {
+                        return true;
+                    }
+
+                    if (root.hasAttribute("clip-path")) {
+                        var clipPath = document.getElementById(root.getAttribute("clip-path").match(/url\(#([a-z0-9]*)\)/)[1]);
+                        if (clipPath) {
+                            var paths = clipPath.getElementsByTagName("path")
+                            if (paths && paths.length) {
+                                console.log("---clipPath:", paths[0], self._getBoundingRect(paths[0]));
+                                clipRect = self._intersect(clipRect, self._getBoundingRect(paths[0]))
+                            }
+                        }
+                    }
+
+                    if (!self._doIntersect(clipRect, self._getBoundingRect(root))) {
+                        root.parentNode.removeChild(root);
+                        return false;
+                    }
+
+                    for (var i = 0, nodes = root.childNodes, length = nodes.length, hasVisibleChild = nodes.length === 0; i < length; i ++) {
+                        var node = nodes[i];
+
+                        if (node.nodeType !== Node.TEXT_NODE) {
+                            if (!_walker(node, clipRect)) {
+                                // The child node has been removed, re-adjust the counter
+                                i --;
+                                length --;
+                            } else {
+                                hasVisibleChild = true;
+                            }
+                        } else {
+                            hasVisibleChild = true;
+                        }
+                    }
+
+                    if (!hasVisibleChild) {
+                        root.parentNode.removeChild(root);
+                    }
+
+                    return hasVisibleChild;
+                }
+
+                _walker(svgElement);
+            }
         }
     },
 
