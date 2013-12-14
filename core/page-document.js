@@ -383,6 +383,23 @@ var PageDocument = exports.PageDocument = Montage.specialize({
         }
     },
 
+    _hasReadAlong: {
+        value: false
+    },
+
+    hasReadAlong: {
+        get: function () {
+            this.getHasReadAlong().done();
+            return this._hasReadAlong;
+        }
+    },
+
+    getHasReadAlong: {
+        value: function () {
+            return this._getChannelProperty("hasReadAlong", "hasReadAlong", "_hasReadAlong");
+        }
+    },
+
     /**
      * Internal eventually consistent copyrightPosition
      */

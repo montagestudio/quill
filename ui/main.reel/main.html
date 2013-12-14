@@ -136,6 +136,17 @@
                 }
             },
 
+            "readAlongCondition": {
+                "prototype": "montage/ui/condition.reel",
+                "properties": {
+                    "element": {"#": "readAlongCondition"},
+                    "removalStrategy": "hide"
+                },
+                "bindings": {
+                    "condition": {"<-": "!!@owner.currentPage.pageWindow && @owner.currentPage.hasReadAlong"}
+                }
+            },
+
             "saveButton": {
                 "prototype": "matte/ui/button.reel",
                 "properties": {
@@ -167,6 +178,10 @@
                         <input data-montage-id="autoOpacity" class="Overlay-autoOpacity" type="checkbox"> auto
                     </label>
                 </div>
+            </section>
+            <section data-montage-id="readAlongCondition" class="Toolbar-group ReadAlong">
+                <img class="ReadAlong-icon" src="/assets/img/play.png">
+                <label class="Copyright-title">Read Along</label>
             </section>
             <section data-montage-id="copyrightCondition" class="Toolbar-group Copyright">
                 <label class="Copyright-title">Copyright</label>
