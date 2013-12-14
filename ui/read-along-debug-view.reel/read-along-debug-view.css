@@ -1,0 +1,28 @@
+.ReadAlongDebugViewPages {
+    position: relative;
+    overflow: hidden;
+    height: inherit;
+}
+
+
+.ReadAlongDebugViewPages > iframe {
+    position: absolute;
+    border: none;
+    margin: 0;
+    padding: 0;
+
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.ReadAlongDebugViewPages-debug {
+    position: absolute;
+    left: 100px;
+    top: 150px;
+    border: 2px;
+    margin: 2em;
+    padding: 2em;
+    z-index: 1000;
+    background: grey;
+    opacity: .8;
+}

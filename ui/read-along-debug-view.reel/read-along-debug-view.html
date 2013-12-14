@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+    <title>Page View</title>
+    <meta charset="utf-8">
+
+    <link href="read-along-debug-view.css" rel="stylesheet" />
+
+    <script type="text/montage-serialization">
+        {
+            "localizer": {
+                "object": "montage/core/localizer[defaultLocalizer]"
+            },
+
+            "owner": {
+                "properties": {
+                    "element": {"#": "pageView"}
+                }
+            },
+
+            "readAloudDebug": {
+                "prototype": "montage/ui/text.reel",
+                "properties": {
+                    "element": {"#": "readAloudDebug"}
+                },
+                "bindings": {
+                    "value": {"<-": "@owner.item.text"}
+                }
+            }
+        }
+    </script>
+
+</head>
+<body>
+    <section data-montage-id="pageView" class="ReadAlongDebugViewPages">
+        <iframe seamless scrolling="no"></iframe>
+
+        <div data-montage-id="readAloudDebug" class="ReadAlongDebugViewPages-debug"></div>
+    </section>
+</body>
+</html>
