@@ -1,7 +1,8 @@
 var Montage = require("montage").Montage,
     Promise = require("montage/core/promise").Promise,
     Map = require("montage/collections/map"),
-    UUID = require("montage/core/uuid");
+    UUID = require("montage/core/uuid"),
+    ReadAlong = require("core/read-along").ReadAlong;
 
 /**
  * This represents a single physical page in an ebook.
@@ -21,6 +22,11 @@ var PageDocument = exports.PageDocument = Montage.specialize({
         value: function PageDocument () {
             this._deferredMap = new Map();
             this._operationQueue = [];
+
+           /* prepare for read along */
+           this.readAlong = new ReadAlong();
+           this.readAlong.pageDocument = this;
+
             return this.super();
         }
     },
@@ -164,7 +170,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
             channel.port1.onmessage = (function (self) {
                 return function () {
                     self.handleAgentMessage.apply(self, arguments);
-                }
+                };
             })(this);
 
             this._channelReady = false;
@@ -383,23 +389,6 @@ var PageDocument = exports.PageDocument = Montage.specialize({
         }
     },
 
-    _hasReadAlong: {
-        value: false
-    },
-
-    hasReadAlong: {
-        get: function () {
-            this.getHasReadAlong().done();
-            return this._hasReadAlong;
-        }
-    },
-
-    getHasReadAlong: {
-        value: function () {
-            return this._getChannelProperty("hasReadAlong", "hasReadAlong", "_hasReadAlong");
-        }
-    },
-
     /**
      * Internal eventually consistent copyrightPosition
      */
@@ -440,7 +429,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
      */
     getCopyrightPosition: {
         value: function () {
-           return this._getChannelProperty("copyrightPosition", "copyrightPosition", "_copyrightPosition");
+            return this._getChannelProperty("copyrightPosition", "copyrightPosition", "_copyrightPosition");
         }
     },
 
@@ -481,6 +470,18 @@ var PageDocument = exports.PageDocument = Montage.specialize({
                 return pageDom;
             });
         }
+    },
+
+    readAlong: {
+        value: null
+    },
+
+    _hasReadAlongChannelRider: {
+        value: false
+    },
+
+    _readingOrderFromXHTMLChannelRider: {
+        value: false
     },
 
     /**

@@ -29,11 +29,6 @@ HtmlController.prototype = {
         return !!this.document.getElementById("scholastic-e-copyright");
     },
 
-    hasReadAlong: function () {
-        // return !!this.document.getElementById("read-along-details");
-        return true;
-    },
-
     copyrightPosition: function () {
         var banner = this.document.querySelector(".copyright-banner"),
             result;
@@ -83,6 +78,23 @@ HtmlController.prototype = {
 
     documentContent: function () {
         return (new XMLSerializer()).serializeToString(this.document);
+    },
+
+    hasReadAlong: function() {
+        // return !!this.document.getElementById("read-along-details");
+        return true;
+    },
+
+    readingOrderFromXHTML: function() {
+        // return !!this.document.getElementById("read-along-details");
+        return [{
+            "id": "w1",
+            "text": "hi there"
+        }, {
+            "id": "w1",
+            "text": "you too"
+        }];
     }
+    
 
 };

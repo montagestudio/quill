@@ -1,6 +1,6 @@
 var PageDocument = require("core/page-document").PageDocument,
     Promise = require("montage/core/promise").Promise,
-    WAITSFOR_TIMEOUT = 2500;
+    WAITSFOR_TIMEOUT = 5500;
 
 var connectDocumentToWindow = function(doc, aWindow) {
     var deferredDocumentConnection = Promise.defer();
@@ -18,7 +18,7 @@ var connectDocumentToWindow = function(doc, aWindow) {
 
 /*
 TODO maybe fastest to run tests with a page doc, if not try with only the read along...
- */
+*/
 describe("core/read-along-spec", function() {
 
     var pageDocument,
@@ -121,7 +121,7 @@ describe("core/read-along-spec", function() {
 
             describe("via the optimistic property", function() {
 
-                it("should eventually update with the latest value", function() {
+                it("should eventually update hasReadAlong with the latest value", function() {
                     return connectedDocumentPromise.then(function() {
                         mockResponses.hasReadAlong = {
                             result: false,
@@ -154,19 +154,95 @@ describe("core/read-along-spec", function() {
                             mockWindow.remotePort.postMessage(responseMessage);
                         });
 
-                        expect(pageDocument.hasReadAlong).toBe(pageDocument._hasReadAlong);
+                        expect(pageDocument.readAlong.hasReadAlong).toBe(pageDocument.readAlong._hasReadAlong);
 
                         return deferredUpdateFromChannel.promise.then(function() {
-                            expect(pageDocument._hasReadAlong).toBe(true);
+                            expect(pageDocument.readAlong._hasReadAlong).toBe(true);
                         });
                     }).timeout(WAITSFOR_TIMEOUT);
                 });
 
             });
 
+
+            it("should eventually update readingOrderFromXHTML with the latest value", function() {
+                return connectedDocumentPromise.then(function() {
+                    mockResponses.readingOrderFromXHTML = {
+                        result: [{
+                            "id": "w1",
+                            "text": "Hello"
+                        }, {
+                            "id": "w2",
+                            "text": "I'm"
+                        }, {
+                            "id": "w4",
+                            "text": "Emily"
+                        }, {
+                            "id": "w5",
+                            "text": "Elizabeth!"
+                        }],
+                        success: true
+                    };
+                    var deferredUpdateFromChannel = Promise.defer();
+
+                    spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
+                        expect(message.data.method).toBe("readingOrderFromXHTML");
+
+                        // Plant a response that the agent knows a new value
+                        var responseMessage = {
+                            method: message.data.method,
+                            result: [{
+                                "id": "w1",
+                                "text": "Rappity"
+                            }, {
+                                "id": "w2",
+                                "text": "tap"
+                            }, {
+                                "id": "w4",
+                                "text": "tap"
+                            }, {
+                                "id": "w5",
+                                "text": "tap!"
+                            }],
+                            success: true,
+                            identifier: message.data.identifier
+                        };
+
+                        spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
+                            var deferredResult = this._deferredMap.get(message.data.identifier);
+
+                            deferredResult.promise.then(function(success) {
+                                // Test is done when the page has received the actual value
+                                deferredUpdateFromChannel.resolve();
+                            });
+
+                            return this.handleAgentMessage.originalValue.call(this, message);
+                        });
+
+                        mockWindow.remotePort.postMessage(responseMessage);
+                    });
+
+                    expect(pageDocument.readAlong.readingOrderFromXHTML).toBe(pageDocument.readAlong._readingOrderFromXHTML);
+
+                    return deferredUpdateFromChannel.promise.then(function() {
+                        expect(pageDocument.readAlong._readingOrderFromXHTML).toEqual([{
+                            "id": "w1",
+                            "text": "Rappity"
+                        }, {
+                            "id": "w2",
+                            "text": "tap"
+                        }, {
+                            "id": "w4",
+                            "text": "tap"
+                        }, {
+                            "id": "w5",
+                            "text": "tap!"
+                        }]);
+                    });
+                }).timeout(WAITSFOR_TIMEOUT);
+            });
+
         });
 
-
     });
-
 });
