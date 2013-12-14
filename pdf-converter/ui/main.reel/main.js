@@ -358,14 +358,42 @@ exports.Main = Component.specialize({
             return this.environmentBridge.backend.get("fs").invoke("exists", outputPath.substring("fs://localhost".length)).then(function(exists) {
                 if (exists && !forceCreate) {
                     return outputPath;
-                } else  {
+                } else {
                     return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate", "pdf-converter/templates/epub3", outputPath).then(function(result) {
                         var source = decodeURI(self.url).substring("fs://localhost".length),
                             dest = (result.url + "/original.pdf").substring("fs://localhost".length);
-
-//                        return self.environmentBridge.backend.get("fs").invoke("link", source, dest).then(function() {   // Use that for an hard link (copy the original)
+                        //                        return self.environmentBridge.backend.get("fs").invoke("link", source, dest).then(function() {   // Use that for an hard link (copy the original)
                         return self.environmentBridge.backend.get("fs").invoke("symbolicLink", dest, source, "file").then(function() {
-                            return result.url;
+                            
+                            // Also create a sym link to the final audio, or maybe copy it what about network drives?
+                            var expectedBookDirectoryInAudio = "00000000",
+                                bookId = self.url.substring(self.url.lastIndexOf("/") + 1),
+                                sourcePath = self.url.substring(0, self.url.lastIndexOf("/")),
+                                finalAudioDirName = "final",
+                                extIndex = bookId.lastIndexOf(".");
+
+                            if (extIndex !== -1) {
+                                bookId = bookId.substring(0, extIndex);
+                            }
+                            if(bookId){
+                                expectedBookDirectoryInAudio = bookId.substring(0, bookId.indexOf("_"));
+                            }
+
+                            var simulationExpectedAudioDirFromPDFLocation = "/Audio/" + expectedBookDirectoryInAudio + "/"+finalAudioDirName
+                                sourceAudioDir = decodeURI(sourcePath).substring("fs://localhost".length) + simulationExpectedAudioDirFromPDFLocation,
+                                destAudioDir = (result.url + "/OEBPS/audio").substring("fs://localhost".length);
+
+                            console.log("\tSymLinking audio " + sourceAudioDir + " to " + destAudioDir);
+
+                            // alert("Pause me");
+                            // throw "pause me";
+                            return self.environmentBridge.backend.get("fs").invoke("symbolicLink", destAudioDir, sourceAudioDir, "directory").then(function() {
+                                return result.url;
+                            }, function() {
+                                return result.url;
+                            });
+
+
                         }, function() {
                             return result.url;
                         });
