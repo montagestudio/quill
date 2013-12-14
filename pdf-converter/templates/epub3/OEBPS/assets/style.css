@@ -98,4 +98,5 @@ div.page text, div.page tspan, div.page image {
 /* Read along highlighting */
 .-epub-media-overlay-active {
     background-color: #ffb;
+    opacity: .3;
 }
