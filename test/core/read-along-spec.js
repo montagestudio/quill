@@ -1,87 +1,12 @@
 var PageDocument = require("core/page-document").PageDocument,
     Promise = require("montage/core/promise").Promise,
+    ReadAlong = require("core/read-along").ReadAlong,
+    Q = require("q"),
     WAITSFOR_TIMEOUT = 5500;
 
-var connectDocumentToWindow = function(doc, aWindow) {
-    var deferredDocumentConnection = Promise.defer();
-
-    doc.addPathChangeListener("_channelReady", function(ready) {
-        if (ready) {
-            deferredDocumentConnection.resolve(doc);
-        }
-    });
-
-    doc.pageWindow = aWindow;
-
-    return deferredDocumentConnection.promise;
-};
-
-/*
-TODO maybe fastest to run tests with a page doc, if not try with only the read along...
-*/
 describe("core/read-along-spec", function() {
 
-    var pageDocument,
-        mockWindow,
-        mockResponses;
-
-    beforeEach(function() {
-        pageDocument = new PageDocument();
-
-        mockResponses = {
-            hasReadAlong: {
-                result: false,
-                success: true
-            },
-            copyrightPosition: {
-                result: null,
-                success: true
-            }
-        };
-        mockWindow = {
-            remotePort: null,
-            postMessage: function(message, origin, transfer) {
-                if (transfer && transfer.length > 0) {
-                    this.remotePort = transfer[0];
-
-                    var self = this;
-                    this.remotePort.onmessage = function(message) {
-                        self.handleChannelMessage(message);
-                    };
-
-                    this.remotePort.postMessage("ready");
-                }
-            },
-            handleChannelMessage: function(message) {
-                var methodName = message.data.method,
-                    response = mockResponses[methodName],
-                    responseMessage = {
-                        method: methodName,
-                        result: response.result,
-                        success: !! response.success,
-                        identifier: message.data.identifier
-                    };
-
-                this.remotePort.postMessage(responseMessage);
-            }
-        };
-    });
-
-    describe("initialization", function() {
-
-        it("should have no pageWindow by default", function() {
-            expect(pageDocument.pageWindow).toBeNull();
-        });
-
-        it("should open a message channel to the specified window", function() {
-            pageDocument.pageWindow = mockWindow;
-            expect(mockWindow.remotePort).toBeTruthy();
-        });
-
-    });
-
-
-    describe("reading order", function() {
+    describe("reading order visualization", function() {
 
         it("should indicate reading order visually", function() {
             expect(true).toBe(true);
@@ -92,7 +17,6 @@ describe("core/read-along-spec", function() {
         });
 
     });
-
 
     describe("align audio with text", function() {
 
@@ -106,69 +30,73 @@ describe("core/read-along-spec", function() {
 
     });
 
+    describe("channel to epub book page's iframe", function() {
 
+        var readAlong;
 
-    describe("with an open channel", function() {
-
-        var connectedDocumentPromise;
-
-
-        describe("the read along presence API", function() {
+        describe("the reading order API", function() {
 
             beforeEach(function() {
-                connectedDocumentPromise = connectDocumentToWindow(pageDocument, mockWindow);
+                readAlong = new ReadAlong();
+                readAlong.connect();
             });
 
-            describe("via the optimistic property", function() {
 
-                it("should eventually update hasReadAlong with the latest value", function() {
-                    return connectedDocumentPromise.then(function() {
-                        mockResponses.hasReadAlong = {
-                            result: false,
-                            success: true
-                        };
-                        var deferredUpdateFromChannel = Promise.defer();
+            it("should send messages", function() {
+                readAlong.channel.l2r.put(10);
+                readAlong.channel.r2l.put(20);
 
-                        spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
-                            expect(message.data.method).toBe("hasReadAlong");
-
-                            // Plant a response that the agent knows a new value
-                            var responseMessage = {
-                                method: message.data.method,
-                                result: true,
-                                success: true,
-                                identifier: message.data.identifier
-                            };
-
-                            spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
-                                var deferredResult = this._deferredMap.get(message.data.identifier);
-
-                                deferredResult.promise.then(function(success) {
-                                    // Test is done when the page has received the actual value
-                                    deferredUpdateFromChannel.resolve();
-                                });
-
-                                return this.handleAgentMessage.originalValue.call(this, message);
-                            });
-
-                            mockWindow.remotePort.postMessage(responseMessage);
-                        });
-
-                        expect(pageDocument.readAlong.hasReadAlong).toBe(pageDocument.readAlong._hasReadAlong);
-
-                        return deferredUpdateFromChannel.promise.then(function() {
-                            expect(pageDocument.readAlong._hasReadAlong).toBe(true);
-                        });
-                    }).timeout(WAITSFOR_TIMEOUT);
+                var a = readAlong.channel.l2r.get().then(function(value) {
+                    console.log(value);
+                    expect(value).toBe(20);
                 });
+                var b = readAlong.channel.r2l.get().then(function(value) {
+                    console.log(value);
+                    expect(value).toBe(10);
+                });
+                Q.all([a, b]);
+            });
 
+
+            it("should trigger local progress handler", function() {
+                var notifyCount = 0;
+                return readAlong.peers.remote.invoke('runSomethingWithProgressNotifications', 3).progress(function(p) {
+                    notifyCount++;
+                    console.log(notifyCount);
+                }).then(function(message) {
+                    console.log(message);
+                    console.log(notifyCount);
+                    expect(notifyCount).toBe(3);
+                });
+            });
+
+            it("should reject all pending promises on lost connection", function() {
+                readAlong.peers.close();
+                return readAlong.peers.remote.invoke("respond").then(function() {
+                    console.log("This shouldnt happen");
+                    expect(false).toBe(true);
+                }, function(reason) {
+                    console.log("Promise on closed connection was rejected ", reason.message);
+                    expect(reason.message).toBe("Can't resolve promise because Connection closed");
+                });
+            });
+
+            it("should eventually update hasReadAlong with the latest value", function() {
+
+                return readAlong.peers.remote.invoke("hasReadAlong")
+                    .then(function(result) {
+                        console.log(result);
+                        expect(result).toBe(true);
+                    });
             });
 
 
             it("should eventually update readingOrderFromXHTML with the latest value", function() {
-                return connectedDocumentPromise.then(function() {
-                    mockResponses.readingOrderFromXHTML = {
-                        result: [{
+
+                return readAlong.peers.remote.invoke("getReadingOrderFromXHTML")
+                    .then(function(result) {
+                        console.log(result);
+                        expect(result).toEqual([{
                             "id": "w1",
                             "text": "Hello"
                         }, {
@@ -180,66 +108,8 @@ describe("core/read-along-spec", function() {
                         }, {
                             "id": "w5",
                             "text": "Elizabeth!"
-                        }],
-                        success: true
-                    };
-                    var deferredUpdateFromChannel = Promise.defer();
-
-                    spyOn(mockWindow, "handleChannelMessage").andCallFake(function(message) {
-                        expect(message.data.method).toBe("readingOrderFromXHTML");
-
-                        // Plant a response that the agent knows a new value
-                        var responseMessage = {
-                            method: message.data.method,
-                            result: [{
-                                "id": "w1",
-                                "text": "Rappity"
-                            }, {
-                                "id": "w2",
-                                "text": "tap"
-                            }, {
-                                "id": "w4",
-                                "text": "tap"
-                            }, {
-                                "id": "w5",
-                                "text": "tap!"
-                            }],
-                            success: true,
-                            identifier: message.data.identifier
-                        };
-
-                        spyOn(pageDocument, "handleAgentMessage").andCallFake(function(message) {
-                            var deferredResult = this._deferredMap.get(message.data.identifier);
-
-                            deferredResult.promise.then(function(success) {
-                                // Test is done when the page has received the actual value
-                                deferredUpdateFromChannel.resolve();
-                            });
-
-                            return this.handleAgentMessage.originalValue.call(this, message);
-                        });
-
-                        mockWindow.remotePort.postMessage(responseMessage);
-                    });
-
-                    expect(pageDocument.readAlong.readingOrderFromXHTML).toBe(pageDocument.readAlong._readingOrderFromXHTML);
-
-                    return deferredUpdateFromChannel.promise.then(function() {
-                        expect(pageDocument.readAlong._readingOrderFromXHTML).toEqual([{
-                            "id": "w1",
-                            "text": "Rappity"
-                        }, {
-                            "id": "w2",
-                            "text": "tap"
-                        }, {
-                            "id": "w4",
-                            "text": "tap"
-                        }, {
-                            "id": "w5",
-                            "text": "tap!"
                         }]);
                     });
-                }).timeout(WAITSFOR_TIMEOUT);
             });
 
         });

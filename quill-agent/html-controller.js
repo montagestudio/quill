@@ -80,21 +80,51 @@ HtmlController.prototype = {
         return (new XMLSerializer()).serializeToString(this.document);
     },
 
-    hasReadAlong: function() {
-        // return !!this.document.getElementById("read-along-details");
-        return true;
-    },
 
-    readingOrderFromXHTML: function() {
-        // return !!this.document.getElementById("read-along-details");
-        return [{
+    sharedReadingOrderMethods: {
+        hasReadAlong: function() {
+            // return !!this.document.getElementById("read-along-details");
+            return true;
+        },
+        getReadingOrderFromXHTML: function() {
+            var deferred = Q.defer();
+
+            var self = this;
+            window.setTimeout(function() {
+
+                console.log("getReadingOrderFromXHTML");
+                deferred.resolve(self.readingOrder);
+
+            }, 100);
+            return deferred.promise;
+        },
+        runSomethingWithProgressNotifications: function(times) {
+            var deferred = Q.defer();
+            var count = 0;
+            setTimeout(function() {
+                while (count++ < times) {
+                    console.log('Notify' + count + ' time');
+                    deferred.notify('Notify' + count + ' time');
+                }
+                deferred.resolve('Resolving');
+            }, 0);
+            return deferred.promise;
+        },
+        respond: function() {
+            return Q.defer().promise;
+        },
+        readingOrder: [{
             "id": "w1",
-            "text": "hi there"
+            "text": "Hello"
         }, {
-            "id": "w1",
-            "text": "you too"
-        }];
+            "id": "w2",
+            "text": "I'm"
+        }, {
+            "id": "w4",
+            "text": "Emily"
+        }, {
+            "id": "w5",
+            "text": "Elizabeth!"
+        }]
     }
-    
-
 };

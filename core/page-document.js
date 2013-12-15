@@ -25,7 +25,6 @@ var PageDocument = exports.PageDocument = Montage.specialize({
 
            /* prepare for read along */
            this.readAlong = new ReadAlong();
-           this.readAlong.pageDocument = this;
 
             return this.super();
         }
@@ -474,14 +473,6 @@ var PageDocument = exports.PageDocument = Montage.specialize({
 
     readAlong: {
         value: null
-    },
-
-    _hasReadAlongChannelRider: {
-        value: false
-    },
-
-    _readingOrderFromXHTMLChannelRider: {
-        value: false
     },
 
     /**

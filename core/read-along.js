@@ -1,6 +1,9 @@
 var Montage = require("montage").Montage,
     Promise = require("montage/core/promise").Promise,
-    ReadingOrder = require("core/reading-order").ReadingOrder;
+    ReadingOrder = require("core/reading-order").ReadingOrder,
+    Q = require("q"),
+    Queue = require("q/queue"),
+    Connection = require("q-connection");
 
 /**
  * This controls the read aloud feature of an ebook page.
@@ -8,6 +11,12 @@ var Montage = require("montage").Montage,
 
 var WAV_EXTENSION = ".wav",
     MP3_EXTENSION = ".mp3";
+
+
+/**
+ * https://github.com/kriskowal/q-connection/blob/master/spec/q-connection-spec.js
+ */
+
 
 exports.ReadAlong = Montage.specialize({
 
@@ -111,59 +120,6 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
-    pageDocument: {
-        value: null
-    },
-
-    _hasReadAlong: {
-        value: false
-    },
-
-    hasReadAlong: {
-        get: function() {
-            var self = this;
-            var resultDone = this.getHasReadAlong()
-            // .then(function(result){
-            //     console.log("resultDone " + result);
-            //     self._hasReadAlong = result;
-            //      if the page has read along, then lets load the reading order 
-            //     if(result === true){
-            //         self.getReadingOrderFromXHTML();
-            //     }
-            // })
-            .done();
-            return this._hasReadAlong;
-        }
-    },
-
-    getHasReadAlong: {
-        value: function() {
-            return this.pageDocument._getChannelProperty("hasReadAlong", "hasReadAlong", "_hasReadAlongChannelRider");
-        }
-    },
-
-    _readingOrderFromXHTML: {
-        value: null
-    },
-
-    readingOrderFromXHTML: {
-        get: function() {
-            var self = this;
-            this.getReadingOrderFromXHTML().then(function(result){
-                console.log("resultDone " + result);
-                self._readingOrderFromXHTML = result;
-                self.readingOrder.contents = result;
-            }).done();
-            return this._readingOrderFromXHTML;
-        }
-    },
-
-    getReadingOrderFromXHTML: {
-        value: function() {
-            return this.pageDocument._getChannelProperty("readingOrderFromXHTML", "readingOrderFromXHTML", "_readingOrderFromXHTMLChannelRider");
-        }
-    },
-
     alignAudioAndText: {
         value: function() {
             console.log("Aligning");
@@ -205,6 +161,78 @@ exports.ReadAlong = Montage.specialize({
             }
             console.log("saving prevous read along details" + JSON.stringify(this.alignmentResults));
             return new Promise();
+        }
+    },
+
+    channel: {
+        value: null
+    },
+
+    peers: {
+        value: null
+    },
+
+    hasReadAlong: {
+        value: null
+    },
+
+    connect: {
+        value: function() {
+
+            /**
+             * https://github.com/kriskowal/q-connection/blob/master/spec/q-connection-spec.js
+             */
+            var sending = Queue();
+            var receiving = Queue();
+
+            var channel = {
+                l2r: {
+                    get: sending.get,
+                    put: receiving.put,
+                    close: sending.close,
+                    closed: sending.closed
+                },
+                r2l: {
+                    get: receiving.get,
+                    put: sending.put,
+                    close: receiving.close,
+                    closed: receiving.closed
+                },
+                close: function() {
+                    sending.close();
+                    receiving.close();
+                }
+            };
+
+            // To communicate with a single frame on the same origin
+            // (multiple frames will require some handshaking event sources)
+
+            var iframe;
+            var iFrames = document.getElementsByTagName("iframe");
+            for (var frame = 0; frame < iFrames.length; frame++) {
+                if (iFrames[frame].src === this.xhtmlUrl) {
+                    console.log(iFrames[frame]);
+                    iframe = iFrames[frame];
+                }
+            }
+
+            local = iframe.contentWindow.agent.htmlController.sharedReadingOrderMethods;
+
+            this.channel = channel;
+            this.peers = {
+                local: Connection(channel.l2r, local),
+                remote: Connection(channel.r2l, local, {
+                    origin: window.location.origin,
+                    Q: Q
+                }),
+                close: channel.close
+            };
+
+
+            var self = this;
+            this.peers.remote.invoke("hasReadAlong").then(function() {
+                self.hasReadAlong = result;
+            });
         }
     }
 
