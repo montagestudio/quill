@@ -210,10 +210,14 @@ exports.ReadAlong = Montage.specialize({
             var iframe;
             var iFrames = document.getElementsByTagName("iframe");
             for (var frame = 0; frame < iFrames.length; frame++) {
-                if (iFrames[frame].src === this.xhtmlUrl) {
+                if (iFrames[frame].src.indexOf(this.xhtmlUrl) > -1 ) {
                     console.log(iFrames[frame]);
                     iframe = iFrames[frame];
                 }
+            }
+            if(!iframe){
+                console.log("No connection to the iframe.");
+                return;
             }
 
             local = iframe.contentWindow.agent.htmlController.sharedReadingOrderMethods;

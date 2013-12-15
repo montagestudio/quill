@@ -38,6 +38,7 @@ describe("core/read-along-spec", function() {
 
             beforeEach(function() {
                 readAlong = new ReadAlong();
+                readAlong.xhtmlUrl = "test/read-along/test-book-page.html";
                 readAlong.connect();
             });
 
