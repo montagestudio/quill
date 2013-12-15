@@ -83,6 +83,7 @@ HtmlController.prototype = {
 
     sharedReadingOrderMethods: {
         hasReadAlong: function() {
+            console.log("Asked the page "+window.location.href + " if it has read along.");
             // return !!this.document.getElementById("read-along-details");
             return true;
         },

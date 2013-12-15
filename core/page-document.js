@@ -174,6 +174,9 @@ var PageDocument = exports.PageDocument = Montage.specialize({
 
             this._channelReady = false;
             this._pageWindow.postMessage("openChannel", "fs://localhost", [channel.port2]);
+        
+            this.readAlong.xhtmlUrl = this._url;
+            this.readAlong.connect();
         }
     },
 
@@ -496,7 +499,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
     URL_PARAMS: {
         value: {
             find: "<head>",
-            insert: '<script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/quill-agent.js" /><script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/html-controller.js" />'
+            insert: '<script class="' + INJECTED_CLASS_NAME + '" src="http://client/node_modules/q/q.js" /><script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/quill-agent.js" /><script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/html-controller.js" />'
         }
     }
 });
