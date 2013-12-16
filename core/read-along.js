@@ -23,6 +23,8 @@ exports.ReadAlong = Montage.specialize({
     constructor: {
         value: function ReadAlong() {
 
+            this.useWorkaroundForCORSErrorWhenConnectingToIframe = true;
+
             this.readingOrder = new ReadingOrder();
 
             return this.super();
@@ -207,20 +209,29 @@ exports.ReadAlong = Montage.specialize({
             // To communicate with a single frame on the same origin
             // (multiple frames will require some handshaking event sources)
 
-            var iframe;
+            var iframe,
+                local;
+
             var iFrames = document.getElementsByTagName("iframe");
             for (var frame = 0; frame < iFrames.length; frame++) {
-                if (iFrames[frame].src.indexOf(this.xhtmlUrl) > -1 ) {
+                if (iFrames[frame].src.indexOf(this.xhtmlUrl) > -1) {
                     console.log(iFrames[frame]);
                     iframe = iFrames[frame];
                 }
             }
-            if(!iframe){
+            if (!iframe) {
                 console.log("No connection to the iframe.");
                 return;
             }
 
-            local = iframe.contentWindow.agent.htmlController.sharedReadingOrderMethods;
+            /* workaround for Uncaught SecurityError: Blocked a frame with origin "http://client" from accessing a frame with origin "fs://localhost".  The frame requesting access has a protocol of "http", the frame being accessed has a protocol of "fs". Protocols must match.
+             */
+            try {
+                local = iframe.contentWindow.agent.htmlController.sharedReadingOrderMethods;
+            } catch (e) {
+                console.log("Cant connect to the iframe. " + e);
+                local = {};
+            }
 
             this.channel = channel;
             this.peers = {
@@ -234,9 +245,18 @@ exports.ReadAlong = Montage.specialize({
 
 
             var self = this;
-            this.peers.remote.invoke("hasReadAlong").then(function() {
-                self.hasReadAlong = result;
-            });
+            if (!this.useWorkaroundForCORSErrorWhenConnectingToIframe) {
+                this.peers.remote.invoke("hasReadAlong").then(function() {
+                    self.hasReadAlong = result;
+                });
+                this.peers.remote.invoke("getReadingOrderFromXHTML").then(function() {
+                    self.this.readingOrder.contents = result;
+                });
+            } else {
+                srcUri = iframe.src.replace("http://client/index.html?file=", "");
+                this.readingOrder.loadFromXHTML(srcUri);
+                this.hasReadAlong = this.readingOrder.text !== "No text detected on this page.";
+            }
         }
     }
 

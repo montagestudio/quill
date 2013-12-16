@@ -1,8 +1,5 @@
-var PageDocument = require("core/page-document").PageDocument,
-    Promise = require("montage/core/promise").Promise,
-    ReadAlong = require("core/read-along").ReadAlong,
-    Q = require("q"),
-    WAITSFOR_TIMEOUT = 5500;
+var ReadAlong = require("core/read-along").ReadAlong,
+    Q = require("q");
 
 describe("core/read-along-spec", function() {
 

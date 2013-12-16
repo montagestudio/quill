@@ -7,27 +7,33 @@
     <link href="read-along-debug-view.css" rel="stylesheet" />
 
     <script type="text/montage-serialization">
-        {
-            "localizer": {
-                "object": "montage/core/localizer[defaultLocalizer]"
-            },
+    {
+        "localizer": {
+            "object": "montage/core/localizer[defaultLocalizer]"
+        },
 
-            "owner": {
-                "properties": {
-                    "element": {"#": "pageView"}
-                }
-            },
+        "owner": {
+            "properties": {
+                "element": {"#": "pageView"}
+            }
+        },
 
-            "readAloudDebug": {
-                "prototype": "montage/ui/text.reel",
-                "properties": {
-                    "element": {"#": "readAloudDebug"}
-                },
-                "bindings": {
-                    "value": {"<-": "@owner.pageDocument.readAlong.readingOrder.text"}
-                }
+        "readAloudDebug": {
+            "prototype": "montage/ui/text.reel",
+            "properties": {
+                "element": {"#": "readAloudDebug"}
+            },
+            "bindings": {
+                "value": {"<-": "@textPromiseController.state"}
+            }
+        },
+        "textPromiseController": {
+            "prototype": "montage/core/promise-controller",
+            "bindings": {
+                "value": {"<-": "@owner.pageDocument.readAlong.readingOrder.text"}
             }
         }
+    }
     </script>
 
 </head>
