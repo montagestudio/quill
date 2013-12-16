@@ -53,6 +53,7 @@ exports.ReadingOrder = Montage.specialize({
                         }
                     }
                     console.log(JSON.stringify(self.contents));
+                    var triggerTextUpdate = self.text;
                     deffered.resolve(self.contents);
                 });
 
@@ -60,6 +61,10 @@ exports.ReadingOrder = Montage.specialize({
 
             return deffered.promise;
         }
+    },
+
+    workaroundForPromiseController : {
+        value: null
     },
 
     text: {
@@ -74,6 +79,7 @@ exports.ReadingOrder = Montage.specialize({
                         return item.text;
                     }).join(":::");
                 }
+                self.workaroundForPromiseController = text;
                 deffered.resolve(text);
             });
             return deffered.promise;

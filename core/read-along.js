@@ -214,7 +214,7 @@ exports.ReadAlong = Montage.specialize({
 
             var iFrames = document.getElementsByTagName("iframe");
             for (var frame = 0; frame < iFrames.length; frame++) {
-                if (iFrames[frame].src.indexOf(this.xhtmlUrl) > -1) {
+                if (iFrames[frame].src.indexOf(this._xhtmlUrl) > -1) {
                     console.log(iFrames[frame]);
                     iframe = iFrames[frame];
                 }
@@ -253,9 +253,9 @@ exports.ReadAlong = Montage.specialize({
                     self.this.readingOrder.contents = result;
                 });
             } else {
-                srcUri = iframe.src.replace("http://client/index.html?file=", "");
+                srcUri = this._xhtmlUrl.replace("http://client/index.html?file=", "");
                 this.readingOrder.loadFromXHTML(srcUri);
-                this.hasReadAlong = this.readingOrder.text !== "No text detected on this page.";
+                this.hasReadAlong = this.readingOrder.workaroundForPromiseController !== "No text detected on this page.";
             }
         }
     }

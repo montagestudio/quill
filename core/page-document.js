@@ -175,7 +175,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
             this._channelReady = false;
             this._pageWindow.postMessage("openChannel", "fs://localhost", [channel.port2]);
         
-            this.readAlong.xhtmlUrl = this._url;
+            this.readAlong.xhtmlUrl = this._url.substring(0, this._url.indexOf("?"));
             this.readAlong.connect();
         }
     },
