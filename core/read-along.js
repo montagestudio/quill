@@ -25,7 +25,7 @@ exports.ReadAlong = Montage.specialize({
 
             this.useWorkaroundForCORSErrorWhenConnectingToIframe = true;
 
-            this.readingOrder = new ReadingOrder();
+            this._readingOrder = new ReadingOrder();
 
             return this.super();
         }
@@ -62,6 +62,12 @@ exports.ReadAlong = Montage.specialize({
         set: function(value) {
             if (value && value !== this._xhtmlUrl) {
                 this._xhtmlUrl = value;
+
+                var pageNumber = value.substring(value.lastIndexOf("/") + 1).replace(".xhtml", "");
+                this._pageNumber = pageNumber;
+
+                var sourcePath = value.substring(0, value.lastIndexOf("/")).replace("/pages", "");
+                this._basePath = sourcePath;
             }
         }
     },
@@ -110,7 +116,7 @@ exports.ReadAlong = Montage.specialize({
             var url = this._finalAudioUrl;
 
             if (!url && this._basePath && this._pageNumber) {
-                url = this._basePath + "/audio/" + this._pageNumber + MP3_EXTENSION;
+                url = this._basePath + "/audio/" + this._pageNumber + WAV_EXTENSION;
             }
 
             return url;
@@ -119,6 +125,35 @@ exports.ReadAlong = Montage.specialize({
             if (value && value !== this._finalAudioUrl) {
                 this._finalAudioUrl = value;
             }
+        }
+    },
+
+    playAudio: {
+        value: function() {
+            if (!this.finalAudioUrl) {
+                console.log("No audio for "+this._pageNumber);
+                return;
+            }
+
+            var audioElementForThisPage = document.getElementById("audio" + this._pageNumber);
+            if (!audioElementForThisPage) {
+                audioElementForThisPage = document.createElement("audio");
+                audioElementForThisPage.id = "audio" + this._pageNumber;
+                document.body.appendChild(audioElementForThisPage);
+            }
+            if(!audioElementForThisPage){
+                audioElementForThisPage.src = this.finalAudioUrl;
+            }
+            audioElementForThisPage.play();
+            this.finalAudio = audioElementForThisPage;
+            var hit = this.pageDocument.getReadingOrder;
+            console.log("getReadingOrder", hit);
+        }
+    },
+
+    handleAction: {
+        value: function() {
+            this.playAudio();
         }
     },
 
@@ -175,6 +210,33 @@ exports.ReadAlong = Montage.specialize({
     },
 
     hasReadAlong: {
+        value: null
+    },
+
+    sharedReadingOrderMethods: {
+        value: null
+    },
+
+    _readingOrder: {
+        value: null
+    },
+
+    readingOrder: {
+        get: function() {
+            console.log("get readingOrder", this._readingOrder);
+
+            return this._readingOrder;
+        },
+        set: function(value) {
+            console.log("set readingOrder", value);
+
+            if (value && value !== this._readingOrder) {
+                this._readingOrder.contents = value;
+            }
+        }
+    },
+
+    pageDocument: {
         value: null
     },
 
@@ -246,14 +308,14 @@ exports.ReadAlong = Montage.specialize({
 
             var self = this;
             if (!this.useWorkaroundForCORSErrorWhenConnectingToIframe) {
-                this.peers.remote.invoke("hasReadAlong").then(function() {
+                this.peers.remote.invoke("hasReadAlong").then(function(result) {
                     self.hasReadAlong = result;
                 });
-                this.peers.remote.invoke("getReadingOrderFromXHTML").then(function() {
+                this.peers.remote.invoke("getReadingOrderFromXHTML").then(function(result) {
                     self.this.readingOrder.contents = result;
                 });
             } else {
-                srcUri = this._xhtmlUrl.replace("http://client/index.html?file=", "");
+                var srcUri = this._xhtmlUrl.replace("http://client/index.html?file=", "");
                 this.readingOrder.loadFromXHTML(srcUri);
                 this.hasReadAlong = this.readingOrder.workaroundForPromiseController !== "No text detected on this page.";
             }

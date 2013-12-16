@@ -81,9 +81,56 @@ HtmlController.prototype = {
     },
 
 
+    getReadingOrder: function() {
+        console.log("Building reading order for the page " + window.location.href + " in the html controller.");
+        var textNodes;
+        try {
+            textNodes = document.getElementById("textOverlay").getElementsByTagName("span");
+        } catch (e) {
+            console.warn(e);
+            return [];
+        }
+        console.log(textNodes);
+        var count =0;
+        for (var node = 0; node < textNodes.length; node++) {
+            textNode = textNodes[node];
+            if (textNode.id.indexOf("w") === 0) {
+                count++;
+                this.sharedReadingOrderMethods.readingOrder.push({
+                    "id": textNode.id,
+                    "text": textNode.innerText.trim(),
+                    "readingOrder": count
+                });
+            }
+        }
+        console.log(this.sharedReadingOrderMethods.readingOrder);
+
+        /* mock highlight the words */
+        var self = this;
+        var highlightWord = function(word) {
+            if (word >= self.sharedReadingOrderMethods.readingOrder.length) {
+                return;
+            }
+            console.log("Highlighting " + word);
+            var wordItem = self.sharedReadingOrderMethods.readingOrder[word];
+            var element = document.getElementById(wordItem.id);
+            element.classList.add("-epub-media-overlay-active");
+            if (word > 0) {
+                var previous = document.getElementById(self.sharedReadingOrderMethods.readingOrder[word - 1].id);
+                previous.classList.remove("-epub-media-overlay-active");
+            }
+            window.setTimeout(function() {
+                highlightWord(word+1);
+            }, 300);
+        };
+        highlightWord(0);
+
+        return this.sharedReadingOrderMethods.readingOrder;
+    },
+
     sharedReadingOrderMethods: {
         hasReadAlong: function() {
-            console.log("Asked the page "+window.location.href + " if it has read along.");
+            console.log("Asked the page " + window.location.href + " if it has read along.");
             // return !!this.document.getElementById("read-along-details");
             return true;
         },
@@ -114,18 +161,6 @@ HtmlController.prototype = {
         respond: function() {
             return Q.defer().promise;
         },
-        readingOrder: [{
-            "id": "w1",
-            "text": "Hello"
-        }, {
-            "id": "w2",
-            "text": "I'm"
-        }, {
-            "id": "w4",
-            "text": "Emily"
-        }, {
-            "id": "w5",
-            "text": "Elizabeth!"
-        }]
+        readingOrder: []
     }
 };

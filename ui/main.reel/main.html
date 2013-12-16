@@ -147,6 +147,19 @@
                 }
             },
 
+            "readAlongButton": {
+                "prototype": "matte/ui/button.reel",
+                "properties": {
+                    "element": {"#": "readAlongButton"}
+                },
+                "listeners": [
+                    {
+                        "type": "action",
+                        "listener": {"@": "owner"}
+                    }
+                ]
+            },
+
             "saveButton": {
                 "prototype": "matte/ui/button.reel",
                 "properties": {
@@ -180,7 +193,7 @@
                 </div>
             </section>
             <section data-montage-id="readAlongCondition" class="Toolbar-group ReadAlong">
-                <img class="ReadAlong-icon" src="/assets/img/play.png">
+                <button data-montage-id="readAlongButton" class="ReadAlong-icon" src="/assets/img/play.png"></button>
                 <label class="Copyright-title">Read Along</label>
             </section>
             <section data-montage-id="copyrightCondition" class="Toolbar-group Copyright">

@@ -1,7 +1,7 @@
 
 #textOverlay span {
     position: relative;
-    background-color: #ff5;
+    background-color: #5ff;
     color: #f00 !important; /* the text is way off, we can't use text color */
     opacity: .3;
 }

@@ -25,6 +25,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
 
            /* prepare for read along */
            this.readAlong = new ReadAlong();
+           this.readAlong.pageDocument = this;
 
             return this.super();
         }
@@ -176,7 +177,9 @@ var PageDocument = exports.PageDocument = Montage.specialize({
             this._pageWindow.postMessage("openChannel", "fs://localhost", [channel.port2]);
         
             this.readAlong.xhtmlUrl = this._url.substring(0, this._url.indexOf("?"));
-            this.readAlong.connect();
+            this.readAlong.playAudio();
+            // this.readAlong.readingOrder = this.getReadingOrder;
+            // this.readAlong.connect();
         }
     },
 
@@ -477,6 +480,25 @@ var PageDocument = exports.PageDocument = Montage.specialize({
     readAlong: {
         value: null
     },
+
+
+    _getReadingOrder: {
+        value: null
+    },
+
+    getReadingOrder: {
+        get: function () {
+            this.getGetReadingOrder().done();
+            return this._getReadingOrder;
+        }
+    },
+
+    getGetReadingOrder: {
+        value: function () {
+            return this._getChannelProperty("getReadingOrder", "getReadingOrder", "_getReadingOrder");
+        }
+    },
+
 
     /**
      * Clear out cached values from the remote and refresh them
