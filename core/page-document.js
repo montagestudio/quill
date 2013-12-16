@@ -179,7 +179,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
             this.readAlong.xhtmlUrl = this._url.substring(0, this._url.indexOf("?"));
             this.readAlong.playAudio();
             // this.readAlong.readingOrder = this.getReadingOrder;
-            // this.readAlong.connect();
+            this.readAlong.connect();
         }
     },
 

@@ -24,13 +24,13 @@
                 "element": {"#": "readAloudDebug"}
             },
             "bindings": {
-                "value": {"<-": "@owner.pageDocument.readAlong.readingOrder.text"}
+                "value": {"<-": "@textPromiseController.value"}
             }
         },
         "textPromiseController": {
             "prototype": "montage/core/promise-controller",
             "bindings": {
-                "value": {"<-": "@owner.pageDocument.readAlong.readingOrder.text"}
+                "promise": {"<-": "@owner.pageDocument.readAlong.readingOrder.text"}
             }
         }
     }
