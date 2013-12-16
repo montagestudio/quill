@@ -3,7 +3,8 @@ var Montage = require("montage").Montage,
     ReadingOrder = require("core/reading-order").ReadingOrder,
     Q = require("q"),
     Queue = require("q/queue"),
-    Connection = require("q-connection");
+    Connection = require("q-connection"),
+    AudioAlignment = require("backend_plugins/audio-alignment").AudioAlignment;
 
 /**
  * This controls the read aloud feature of an ebook page.
@@ -68,6 +69,11 @@ exports.ReadAlong = Montage.specialize({
 
                 var sourcePath = value.substring(0, value.lastIndexOf("/")).replace("/pages", "");
                 this._basePath = sourcePath;
+
+                if (!this.audioAlignment) {
+                    this.audioAlignment = new AudioAlignment();
+                    this.audioAlignment.initialize(sourcePath, pageNumber);
+                }
             }
         }
     },
@@ -131,7 +137,7 @@ exports.ReadAlong = Montage.specialize({
     playAudio: {
         value: function() {
             if (!this.finalAudioUrl) {
-                console.log("No audio for "+this._pageNumber);
+                console.log("No audio for " + this._pageNumber);
                 return;
             }
 
@@ -141,9 +147,16 @@ exports.ReadAlong = Montage.specialize({
                 audioElementForThisPage.id = "audio" + this._pageNumber;
                 document.body.appendChild(audioElementForThisPage);
             }
-            if(!audioElementForThisPage){
+            if (!audioElementForThisPage) {
                 audioElementForThisPage.src = this.finalAudioUrl;
             }
+
+            if (this.audioAlignment) {
+                this.audioAlignment.audioFile = this.finalAudioUrl;
+            } else {
+                console.warn("Aligner is not on, this is a problem.");
+            }
+
             audioElementForThisPage.play();
             this.finalAudio = audioElementForThisPage;
             var hit = this.pageDocument.getReadingOrder;
@@ -155,6 +168,10 @@ exports.ReadAlong = Montage.specialize({
         value: function() {
             this.playAudio();
         }
+    },
+
+    audioAlignment: {
+        value: null
     },
 
     alignAudioAndText: {
@@ -236,6 +253,10 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
+    textContent: {
+        value: null
+    },
+
     pageDocument: {
         value: null
     },
@@ -315,9 +336,28 @@ exports.ReadAlong = Montage.specialize({
                     self.this.readingOrder.contents = result;
                 });
             } else {
+                self.alignmentResults = self.alignmentResults || [];
                 var srcUri = this._xhtmlUrl.replace("http://client/index.html?file=", "");
-                this.readingOrder.loadFromXHTML(srcUri);
-                this.hasReadAlong = this.readingOrder.workaroundForPromiseController !== "No text detected on this page.";
+                this.readingOrder.loadFromXHTML(srcUri).then(function(order) {
+
+                    if (self.audioAlignment) {
+                        self.audioAlignment.readingOrderJson = order;
+                        self.audioAlignment.runAligner().then(function(alignment){
+                            console.log("Alignment ", alignment);
+                            
+                            self.alignmentResults.push(alignment);
+                        });
+                    } else {
+                        console.warn("Aligner is not on, this is a problem.");
+                    }
+
+                    this.readingOrder.text.then(function(result) {
+                        console.log("Page content " + result);
+                        self.hasReadAlong = result !== "No text detected on this page.";
+                        self.textContent = result;
+                    });
+
+                });
             }
         }
     }
