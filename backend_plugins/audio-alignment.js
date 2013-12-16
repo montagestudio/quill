@@ -136,20 +136,20 @@ exports.AudioAlignment = Montage.specialize({
                         // console.log("First guess: ", result.guesses[1]);
                         // console.log("Performance: ", result.performance);
                     // }
-                    // deferred.resolve(result);
+                    deferred.resolve(result);
                     // 
                     // 
-                    self.backend.get("aligner").invoke("getRuns").then(function(runs) {
-                        console.log("Recieved alignment result: ", runs);
-                        // for (var run = 0; run < runs.length; run++) {
-                        //     console.log("First guess: ", runs[run].guesses[1]);
-                        //     // console.log("Performance: ", runs[run].performance);
-                        // }
-                        deferred.resolve(runs);
-                    }, function(reason) {
-                        console.log("Failed to get alignment result.", reason);
-                        deferred.reject(reason);
-                    });
+                    // self.backend.get("aligner").invoke("getRuns").then(function(runs) {
+                    //     console.log("Recieved alignment result: ", runs);
+                    //     // for (var run = 0; run < runs.length; run++) {
+                    //     //     console.log("First guess: ", runs[run].guesses[1]);
+                    //     //     // console.log("Performance: ", runs[run].performance);
+                    //     // }
+                    //     deferred.resolve(runs);
+                    // }, function(reason) {
+                    //     console.log("Failed to get alignment result.", reason);
+                    //     deferred.reject(reason);
+                    // });
 
                 }, function(reason) {
                     console.log("Failed to get alignment result.", reason);

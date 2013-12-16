@@ -73,6 +73,25 @@ exports.ReadAlong = Montage.specialize({
                 if (!this.audioAlignment) {
                     this.audioAlignment = new AudioAlignment();
                     this.audioAlignment.initialize(sourcePath, pageNumber);
+                    this.audioAlignment.audioFile = this.finalAudioUrl;
+                }
+
+                if(!this.finalAudio){
+                    var audioElementForThisPage = document.getElementById("audio" + this._pageNumber);
+                    if (!audioElementForThisPage) {
+                        audioElementForThisPage = document.createElement("audio");
+                        audioElementForThisPage.id = "audio" + this._pageNumber;
+                        document.body.appendChild(audioElementForThisPage);
+                        var self = this;
+                        audioElementForThisPage.addEventListener('ended', function(target) {
+                            console.log("Audio is done playing", target);
+                        });
+                    }
+                    if (!audioElementForThisPage.src) {
+                        audioElementForThisPage.src = this.finalAudioUrl;
+                    }
+                    this.finalAudio = audioElementForThisPage;
+
                 }
             }
         }
@@ -136,29 +155,12 @@ exports.ReadAlong = Montage.specialize({
 
     playAudio: {
         value: function() {
-            if (!this.finalAudioUrl) {
+            if (!this.finalAudioUrl || !this.finalAudio) {
                 console.log("No audio for " + this._pageNumber);
                 return;
             }
 
-            var audioElementForThisPage = document.getElementById("audio" + this._pageNumber);
-            if (!audioElementForThisPage) {
-                audioElementForThisPage = document.createElement("audio");
-                audioElementForThisPage.id = "audio" + this._pageNumber;
-                document.body.appendChild(audioElementForThisPage);
-            }
-            if (!audioElementForThisPage) {
-                audioElementForThisPage.src = this.finalAudioUrl;
-            }
-
-            if (this.audioAlignment) {
-                this.audioAlignment.audioFile = this.finalAudioUrl;
-            } else {
-                console.warn("Aligner is not on, this is a problem.");
-            }
-
-            audioElementForThisPage.play();
-            this.finalAudio = audioElementForThisPage;
+            this.finalAudio.play();
             var hit = this.pageDocument.getReadingOrder;
             console.log("getReadingOrder", hit);
         }
@@ -342,10 +344,25 @@ exports.ReadAlong = Montage.specialize({
 
                     if (self.audioAlignment) {
                         self.audioAlignment.readingOrderJson = order;
-                        self.audioAlignment.runAligner().then(function(alignment){
+                        self.audioAlignment.runAligner().then(function(alignment) {
                             console.log("Alignment ", alignment);
-                            
                             self.alignmentResults.push(alignment);
+
+                            var alignedAudioFile = alignment.audioFile;
+                            if (!alignedAudioFile && alignment[0] && alignment[0].audioFile) {
+                                alignedAudioFile = alignment[0].audioFile;
+                            }
+                            if (alignedAudioFile) {
+                                if (alignedAudioFile.indexOf("/") === 0) {
+                                    alignedAudioFile = "fs://localhost" + alignedAudioFile;
+                                }
+                                // if (!self.finalAudio.src) {
+                                //     self.finalAudio.src = self.finalAudioUrl;
+                                // }
+                                self.finalAudio.src = self.finalAudioUrl;
+
+                                self.playAudio();
+                            }
                         });
                     } else {
                         console.warn("Aligner is not on, this is a problem.");
