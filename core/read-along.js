@@ -10,7 +10,8 @@ var Montage = require("montage").Montage,
  * This controls the read aloud feature of an ebook page.
  */
 
-var WAV_EXTENSION = ".wav",
+var RAW_EXTENSION = ".raw",
+    WAV_EXTENSION = ".wav"
     MP3_EXTENSION = ".mp3";
 
 
@@ -76,7 +77,7 @@ exports.ReadAlong = Montage.specialize({
                     this.audioAlignment.audioFile = this.finalAudioUrl;
                 }
 
-                if(!this.finalAudio){
+                if (!this.finalAudio) {
                     var audioElementForThisPage = document.getElementById("audio" + this._pageNumber);
                     if (!audioElementForThisPage) {
                         audioElementForThisPage = document.createElement("audio");
@@ -111,16 +112,18 @@ exports.ReadAlong = Montage.specialize({
 
     voiceAudioUrl: {
         get: function() {
-            return this._voiceAudioUrl;
-        },
-        set: function(value) {
             var url = this._voiceAudioUrl;
 
             if (!url && this._basePath && this._pageNumber) {
-                url = this._basePath + "/audio/../voice/" + this._pageNumber + WAV_EXTENSION;
+                url = this._basePath + "/voice/" + this._pageNumber + RAW_EXTENSION;
             }
 
             return url;
+        },
+        set: function(value) {
+            if (value && value !== this._voiceAudioUrl) {
+                this._voiceAudioUrl = value;
+            }
         }
     },
 
@@ -132,7 +135,7 @@ exports.ReadAlong = Montage.specialize({
         value: null
     },
 
-    _finalAudioUrl: {
+    _voiceAudioUrl: {
         value: null
     },
 
@@ -344,22 +347,27 @@ exports.ReadAlong = Montage.specialize({
 
                     if (self.audioAlignment) {
                         self.audioAlignment.readingOrderJson = order;
-                        self.audioAlignment.runAligner().then(function(alignment) {
+                        self.audioAlignment.runAligner({
+                            "xhtml": self.xhtmlUrl.replace("fs://localhost", ""),
+                            "voice": self.voiceAudioUrl.replace("fs://localhost", ""),
+                            "finalAudio": self.finalAudioUrl,
+                            "pageNumber": self._pageNumber,
+                            "basePath": self.basePath,
+                            "readingOrder": order,
+                            "text": null
+                        }).then(function(alignment) {
                             console.log("Alignment ", alignment);
                             self.alignmentResults.push(alignment);
 
-                            var alignedAudioFile = alignment.audioFile;
-                            if (!alignedAudioFile && alignment[0] && alignment[0].audioFile) {
-                                alignedAudioFile = alignment[0].audioFile;
-                            }
-                            if (alignedAudioFile) {
+                            var alignedAudioFile = alignment.finalAudio;
+                           
+                            if (alignedAudioFile && alignment.alignmentResults && alignment.alignmentResults[0] && alignment.alignmentResults[0].guesses && alignment.alignmentResults[0].guesses["1"]) {
                                 if (alignedAudioFile.indexOf("/") === 0) {
                                     alignedAudioFile = "fs://localhost" + alignedAudioFile;
                                 }
-                                // if (!self.finalAudio.src) {
-                                //     self.finalAudio.src = self.finalAudioUrl;
+                                // if (!self.finalAudio.src || self.finalAudio.src != alignedAudioFile) {
+                                //     self.finalAudio.src = alignedAudioFile;
                                 // }
-                                self.finalAudio.src = self.finalAudioUrl;
 
                                 self.playAudio();
                             }
@@ -368,7 +376,7 @@ exports.ReadAlong = Montage.specialize({
                         console.warn("Aligner is not on, this is a problem.");
                     }
 
-                    this.readingOrder.text.then(function(result) {
+                    self.readingOrder.text.then(function(result) {
                         console.log("Page content " + result);
                         self.hasReadAlong = result !== "No text detected on this page.";
                         self.textContent = result;

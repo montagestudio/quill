@@ -385,14 +385,17 @@ exports.Main = Component.specialize({
 
                             console.log("\tSymLinking audio " + sourceAudioDir + " to " + destAudioDir);
 
-                            // alert("Pause me");
-                            // throw "pause me";
                             return self.environmentBridge.backend.get("fs").invoke("symbolicLink", destAudioDir, sourceAudioDir, "directory").then(function() {
-                                return result.url;
+                                console.log("\tSymLinking audio " + sourceAudioDir.replace(finalAudioDirName, "voice") + " to " + destAudioDir.replace("audio", "voice"));
+
+                                return self.environmentBridge.backend.get("fs").invoke("symbolicLink", destAudioDir.replace("audio", "voice"), sourceAudioDir.replace(finalAudioDirName,"voice"), "directory").then(function() {
+                                    return result.url;
+                                }, function() {
+                                    return result.url;
+                                });
                             }, function() {
                                 return result.url;
                             });
-
 
                         }, function() {
                             return result.url;

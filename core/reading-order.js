@@ -40,7 +40,7 @@ exports.ReadingOrder = Montage.specialize({
                     template = Template.create();
                     doc = template.createHtmlDocumentWithHtml(pagehtml);
                     var textNodes = doc.getElementById("textOverlay").getElementsByTagName("span");
-                    console.log(textNodes);
+                    // console.log(textNodes);
                     for (var node = 0; node < textNodes.length; node++) {
                         textNode = textNodes[node];
                         if (textNode.id.indexOf("w") === 0) {
@@ -52,7 +52,7 @@ exports.ReadingOrder = Montage.specialize({
                             });
                         }
                     }
-                    console.log(JSON.stringify(self.contents));
+                    console.log("This page contains this many words "+ JSON.stringify(self.contents.length));
                     var triggerTextUpdate = self.text;
                     deffered.resolve(self.contents);
                 });

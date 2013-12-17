@@ -123,20 +123,48 @@ exports.AudioAlignment = Montage.specialize({
     },
 
     runAligner: {
-        value: function(xhtmlPath, audioPath, pageNumber, text) {
+        value: function(options) {
             var deferred = Promise.defer(),
                 self = this;
 
             Promise.nextTick(function() {
                 console.log("Running aligner...");
 
-                self.backend.get("aligner").invoke("run", xhtmlPath, audioPath, pageNumber, text).then(function(result) {
+                if (options.readingOrder) {
+                    options.text = "";
+                    options.text = options.readingOrder.map(function(item) {
+                        return item.text;
+                    }).join(" ");
+                }
+                if (!options.text) {
+                    console.log("There is no text, resolving the reading order only.");
+                    options.alignmentResults = {
+                        "guesses": {},
+                        "info": "empty text, not running aligner"
+                    };
+                    deferred.resolve(options);
+                    return;
+                }
+
+                if (parseInt(options.pageNumber, 10) % 2 === 1) {
+                    console.log("Only running the right page. ");
+                    options.alignmentResults = [{
+                        "guesses": {},
+                        "info": "waiting on the other page to finish."
+                    }];
+                    deferred.resolve(options);
+                    return;
+                }
+                console.log("Running the voice audio " + options.voice);
+
+                self.backend.get("aligner").invoke("run", options.voice, options.text).then(function(result) {
                     console.log("Alignment is complete: ", result);
+                    options.alignmentResults = result;
                     // for (var run = 0; run < aligner.runs.length; run++) {
-                        // console.log("First guess: ", result.guesses[1]);
-                        // console.log("Performance: ", result.performance);
+                    // console.log("First guess: ", result.guesses[1]);
+                    // console.log("Performance: ", result.performance);
                     // }
-                    deferred.resolve(result);
+                    deferred.resolve(options);
                     // 
                     // 
                     // self.backend.get("aligner").invoke("getRuns").then(function(runs) {
@@ -156,7 +184,7 @@ exports.AudioAlignment = Montage.specialize({
                     deferred.reject(reason);
                 });
 
-               
+
 
             });
             return deferred.promise;
