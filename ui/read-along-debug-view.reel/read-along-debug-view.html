@@ -53,7 +53,8 @@
                 "src": "../../assets/img/play.png"
             },
             "bindings": {
-               "src": {"<-": "@owner.item.readAlong.playing ? '../../assets/img/pause.png' : '../../assets/img/play.png' "}
+               "src": {"<-": "@owner.item.readAlong.playing ? '../../assets/img/pause.png' : '../../assets/img/play.png' "},
+               "isHidden": {"<-":"!@owner.item.readAlong.hasReadAlong"}
             }
         },
 

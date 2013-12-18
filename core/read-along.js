@@ -443,9 +443,9 @@ exports.ReadAlong = Montage.specialize({
 
             var self = this;
             if (!this.useWorkaroundForCORSErrorWhenConnectingToIframe) {
-                this.peers.remote.invoke("hasReadAlong").then(function(result) {
-                    self.hasReadAlong = result;
-                });
+                // this.peers.remote.invoke("hasReadAlong").then(function(result) {
+                //     self.hasReadAlong = result;
+                // });
                 this.peers.remote.invoke("getReadingOrderFromXHTML").then(function(result) {
                     self.this.readingOrder.contents = result;
                 });
