@@ -87,7 +87,9 @@ HtmlController.prototype = {
             text = details.text;
 
         try {
-            document.getElementById(elementId).classList.add(classNames);
+            if (!document.getElementById(elementId).classList.contains(classNames)) {
+                document.getElementById(elementId).classList.add(classNames);
+            }
             // console.log("Added class " + classNames + " to " + text);
 
         } catch (e) {
@@ -102,7 +104,9 @@ HtmlController.prototype = {
         try {
             var classes = classNames.trim().split(" ");
             for (var i = 0; i < classes.length; i++) {
-                document.getElementById(elementId).classList.remove(classes[i]);
+                if (document.getElementById(elementId).classList.contains(classes[i])) {
+                    document.getElementById(elementId).classList.remove(classes[i]);
+                }
                 // console.log("Remove class " + classes[i] + " from " + text);
 
             }

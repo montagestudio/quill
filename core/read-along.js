@@ -67,6 +67,7 @@ exports.ReadAlong = Montage.specialize({
 
                 var pageNumber = value.substring(value.lastIndexOf("/") + 1).replace(".xhtml", "");
                 this._pageNumber = pageNumber;
+                this.readingOrder._pageNumber = pageNumber;
 
                 var sourcePath = value.substring(0, value.lastIndexOf("/")).replace("/pages", "");
                 this._basePath = sourcePath;
@@ -163,21 +164,31 @@ exports.ReadAlong = Montage.specialize({
             }
             var readingOrderToDraw;
             var guesses = this.alignmentResults[this.alignmentResults.length - 1].alignmentResults[0].guesses;
+            var bestGuessInTermsOfRecall;
+            var bestGuessInTermsOfPrecision;
+
             for (var g in guesses) {
                 if (guesses.hasOwnProperty(g)) {
                     var guess = guesses[g];
+
                     if (guess.readingOrder) {
-                        readingOrderToDraw = guess.readingOrder;
-                        break;
+                        if (!bestGuessInTermsOfRecall || guess.recall > bestGuessInTermsOfRecall.recall) {
+                            bestGuessInTermsOfRecall = guess;
+                        }
+                        if (!bestGuessInTermsOfPrecision || guess.precision > bestGuessInTermsOfRecall.precision) {
+                            bestGuessInTermsOfPrecision = guess;
+                        }
                     }
                 }
             }
+            readingOrderToDraw = bestGuessInTermsOfRecall.readingOrder;
+            console.log("Playing read along guess #" + bestGuessInTermsOfRecall.rank, readingOrderToDraw);
             var selfPageDocument = this.pageDocument;
             var timeUpdateFunction = function() {
                 /*
                 For each word in the reading order, add events to the audio to turn on and off the css.
                  */
-                console.log(this.currentTime);
+                // console.log(this.currentTime);
                 if (!readingOrderToDraw) {
                     return;
                 }
@@ -397,12 +408,11 @@ exports.ReadAlong = Montage.specialize({
                             "readingOrder": order,
                             "text": null
                         }).then(function(alignment) {
-                            console.log("Alignment ", alignment);
-                            self.alignmentResults.push(alignment);
 
                             var alignedAudioFile = alignment.finalAudio;
-
                             if (alignedAudioFile && alignment.alignmentResults && alignment.alignmentResults[0] && alignment.alignmentResults[0].guesses && alignment.alignmentResults[0].guesses["1"]) {
+                                self.alignmentResults.push(alignment);
+                                console.log("Alignment returned guesses ", alignment);
                                 if (alignedAudioFile.indexOf("/") === 0) {
                                     alignedAudioFile = "fs://localhost" + alignedAudioFile;
                                 }
@@ -455,8 +465,9 @@ exports.ReadAlong = Montage.specialize({
                     var guess = guesses[gu];
 
                     // if (guess.potentiallyClose) {
-                        guess = this.putElemntIdIntoAlignments(guess, readingOrder.slice());
-                        console.log(guess);
+                    guess = this.fitWordsToAlignmentTimesRegardlessOfText(guess, readingOrder.slice());
+                    // guess = this.putElementIdIntoAlignments(guess, readingOrder.slice());
+                    console.log(guess);
                     // }
                 }
             }
@@ -464,7 +475,75 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
-    putElemntIdIntoAlignments: {
+    /*
+    This is a very simplistic, if the words are perfectly recognized, and the reading order is perfect,
+    the highlights will be nice and sequential (maybe too fast, or two slow, or missing some at the end...)
+     */
+    fitWordsToAlignmentTimesRegardlessOfText: {
+        value: function(guess, readingOrder) {
+            var wordsInAudio = guess.alignment;
+            var wordsInDomReadingOrder = readingOrder;
+            var uniqueWordsInGuess = {};
+            var uniqueWordsInReadingOrder = {};
+
+            var precision = 0,
+                correspondingIndexInAudio,
+                lastIndexInWordsInAudio,
+                lastIndexInDomReadingOrder,
+                correspondingWordInAudio;
+
+            for (var wordIndex = 0; wordIndex < wordsInDomReadingOrder.length; wordIndex++) {
+                correspondingIndexInAudio = wordIndex + 1;
+                correspondingWordInAudio = wordsInAudio[correspondingIndexInAudio];
+                if (!correspondingWordInAudio) {
+                    console.log("correspondingIndexInAudio is missing" + correspondingIndexInAudio);
+                    continue;
+                }
+                /* TODO do a match on vowels to see if it might be a match, instead of just trying it */
+
+                wordsInDomReadingOrder[wordIndex].audioText = correspondingWordInAudio.text;
+                wordsInDomReadingOrder[wordIndex].startTime = correspondingWordInAudio.start;
+                wordsInDomReadingOrder[wordIndex].endTime = correspondingWordInAudio.end;
+                if (wordsInDomReadingOrder[wordIndex].audioText.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "") === wordsInDomReadingOrder[wordIndex].text.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "")) {
+                    precision++;
+                }
+                uniqueWordsInGuess[wordsInDomReadingOrder[wordIndex].audioText] = 1;
+                uniqueWordsInReadingOrder[wordsInDomReadingOrder[wordIndex].text] = 1;
+
+                /* keep track of words that were not matched, either audio was too short, or words in dom were too short */
+                lastIndexInWordsInAudio = correspondingIndexInAudio;
+                lastIndexInDomReadingOrder = wordIndex;
+            }
+            console.log("Hypothesis " + guess.hypothesis + "; Last word in dom: " + lastIndexInDomReadingOrder + ", last word in audio: " + lastIndexInWordsInAudio);
+
+            var wordsInGuess = 0;
+            for (var wg in uniqueWordsInGuess) {
+                if (uniqueWordsInGuess.hasOwnProperty(wg)) {
+                    wordsInGuess++;
+                }
+            }
+
+            var wordsInDom = 0;
+            for (var wd in uniqueWordsInReadingOrder) {
+                if (uniqueWordsInReadingOrder.hasOwnProperty(wd)) {
+                    wordsInDom++;
+                }
+            }
+
+            guess.recall = wordsInGuess / wordsInDom;
+            guess.precision = precision;
+            guess.readingOrder = wordsInDomReadingOrder;
+            guess.uniqueWordsInGuess = uniqueWordsInGuess;
+            guess.uniqueWordsInReadingOrder = uniqueWordsInReadingOrder;
+            return guess;
+        }
+    },
+
+    /*
+    This is a little too complex, it tries to survive the reading order being in the wrong order, 
+    but results in a rather funny smattering of highlights.. not sequential.
+     */
+    putElementIdIntoAlignments: {
         value: function(guess, readingOrder) {
             var words = guess.alignment;
             var countOfWordsWhichMightHaveAReadingOrder = 0;
@@ -474,7 +553,7 @@ exports.ReadAlong = Montage.specialize({
 
             for (var w in words) {
                 if (words.hasOwnProperty(w)) {
-                    if(words[w].text === "</s>"|| words[w].text === "<s>"){
+                    if (words[w].text === "</s>" || words[w].text === "<s>") {
                         console.log("skipping word boundaries (silences).");
                         continue;
                     }

@@ -158,7 +158,7 @@ exports.AudioAlignment = Montage.specialize({
                 console.log("Running the voice audio " + options.voice);
 
                 self.backend.get("aligner").invoke("run", options.voice, options.text).then(function(result) {
-                    console.log("Alignment is complete: ", result);
+                    // console.log("Alignment is complete: ", result);
                     options.alignmentResults = result;
                     // for (var run = 0; run < aligner.runs.length; run++) {
                     // console.log("First guess: ", result.guesses[1]);

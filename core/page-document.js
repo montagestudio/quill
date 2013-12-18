@@ -188,7 +188,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
         value: function() {
             var self = this;
             this._operationQueue.forEach(function (message) {
-                console.log("PERFORM QUEUED:", message);
+                // console.log("PERFORM QUEUED:", message);
                 self._agentPort.postMessage(message);
             });
             this._operationQueue.clear();
@@ -313,7 +313,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
 
                 if (property && internalProperty) {
                     promisedResult = promisedResult.then(function (result) {
-                        console.log("get success", property, result);
+                        // console.log("get success", property, result);
                         self._applyChange(property, internalProperty, result);
                         return result;
                     });

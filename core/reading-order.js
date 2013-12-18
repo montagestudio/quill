@@ -43,16 +43,23 @@ exports.ReadingOrder = Montage.specialize({
                     // console.log(textNodes);
                     for (var node = 0; node < textNodes.length; node++) {
                         textNode = textNodes[node];
+                        /* TODO consider keeping the , and . and ! and ? punctuation to improve alignment? */
                         if (textNode.id.indexOf("w") === 0) {
+                            var potentialText = textNode.innerText.trim();
+                            /* skip words that look like they might be the page number */
+                            if (potentialText == self._pageNumber) {
+                                console.log("This looks like it might be the page number, skipping... ", textNode);
+                                continue;
+                            }
                             count++;
                             self.contents.push({
                                 "id": textNode.id,
-                                "text": textNode.innerText.trim(),
+                                "text": potentialText,
                                 "readingOrder": count
                             });
                         }
                     }
-                    console.log("This page contains this many words "+ JSON.stringify(self.contents.length));
+                    // console.log("This page contains this many words " + JSON.stringify(self.contents.length));
                     var triggerTextUpdate = self.text;
                     deffered.resolve(self.contents);
                 });
@@ -63,13 +70,13 @@ exports.ReadingOrder = Montage.specialize({
         }
     },
 
-    workaroundForPromiseController : {
+    workaroundForPromiseController: {
         value: null
     },
 
     text: {
         get: function() {
-            var deffered = Promise.defer(), 
+            var deffered = Promise.defer(),
                 self = this;
             Promise.nextTick(function() {
 
