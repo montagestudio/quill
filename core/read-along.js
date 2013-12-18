@@ -28,7 +28,8 @@ exports.ReadAlong = Montage.specialize({
             this.useWorkaroundForCORSErrorWhenConnectingToIframe = true;
 
             this._readingOrder = new ReadingOrder();
-
+            this.playing = false;
+            this.playReadAloudReady = false;
             return this.super();
         }
     },
@@ -86,6 +87,8 @@ exports.ReadAlong = Montage.specialize({
                         document.body.appendChild(audioElementForThisPage);
                         audioElementForThisPage.addEventListener('ended', function(target) {
                             console.log("Audio is done playing", target);
+                            //rewind
+                            this.currentTime = 0;
                         });
                     }
                     if (!audioElementForThisPage.src) {
@@ -156,10 +159,38 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
+
+    _playReadAloudReady: {
+        value: null
+    },
+
+    playReadAloudReady: {
+        get: function() {
+            return this._playReadAloudReady;
+        },
+        set: function(value) {
+            if (value && value !== this._playReadAloudReady) {
+                this._playReadAloudReady = value;
+            }
+        }
+    },
+
+    playing: {
+        value: null
+    },
+
     playReadAloud: {
         value: function() {
             if (!this.finalAudioUrl || !this.finalAudio) {
                 console.log("No audio for " + this._pageNumber);
+                return;
+            }
+
+            /* if we are not at the beginning of the audio, resume play */
+            if (this.finalAudio.currentTime > 0) {
+                this.finalAudio.play();
+                console.log("Resumed play read aloud for " + this.xhtmlUrl);
+                this.playing = true;
                 return;
             }
             var readingOrderToDraw;
@@ -213,8 +244,11 @@ exports.ReadAlong = Montage.specialize({
             this.finalAudio.removeEventListener("timeupdate", timeUpdateFunction);
             this.finalAudio.addEventListener("timeupdate", timeUpdateFunction);
 
-
+            var self = this;
             this.finalAudio.addEventListener('ended', function(target) {
+                if (self) {
+                    self.playing = false;
+                }
                 console.log("Removing all highlights, audio is done playing", target);
                 if (!readingOrderToDraw) {
                     return;
@@ -234,6 +268,13 @@ exports.ReadAlong = Montage.specialize({
             this.finalAudio.play();
             // var hit = this.pageDocument.getReadingOrder;
             // console.log("getReadingOrder", hit);
+        }
+    },
+
+    pauseReadAloud: {
+        value: function() {
+            this.finalAudio.pause();
+            this.playing = false;
         }
     },
 
@@ -492,7 +533,7 @@ exports.ReadAlong = Montage.specialize({
                     // }
                 }
             }
-            this.playReadAloud();
+            this.playReadAloudReady = true;
         }
     },
 

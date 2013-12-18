@@ -14,7 +14,8 @@
 
         "owner": {
             "properties": {
-                "element": {"#": "pageView"}
+                "element": {"#": "pageView"},
+                "readAlongButtonState": "../../assets/img/play.png"
             }
         },
 
@@ -27,10 +28,39 @@
                 "value": {"<-": "@textPromiseController.value"}
             }
         },
+
+        "readAlongButton": {
+            "prototype": "matte/ui/button.reel",
+            "properties": {
+                "element": {"#": "readAlongButton"}
+            },
+            "bindings": {
+                "disabled" : {"<-": "!@owner.item.readAlong.playReadAloudReady"},
+                "classList.has('disabled')": {"<-": "!@owner.item.readAlong.playReadAloudReady"}
+            },
+            "listeners": [{
+                "type": "action",
+                "listener": {
+                    "@": "owner"
+                }
+            }]
+        },
+
+        "buttonImage": {
+            "prototype": "matte/ui/image.reel",
+            "properties": {
+                "element": {"#": "buttonImage"},
+                "src": "../../assets/img/play.png"
+            },
+            "bindings": {
+               "src": {"<-": "@owner.item.readAlong.playing ? '../../assets/img/pause.png' : '../../assets/img/play.png' "}
+            }
+        },
+
         "textPromiseController": {
             "prototype": "montage/core/promise-controller",
             "bindings": {
-                "promise": {"<-": "@owner.pageDocument.readAlong.readingOrder.text"}
+                "promise": {"<-": "@owner.item.readAlong.readingOrder.text"}
             }
         }
     }
@@ -38,10 +68,15 @@
 
 </head>
 <body>
-    <section data-montage-id="pageView" class="ReadAlongDebugViewPages">
+    <section data-montage-id="pageView" class="ReadAlong ReadAlongDebugViewPages">
         <iframe seamless scrolling="no"></iframe>
 
-        <div data-montage-id="readAloudDebug" class="ReadAlongDebugViewPages-debug"></div>
+        <div class="ReadAlongDebugViewPages-debug">
+            <button data-montage-id="readAlongButton" class="Toolbar-button" >Read Along
+                <img data-montage-id="buttonImage" class="ReadAlongDebugViewPages-icon" src="../../assets/img/play.png"></img>
+            </button>
+        </div>
+        <div data-montage-id="readAloudDebug" hidden class="ReadAlongDebugViewPages-debug"></div>
     </section>
 </body>
 </html>

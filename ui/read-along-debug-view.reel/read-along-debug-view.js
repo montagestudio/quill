@@ -7,18 +7,37 @@ exports.ReadAlongDebugView = PageView.specialize({
         value: function() {
             console.log("Drawing ", this.item);
             this.super();
-            this.pageDocument =  this.ownerComponent._dummyPage;
 
         }
-    },
-
-    pageDocument: {
-        value: null
     },
 
     loadPage: {
         value: function() {
             this.super();
+        }
+    },
+
+    getButtonImage: {
+        value: function(){
+            if(this.item.readAlong.play){
+
+            }
+        }
+    },
+               // "src": {"<-": "@owner.item.readAlong.playing ? '../../assets/img/pause.png' : '../../assets/img/play.png' "},
+
+    handleAction: {
+        value: function() {
+            if (this.item.readAlong.playing) {
+                console.log("Pausing");
+                this.readAlongButtofnState = "../../assets/img/play.png";
+                this.item.readAlong.pauseReadAloud();
+                // } else if (this.readAlongButtonState == "../../assets/img/play.png") {
+            } else if (!this.item.readAlong.playing && this.item.readAlong.playReadAloudReady) {
+                console.log("Playing");
+                this.readAlongButtonState = "../../assets/img/pause.png";
+                this.item.readAlong.playReadAloud();
+            }
         }
     }
 });

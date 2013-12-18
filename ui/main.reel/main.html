@@ -136,30 +136,6 @@
                 }
             },
 
-            "readAlongCondition": {
-                "prototype": "montage/ui/condition.reel",
-                "properties": {
-                    "element": {"#": "readAlongCondition"},
-                    "removalStrategy": "hide"
-                },
-                "bindings": {
-                    "condition": {"<-": "!!@owner.currentPage.pageWindow && @owner.currentPage.readAlong.hasReadAlong"}
-                }
-            },
-
-            "readAlongButton": {
-                "prototype": "matte/ui/image.reel",
-                "properties": {
-                    "element": {"#": "readAlongButton"}
-                },
-                "listeners": [
-                    {
-                        "type": "action",
-                        "listener": {"@": "owner"}
-                    }
-                ]
-            },
-
             "saveButton": {
                 "prototype": "matte/ui/button.reel",
                 "properties": {
@@ -191,10 +167,6 @@
                         <input data-montage-id="autoOpacity" class="Overlay-autoOpacity" type="checkbox"> auto
                     </label>
                 </div>
-            </section>
-            <section data-montage-id="readAlongCondition" class="Toolbar-group ReadAlong">
-                <button data-montage-id="readAlongButton" class="ReadAlong-icon" src="/assets/img/play.png"></button>
-                <label class="Copyright-title">Read Along</label>
             </section>
             <section data-montage-id="copyrightCondition" class="Toolbar-group Copyright">
                 <label class="Copyright-title">Copyright</label>

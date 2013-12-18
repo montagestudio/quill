@@ -124,20 +124,6 @@ body {
 }
 
 
-/* ReadAlong -------------------------------------- */
-
-.ReadAlong {
-    display: flex;
-}
-
-.ReadAlong-icon {
-    height: 28px;
-    margin: 0 10px 0 10px;
-    vertical-align: middle;
-}
-
-
-
 /* Copyright -------------------------------------- */
 
 .Copyright {

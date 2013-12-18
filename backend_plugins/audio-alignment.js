@@ -146,15 +146,15 @@ exports.AudioAlignment = Montage.specialize({
                     return;
                 }
 
-                if (parseInt(options.pageNumber, 10) % 2 === 1) {
-                    console.log("Only running the right page. ");
-                    options.alignmentResults = [{
-                        "guesses": {},
-                        "info": "waiting on the other page to finish."
-                    }];
-                    deferred.resolve(options);
-                    return;
-                }
+                // if (parseInt(options.pageNumber, 10) % 2 === 1) {
+                //     console.log("Only running the right page. ");
+                //     options.alignmentResults = [{
+                //         "guesses": {},
+                //         "info": "waiting on the other page to finish."
+                //     }];
+                //     deferred.resolve(options);
+                //     return;
+                // }
                 console.log("Running the voice audio " + options.voice);
 
                 self.backend.get("aligner").invoke("run", options.voice, options.text).then(function(result) {
