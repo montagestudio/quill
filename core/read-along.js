@@ -11,7 +11,7 @@ var Montage = require("montage").Montage,
  */
 
 var RAW_EXTENSION = ".raw",
-    WAV_EXTENSION = ".wav"
+    WAV_EXTENSION = ".wav",
     MP3_EXTENSION = ".mp3";
 
 
@@ -83,7 +83,6 @@ exports.ReadAlong = Montage.specialize({
                         audioElementForThisPage = document.createElement("audio");
                         audioElementForThisPage.id = "audio" + this._pageNumber;
                         document.body.appendChild(audioElementForThisPage);
-                        var self = this;
                         audioElementForThisPage.addEventListener('ended', function(target) {
                             console.log("Audio is done playing", target);
                         });
@@ -135,7 +134,7 @@ exports.ReadAlong = Montage.specialize({
         value: null
     },
 
-    _voiceAudioUrl: {
+    _finalAudioUrl: {
         value: null
     },
 
@@ -156,16 +155,58 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
-    playAudio: {
+    playReadAloud: {
         value: function() {
             if (!this.finalAudioUrl || !this.finalAudio) {
                 console.log("No audio for " + this._pageNumber);
                 return;
             }
+            var readingOrderToDraw;
+            var guesses = this.alignmentResults[this.alignmentResults.length - 1].alignmentResults[0].guesses;
+            for (var g in guesses) {
+                if (guesses.hasOwnProperty(g)) {
+                    var guess = guesses[g];
+                    if (guess.readingOrder) {
+                        readingOrderToDraw = guess.readingOrder;
+                        break;
+                    }
+                }
+            }
+            var selfPageDocument = this.pageDocument;
+            var timeUpdateFunction = function() {
+                /*
+                For each word in the reading order, add events to the audio to turn on and off the css.
+                 */
+                console.log(this.currentTime);
+                if(!readingOrderToDraw){
+                    return;
+                }
+                for (var i = 0; i < readingOrderToDraw.length; i++) {
+                    if (this.currentTime > readingOrderToDraw[i].startTime - 0.5 && this.currentTime < readingOrderToDraw[i].endTime) {
+                        selfPageDocument.askIframeToAddClassList({
+                            classNames: "-epub-media-overlay-active",
+                            elementId: readingOrderToDraw[i].id,
+                            text: readingOrderToDraw[i].text
+                        });
+                        console.log("Requested Highlighting " + readingOrderToDraw[i].text);
+                    } else {
+                        selfPageDocument.askIframeToRemoveClassList({
+                            classNames: "-epub-media-overlay-active",
+                            elementId: readingOrderToDraw[i].id,
+                            text: readingOrderToDraw[i].text
+                        });
+                        console.log("Requested Removed Highlighting from " + readingOrderToDraw[i].text);
+                    }
+                }
+            };
+            this.finalAudio.removeEventListener("timeupdate", timeUpdateFunction);
+            this.finalAudio.addEventListener("timeupdate", timeUpdateFunction);
+
+            //TODO seek to the beginning or resume...
 
             this.finalAudio.play();
-            var hit = this.pageDocument.getReadingOrder;
-            console.log("getReadingOrder", hit);
+            // var hit = this.pageDocument.getReadingOrder;
+            // console.log("getReadingOrder", hit);
         }
     },
 
@@ -360,7 +401,7 @@ exports.ReadAlong = Montage.specialize({
                             self.alignmentResults.push(alignment);
 
                             var alignedAudioFile = alignment.finalAudio;
-                           
+
                             if (alignedAudioFile && alignment.alignmentResults && alignment.alignmentResults[0] && alignment.alignmentResults[0].guesses && alignment.alignmentResults[0].guesses["1"]) {
                                 if (alignedAudioFile.indexOf("/") === 0) {
                                     alignedAudioFile = "fs://localhost" + alignedAudioFile;
@@ -368,8 +409,7 @@ exports.ReadAlong = Montage.specialize({
                                 // if (!self.finalAudio.src || self.finalAudio.src != alignedAudioFile) {
                                 //     self.finalAudio.src = alignedAudioFile;
                                 // }
-
-                                self.playAudio();
+                                self.tryToAutomaticallyPatchTheReadingOrderUsingAudioAlignment(alignment);
                             }
                         });
                     } else {
@@ -384,6 +424,110 @@ exports.ReadAlong = Montage.specialize({
 
                 });
             }
+        }
+    },
+
+    tryToAutomaticallyPatchTheReadingOrderUsingAudioAlignment: {
+        value: function(alignment) {
+            console.log("I'm going to try to guess which hypothesis works for this text, and then try to re-order the reading order to match.");
+            var guesses = alignment.alignmentResults[0].guesses;
+            var readingOrder = alignment.readingOrder;
+
+
+            for (var g in guesses) {
+                if (guesses.hasOwnProperty(g)) {
+                    var guess = guesses[g];
+
+                    /* if the alignment is the same length as the reading order (ie has only <s> and </s> extra) */
+                    if (guess.alignment[readingOrder.length + 2] && !guess.alignment[readingOrder.length + 3]) {
+                        guess.potentiallyClose = guess.potentiallyClose ? guess.potentiallyClose++ : 1;
+                    }
+                }
+            }
+
+            for (var gu in guesses) {
+                if (guesses.hasOwnProperty(gu)) {
+                    var guess = guesses[gu];
+
+                    if (guess.potentiallyClose) {
+                        console.log(guess);
+                        guess = this.putElemntIdIntoAlignments(guess, readingOrder);
+                    }
+                }
+            }
+            this.playReadAloud();
+        }
+    },
+
+    putElemntIdIntoAlignments: {
+        value: function(guess, readingOrder) {
+            var words = guess.alignment;
+            var countOfWordsWhichMightHaveAReadingOrder = 0;
+            for (var w in words) {
+                if (words.hasOwnProperty(w)) {
+                    console.log(words[w].text);
+
+                    /*
+                    Put the reading order into the alignment
+                     */
+                    // var matchingReadingOrderItems = readingOrder.filter(function(it) {
+                    //     var text = "";
+                    //     try {
+                    //         text = it.text.toUpperCase().split(/[^A-Z0-9'\n.-]/);
+                    //     } catch (e) {
+                    //         console.log("something is wrong with this reading order item: ", it);
+                    //     }
+                    //     if (text == words[w].text) {
+                    //         console.log("Found something!", it);
+                    //         return it;
+                    //     }
+                    // });
+                    // if (matchingReadingOrderItems.length > 0) {
+                    //     words[w].matchingReadingOrderItems = matchingReadingOrderItems;
+                    //     countOfWordsWhichMightHaveAReadingOrder++;
+                    // }
+
+                    /*
+                    Put the alignment into the reading order
+                     */
+                    for (var item = 0; item < readingOrder.length; item++) {
+                        var span = readingOrder[item];
+                        if (span.text.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "") == words[w].text) {
+                            /*
+                            This causes the FIRST token of this word in the reading order to be the one that is in the alignment.
+                            This only works if the reading order is corrected.
+                             */
+                            if (span.startTime === undefined && words[w].readingOrder === undefined) {
+                                span.startTime = parseFloat(words[w].start);
+                                span.endTime = parseFloat(words[w].end);
+                                words[w].readingOrder = span;
+                                console.log("Found something!", span);
+                                countOfWordsWhichMightHaveAReadingOrder++;
+                                continue;
+                            }
+                        } else {
+                            // console.log(words[w].text + ":" + span.text);
+                        }
+                    }
+
+                }
+            }
+            console.log("Hypothesis " + guess.hypothesis + " has this many words in the dom: " + countOfWordsWhichMightHaveAReadingOrder);
+            guess.countOfWordsWhichMightHaveAReadingOrder = countOfWordsWhichMightHaveAReadingOrder;
+
+            /*
+            Phase 2: shuffle the reading order to be in order by time, to see if it looks okay... (and maybe insert words that werent in the audio, and smooth)
+             */
+            var sorted = readingOrder.sort(function(a, b) {
+                var astart = a.startTime || 100;
+                var bstart = b.startTime || 100;
+
+                return astart - bstart;
+            });
+
+
+            guess.readingOrder = readingOrder;
+            return guess;
         }
     }
 

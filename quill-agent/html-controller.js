@@ -81,8 +81,37 @@ HtmlController.prototype = {
     },
 
 
-    getReadingOrder: function() {
-        console.log("Building reading order for the page " + window.location.href + " in the html controller.");
+    addCss: function(details) {
+        var classNames = details.classNames,
+            elementId = details.elementId;
+
+        try {
+            document.getElementById(elementId).classList.add(classNames);
+            console.log("Added class " + classNames + " to " + text);
+
+        } catch (e) {
+            console.log("Failed to appy class " + classNames + " to " + elementId, e);
+        }
+    },
+
+    removeCss: function(details) {
+        var classNames = details.classNames,
+            elementId = details.elementId,
+            text = details.text;
+        try {
+            var classes = classNames.trim().split(" ");
+            for (var i = 0; i < classes.length; i++) {
+                document.getElementById(elementId).classList.remove(classes[i]);
+                console.log("Remove class " + classes[i] + " from " + text);
+
+            }
+        } catch (e) {
+            console.log("Failed to remove class " + classNames + " to " + elementId, e);
+        }
+    },
+
+    getReadingOrder: function(alignment) {
+        console.log("Building reading order for the page " + window.location.href + " in the html controller.", alignment);
         var textNodes;
         try {
             textNodes = document.getElementById("textOverlay").getElementsByTagName("span");
@@ -91,7 +120,8 @@ HtmlController.prototype = {
             return [];
         }
         console.log(textNodes);
-        var count =0;
+        var count =0,
+            textNode;
         for (var node = 0; node < textNodes.length; node++) {
             textNode = textNodes[node];
             if (textNode.id.indexOf("w") === 0) {

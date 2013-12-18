@@ -494,11 +494,22 @@ var PageDocument = exports.PageDocument = Montage.specialize({
     },
 
     getGetReadingOrder: {
-        value: function () {
-            return this._getChannelProperty("getReadingOrder", "getReadingOrder", "_getReadingOrder");
+        value: function (value) {
+            return this._setChannelProperty("getReadingOrder", value, "getReadingOrder", "_getReadingOrder");
         }
     },
 
+    askIframeToAddClassList: {
+        value: function(value) {
+            return this._setChannelProperty("addCss", value, "addCss", "_addCss");
+        }
+    },
+
+    askIframeToRemoveClassList: {
+        value: function(value) {
+            return this._setChannelProperty("removeCss", value, "removeCss", "_removeCss");
+        }
+    },
 
     /**
      * Clear out cached values from the remote and refresh them
