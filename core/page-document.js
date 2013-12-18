@@ -219,7 +219,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
                 deferredIdentifier = data.identifier,
                 deferredResult;
 
-            console.log("parent" + this.name + ": onmessage", data);
+            // console.log("parent" + this.name + ": onmessage", data);
 
             if ("disconnect" === data) {
                 this.pageWindow = null;
@@ -346,7 +346,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
                     //TODO detect success vs failure (the failure handler deals with errors)
 
                     //TODO accept accepted value, instead of value
-                    console.log("set success", property, value);
+                    // console.log("set success", property, value);
 
                     //TODO how do we know what values are affected by this property?
                     //i.e. which cached deferreds to clear?

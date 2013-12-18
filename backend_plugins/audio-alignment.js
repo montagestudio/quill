@@ -108,12 +108,12 @@ exports.AudioAlignment = Montage.specialize({
 
     readingOrderJson: {
         get: function() {
-            console.log("get readingOrderJson in aligner", this._readingOrderJson);
+            // console.log("get readingOrderJson in aligner", this._readingOrderJson);
 
             return this._readingOrderJson;
         },
         set: function(value) {
-            console.log("set readingOrderJson in aligner", value);
+            // console.log("set readingOrderJson in aligner", value);
 
             if (value && value !== this._readingOrderJson) {
                 this._readingOrderJson = value;

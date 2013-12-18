@@ -178,7 +178,7 @@ exports.ReadAlong = Montage.specialize({
                 For each word in the reading order, add events to the audio to turn on and off the css.
                  */
                 console.log(this.currentTime);
-                if(!readingOrderToDraw){
+                if (!readingOrderToDraw) {
                     return;
                 }
                 for (var i = 0; i < readingOrderToDraw.length; i++) {
@@ -188,14 +188,14 @@ exports.ReadAlong = Montage.specialize({
                             elementId: readingOrderToDraw[i].id,
                             text: readingOrderToDraw[i].text
                         });
-                        console.log("Requested Highlighting " + readingOrderToDraw[i].text);
+                        // console.log("Requested Highlighting " + readingOrderToDraw[i].text);
                     } else {
                         selfPageDocument.askIframeToRemoveClassList({
                             classNames: "-epub-media-overlay-active",
                             elementId: readingOrderToDraw[i].id,
                             text: readingOrderToDraw[i].text
                         });
-                        console.log("Requested Removed Highlighting from " + readingOrderToDraw[i].text);
+                        // console.log("Requested Removed Highlighting from " + readingOrderToDraw[i].text);
                     }
                 }
             };
@@ -433,7 +433,7 @@ exports.ReadAlong = Montage.specialize({
             var guesses = alignment.alignmentResults[0].guesses;
             var readingOrder = alignment.readingOrder;
 
-
+            var tightMatches = 0;
             for (var g in guesses) {
                 if (guesses.hasOwnProperty(g)) {
                     var guess = guesses[g];
@@ -441,18 +441,23 @@ exports.ReadAlong = Montage.specialize({
                     /* if the alignment is the same length as the reading order (ie has only <s> and </s> extra) */
                     if (guess.alignment[readingOrder.length + 2] && !guess.alignment[readingOrder.length + 3]) {
                         guess.potentiallyClose = guess.potentiallyClose ? guess.potentiallyClose++ : 1;
+                        tightMatches++;
                     }
                 }
             }
+
+            // if (!tightMatches && guesses["1"]) {
+            //     guesses["1"].potentiallyClose = 1;
+            // }
 
             for (var gu in guesses) {
                 if (guesses.hasOwnProperty(gu)) {
                     var guess = guesses[gu];
 
-                    if (guess.potentiallyClose) {
+                    // if (guess.potentiallyClose) {
+                        guess = this.putElemntIdIntoAlignments(guess, readingOrder.slice());
                         console.log(guess);
-                        guess = this.putElemntIdIntoAlignments(guess, readingOrder);
-                    }
+                    // }
                 }
             }
             this.playReadAloud();
@@ -463,9 +468,19 @@ exports.ReadAlong = Montage.specialize({
         value: function(guess, readingOrder) {
             var words = guess.alignment;
             var countOfWordsWhichMightHaveAReadingOrder = 0;
+            var numberOfWordsInGuess = 0;
+            var uniqueWordsInGuess = {};
+            var uniqueWordsInReadingOrder = {};
+
             for (var w in words) {
                 if (words.hasOwnProperty(w)) {
+                    if(words[w].text === "</s>"|| words[w].text === "<s>"){
+                        console.log("skipping word boundaries (silences).");
+                        continue;
+                    }
                     console.log(words[w].text);
+                    uniqueWordsInGuess[words[w].text] = true;
+                    numberOfWordsInGuess++;
 
                     /*
                     Put the reading order into the alignment
@@ -492,17 +507,18 @@ exports.ReadAlong = Montage.specialize({
                      */
                     for (var item = 0; item < readingOrder.length; item++) {
                         var span = readingOrder[item];
+                        uniqueWordsInReadingOrder[span.text] = 1;
                         if (span.text.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "") == words[w].text) {
                             /*
                             This causes the FIRST token of this word in the reading order to be the one that is in the alignment.
                             This only works if the reading order is corrected.
                              */
-                            if (span.startTime === undefined && words[w].readingOrder === undefined) {
+                            if (span.startTime === undefined && words[w].span === undefined) {
                                 span.startTime = parseFloat(words[w].start);
                                 span.endTime = parseFloat(words[w].end);
-                                words[w].readingOrder = span;
-                                console.log("Found something!", span);
                                 countOfWordsWhichMightHaveAReadingOrder++;
+                                words[w].span = span;
+                                console.log("Found something!", span);
                                 continue;
                             }
                         } else {
@@ -514,7 +530,24 @@ exports.ReadAlong = Montage.specialize({
             }
             console.log("Hypothesis " + guess.hypothesis + " has this many words in the dom: " + countOfWordsWhichMightHaveAReadingOrder);
             guess.countOfWordsWhichMightHaveAReadingOrder = countOfWordsWhichMightHaveAReadingOrder;
+            guess.precision = countOfWordsWhichMightHaveAReadingOrder / numberOfWordsInGuess;
+            guess.uniqueWordsInGuess = uniqueWordsInGuess;
+            guess.uniqueWordsInReadingOrder = uniqueWordsInReadingOrder;
 
+            var wordsInGuess = 0;
+            for (var wg in uniqueWordsInGuess) {
+                if (uniqueWordsInGuess.hasOwnProperty(wg)) {
+                    wordsInGuess++;
+                }
+            }
+            var wordsInDom = 0;
+            for (var wd in uniqueWordsInReadingOrder) {
+                if (uniqueWordsInReadingOrder.hasOwnProperty(wd)) {
+                    wordsInDom++;
+                }
+            }
+
+            guess.recall = wordsInGuess / wordsInDom;
             /*
             Phase 2: shuffle the reading order to be in order by time, to see if it looks okay... (and maybe insert words that werent in the audio, and smooth)
              */

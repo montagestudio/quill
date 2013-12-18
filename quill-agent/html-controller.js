@@ -83,11 +83,12 @@ HtmlController.prototype = {
 
     addCss: function(details) {
         var classNames = details.classNames,
-            elementId = details.elementId;
+            elementId = details.elementId,
+            text = details.text;
 
         try {
             document.getElementById(elementId).classList.add(classNames);
-            console.log("Added class " + classNames + " to " + text);
+            // console.log("Added class " + classNames + " to " + text);
 
         } catch (e) {
             console.log("Failed to appy class " + classNames + " to " + elementId, e);
@@ -102,7 +103,7 @@ HtmlController.prototype = {
             var classes = classNames.trim().split(" ");
             for (var i = 0; i < classes.length; i++) {
                 document.getElementById(elementId).classList.remove(classes[i]);
-                console.log("Remove class " + classes[i] + " from " + text);
+                // console.log("Remove class " + classes[i] + " from " + text);
 
             }
         } catch (e) {
