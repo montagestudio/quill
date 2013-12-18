@@ -201,7 +201,7 @@ exports.ReadAlong = Montage.specialize({
             for (var g in guesses) {
                 if (guesses.hasOwnProperty(g)) {
                     var guess = guesses[g];
-
+                    console.log("Guess: " + guess.rank + " Precision: " + guess.precision + " Recall: " + guess.recall);
                     if (guess.readingOrder) {
                         if (!bestGuessInTermsOfRecall || guess.recall > bestGuessInTermsOfRecall.recall) {
                             bestGuessInTermsOfRecall = guess;
@@ -212,7 +212,8 @@ exports.ReadAlong = Montage.specialize({
                     }
                 }
             }
-            readingOrderToDraw = bestGuessInTermsOfRecall.readingOrder;
+            // readingOrderToDraw = bestGuessInTermsOfRecall.readingOrder;
+            readingOrderToDraw = bestGuessInTermsOfPrecision.readingOrder;
             console.log("Playing read along guess #" + bestGuessInTermsOfRecall.rank, readingOrderToDraw);
             var selfPageDocument = this.pageDocument;
             var timeUpdateFunction = function() {
@@ -523,13 +524,14 @@ exports.ReadAlong = Montage.specialize({
 
                     // if (guess.potentiallyClose) {
                     /* If the text is short, then force/fake align it */
-                    if (readingOrder && readingOrder.length < 35) {
-                        guess = this.fitWordsToAlignmentTimesRegardlessOfText(guess, readingOrder.slice());
-                    } else {
-                        /* Otherwise, only show words that actually match the audio guesses */
-                        guess = this.putElementIdIntoAlignments(guess, readingOrder.slice());
-                    }
-                    console.log(guess);
+                    // if (readingOrder && readingOrder.length < 35) {
+                    //     guess = this.fitWordsToAlignmentTimesRegardlessOfText(guess, readingOrder.slice());
+                    // } else {
+                    /* Otherwise, only show words that actually match the audio guesses */
+                    // guess = this.putElementIdIntoAlignments(guess, readingOrder.slice());
+                    guess = this.matchWordsToAlignmentToReadingOrder(guess, readingOrder.slice());
+                    // }
+                    // console.log(guess);
                     // }
                 }
             }
@@ -608,6 +610,84 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
+    matchWordsToAlignmentToReadingOrder: {
+        value: function(guess, readingOrder) {
+            var wordsInAudio = guess.alignment;
+            var wordsInDomReadingOrder = readingOrder;
+            var uniqueWordsInGuess = {};
+            var uniqueWordsInReadingOrder = {};
+
+            var precision = 0,
+                previousWordWithKnowEndTime,
+                openmindednessForNextWord = 1;
+
+            //Go through the reading order
+            for (var wordIndex = 0; wordIndex < wordsInDomReadingOrder.length; wordIndex++) {
+                // console.log("\n\n Working on " + wordsInDomReadingOrder[wordIndex].text);
+                uniqueWordsInReadingOrder[wordsInDomReadingOrder[wordIndex].text] = 1;
+
+                // Find the first pronuncaition of this word which is close to the end time of the previous word
+                for (var wordIndexInAlignment in wordsInAudio) {
+                    if (wordsInAudio.hasOwnProperty(wordIndexInAlignment)) {
+                        uniqueWordsInGuess[wordsInAudio[wordIndexInAlignment].text] = 1;
+                        if (wordsInDomReadingOrder[wordIndex].text.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "") === wordsInAudio[wordIndexInAlignment].text.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "")) {
+                            // console.log("Found a match: " + wordsInDomReadingOrder[wordIndex].text + " at " + wordsInAudio[wordIndexInAlignment].start);
+
+                            if (!previousWordWithKnowEndTime) {
+                                previousWordWithKnowEndTime = {
+                                    text: "<sil>",
+                                    endTime: wordsInAudio[wordIndexInAlignment].start
+                                };
+                            }
+
+                            if (parseFloat(wordsInAudio[wordIndexInAlignment].start) >= previousWordWithKnowEndTime.endTime && parseFloat(wordsInAudio[wordIndexInAlignment].start) - previousWordWithKnowEndTime.endTime <= openmindednessForNextWord) {
+                                // console.log("\t" + previousWordWithKnowEndTime.text + " at " + previousWordWithKnowEndTime.endTime + " -> " + wordsInDomReadingOrder[wordIndex].text + " starting at " + wordsInAudio[wordIndexInAlignment].start);
+                                wordsInDomReadingOrder[wordIndex].startTime = parseFloat(wordsInAudio[wordIndexInAlignment].start);
+                                wordsInDomReadingOrder[wordIndex].endTime = parseFloat(wordsInAudio[wordIndexInAlignment].end);
+                                wordsInDomReadingOrder[wordIndex].audioText = wordsInAudio[wordIndexInAlignment].text;
+                                previousWordWithKnowEndTime = wordsInDomReadingOrder[wordIndex];
+                                wordsInAudio[wordIndexInAlignment].text = ""; //empty out the word in the audio so its timings wont be used again.
+                                precision++;
+                                openmindednessForNextWord = 1;
+                                break;
+                            } else {
+                                if (parseFloat(wordsInAudio[wordIndexInAlignment].start) >= previousWordWithKnowEndTime.endTime) {
+                                    openmindednessForNextWord++;
+
+                                }
+                                console.log("\tThis word is at " + wordsInAudio[wordIndexInAlignment].start + " too far away from the previous word " + previousWordWithKnowEndTime.endTime + " new openmindedness " + openmindednessForNextWord);
+                            }
+                        }
+                    }
+                }
+
+            }
+            // console.log("Hypothesis " + guess.hypothesis + "; Last word in dom: " + lastIndexInDomReadingOrder + ", last word in audio: " + lastIndexInWordsInAudio);
+
+            var wordsInGuess = 0;
+            for (var wg in uniqueWordsInGuess) {
+                if (uniqueWordsInGuess.hasOwnProperty(wg)) {
+                    wordsInGuess++;
+                }
+            }
+
+            var wordsInDom = 0;
+            for (var wd in uniqueWordsInReadingOrder) {
+                if (uniqueWordsInReadingOrder.hasOwnProperty(wd)) {
+                    wordsInDom++;
+                }
+            }
+
+            guess.recall = wordsInGuess / wordsInDom;
+            guess.precision = precision;
+            guess.readingOrder = wordsInDomReadingOrder;
+            guess.uniqueWordsInGuess = uniqueWordsInGuess;
+            guess.uniqueWordsInReadingOrder = uniqueWordsInReadingOrder;
+            return guess;
+        }
+    },
+
+
     /*
     This is a little too complex, it tries to survive the reading order being in the wrong order, 
     but results in a rather funny smattering of highlights.. not sequential.
@@ -653,24 +733,30 @@ exports.ReadAlong = Montage.specialize({
                     /*
                     Put the alignment into the reading order
                      */
+                    var previousWordWithKnowEndTime = {
+                        "endTime": 0
+                    };
                     for (var item = 0; item < readingOrder.length; item++) {
                         var span = readingOrder[item];
                         uniqueWordsInReadingOrder[span.text] = 1;
-                        if (span.text.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "") == words[w].text) {
+
+                        if (span.text.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "") == words[w].text.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "")) {
                             /*
                             This causes the FIRST token of this word in the reading order to be the one that is in the alignment.
                             This only works if the reading order is corrected.
                              */
-                            if (span.startTime === undefined && words[w].span === undefined) {
+                            if (span.startTime === undefined && words[w].readingOrder === undefined) {
+                                console.log("previousWordWithKnowEndTime : " + previousWordWithKnowEndTime.endTime + " this words start time " + words[w].start);
                                 span.startTime = parseFloat(words[w].start);
                                 span.endTime = parseFloat(words[w].end);
+                                previousWordWithKnowEndTime = span;
                                 countOfWordsWhichMightHaveAReadingOrder++;
-                                words[w].span = span;
+                                words[w].readingOrder = span.readingOrder;
                                 console.log("Found something!", span);
                                 continue;
+                            } else {
+                                console.log(words[w].text + ":" + span.text);
                             }
-                        } else {
-                            // console.log(words[w].text + ":" + span.text);
                         }
                     }
 
