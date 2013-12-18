@@ -193,7 +193,7 @@ exports.ReadAlong = Montage.specialize({
                     return;
                 }
                 for (var i = 0; i < readingOrderToDraw.length; i++) {
-                    if (this.currentTime > readingOrderToDraw[i].startTime - 0.5 && this.currentTime < readingOrderToDraw[i].endTime) {
+                    if (this.currentTime > readingOrderToDraw[i].startTime - 0.15 && this.currentTime < readingOrderToDraw[i].endTime) {
                         selfPageDocument.askIframeToAddClassList({
                             classNames: "-epub-media-overlay-active",
                             elementId: readingOrderToDraw[i].id,
@@ -212,6 +212,22 @@ exports.ReadAlong = Montage.specialize({
             };
             this.finalAudio.removeEventListener("timeupdate", timeUpdateFunction);
             this.finalAudio.addEventListener("timeupdate", timeUpdateFunction);
+
+
+            this.finalAudio.addEventListener('ended', function(target) {
+                console.log("Removing all highlights, audio is done playing", target);
+                if (!readingOrderToDraw) {
+                    return;
+                }
+                for (var i = 0; i < readingOrderToDraw.length; i++) {
+                    selfPageDocument.askIframeToRemoveClassList({
+                        classNames: "-epub-media-overlay-active",
+                        elementId: readingOrderToDraw[i].id,
+                        text: readingOrderToDraw[i].text
+                    });
+                    // console.log("Requested Removed Highlighting from " + readingOrderToDraw[i].text);
+                }
+            });
 
             //TODO seek to the beginning or resume...
 
@@ -465,8 +481,13 @@ exports.ReadAlong = Montage.specialize({
                     var guess = guesses[gu];
 
                     // if (guess.potentiallyClose) {
-                    guess = this.fitWordsToAlignmentTimesRegardlessOfText(guess, readingOrder.slice());
-                    // guess = this.putElementIdIntoAlignments(guess, readingOrder.slice());
+                    /* If the text is short, then force/fake align it */
+                    if (readingOrder && readingOrder.length < 35) {
+                        guess = this.fitWordsToAlignmentTimesRegardlessOfText(guess, readingOrder.slice());
+                    } else {
+                        /* Otherwise, only show words that actually match the audio guesses */
+                        guess = this.putElementIdIntoAlignments(guess, readingOrder.slice());
+                    }
                     console.log(guess);
                     // }
                 }
@@ -490,28 +511,35 @@ exports.ReadAlong = Montage.specialize({
                 correspondingIndexInAudio,
                 lastIndexInWordsInAudio,
                 lastIndexInDomReadingOrder,
-                correspondingWordInAudio;
+                correspondingWordInAudio,
+                previousWordEndTime;
 
             for (var wordIndex = 0; wordIndex < wordsInDomReadingOrder.length; wordIndex++) {
                 correspondingIndexInAudio = wordIndex + 1;
                 correspondingWordInAudio = wordsInAudio[correspondingIndexInAudio];
                 if (!correspondingWordInAudio) {
-                    console.log("correspondingIndexInAudio is missing" + correspondingIndexInAudio);
-                    continue;
+                    console.log("correspondingIndexInAudio is missing, filling in with rough timings" + correspondingIndexInAudio);
+                    if (!previousWordEndTime) {
+                        previousWordEndTime = 0;
+                    }
+                    wordsInDomReadingOrder[wordIndex].audioText = " ";
+                    wordsInDomReadingOrder[wordIndex].startTime = previousWordEndTime + 0.01;
+                    wordsInDomReadingOrder[wordIndex].endTime = previousWordEndTime + 0.22;
+                } else {
+                    wordsInDomReadingOrder[wordIndex].audioText = correspondingWordInAudio.text;
+                    wordsInDomReadingOrder[wordIndex].startTime = parseFloat(correspondingWordInAudio.start);
+                    wordsInDomReadingOrder[wordIndex].endTime = parseFloat(correspondingWordInAudio.end);
+                    uniqueWordsInGuess[wordsInDomReadingOrder[wordIndex].audioText] = 1;
+                    lastIndexInWordsInAudio = correspondingIndexInAudio;
                 }
                 /* TODO do a match on vowels to see if it might be a match, instead of just trying it */
-
-                wordsInDomReadingOrder[wordIndex].audioText = correspondingWordInAudio.text;
-                wordsInDomReadingOrder[wordIndex].startTime = correspondingWordInAudio.start;
-                wordsInDomReadingOrder[wordIndex].endTime = correspondingWordInAudio.end;
+                previousWordEndTime = wordsInDomReadingOrder[wordIndex].endTime;
                 if (wordsInDomReadingOrder[wordIndex].audioText.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "") === wordsInDomReadingOrder[wordIndex].text.trim().toUpperCase().replace(/[^A-Z0-9'-]/g, "")) {
                     precision++;
                 }
-                uniqueWordsInGuess[wordsInDomReadingOrder[wordIndex].audioText] = 1;
                 uniqueWordsInReadingOrder[wordsInDomReadingOrder[wordIndex].text] = 1;
 
                 /* keep track of words that were not matched, either audio was too short, or words in dom were too short */
-                lastIndexInWordsInAudio = correspondingIndexInAudio;
                 lastIndexInDomReadingOrder = wordIndex;
             }
             console.log("Hypothesis " + guess.hypothesis + "; Last word in dom: " + lastIndexInDomReadingOrder + ", last word in audio: " + lastIndexInWordsInAudio);
