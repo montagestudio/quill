@@ -20,8 +20,7 @@
     right: 0px;
     top: 0px;
     border: 2px;
-    margin: 2em;
-    padding: 2em;
+    padding: 10px;
     z-index: 1000;
     opacity: .8;
 }
