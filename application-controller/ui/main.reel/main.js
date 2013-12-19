@@ -16,7 +16,7 @@ var MAX_CHILDPROCESS = 2,
 
 var CHECK_INTERVAL  = 10,
     STALL_TIMEOUT = 30,
-    RESTART_TIMEOUT = 60;
+    RESTART_TIMEOUT = 6000000;
 
 
 exports.Main = Component.specialize({
