@@ -1,0 +1,13 @@
+<smil xmlns="http://www.w3.org/ns/SMIL" xmlns:epub="http://www.idpf.org/2007/ops" version="3.0">
+    <body>
+
+        <seq id="id1" epub:textref="{{pagenumber}}.xhtml" epub:type="bodymatter chapter">
+
+            <par id="{{wordId}}">
+                <text src="{{pagenumber}}.xhtml#{{wordId}}"/>
+                <audio src="audio/{{pagenumber}}.{{audioExtension}}" clipBegin="0:00:00.000" clipEnd="0:00:00.000"/>
+            </par>
+
+        </seq>
+    </body>
+</smil>
