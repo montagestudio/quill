@@ -193,7 +193,8 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                                 "language": "document-language",
                                 "publisher": "document-publisher",
                                 "title": "document-title",
-                                "eReader_Category_Output": "document-type"
+                                "eReader_Category_Output": "document-type",
+                                "narrator": "document-narrator" // GC TODO: not verified what is the scholastic key for narrator, if any
 
                                 // JFD TODO: add more names as needed
                             };

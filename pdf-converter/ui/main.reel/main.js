@@ -10,6 +10,7 @@ var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 var MAX_PAGES_PER_RUN  = 8;
 
+var CREATE_WITH_READ_ALOUD;
 
 exports.Main = Component.specialize({
 
@@ -146,6 +147,7 @@ exports.Main = Component.specialize({
                                         "original-resolution": "500x800",       // JFD TODO: we need a real value!!!
                                         "document-title": self.metadata ? self.metadata["document-title"] : null || "Untitled",
                                         "document-author": self.metadata ? self.metadata["document-author"] : null || "Unknown",
+                                        "document-narrator": self.metadata ? self.metadata["document-narrator"] : null || "Unknown",
                                         "document-description": self.metadata ? self.metadata["document-description"] : null || "",
                                         "document-publisher": self.metadata ? self.metadata["document-publisher"] : null || "Unknown",
                                         "document-type": self.metadata ? self.metadata["document-type"] : null || "Unknown",
@@ -156,6 +158,10 @@ exports.Main = Component.specialize({
                                             "-" + pad(now.getUTCDate() + 1) +
                                             "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z"
                                     };
+                                    
+                                    if(CREATE_WITH_READ_ALOUD){
+                                        options["total-audio-duration"] =  self.metadata ? self.metadata["total-audio-duration"] : null || "00:00:00.000";
+                                    }
 
                                     return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", pdf, function(){ self.idle() }).then(function(cache) {
                                         PDFJS.objectsCache = cache;
@@ -434,6 +440,18 @@ exports.Main = Component.specialize({
                         folderPath = decodeURIComponent((self.outputURL).substring("fs://localhost".length));
 
                     return self.environmentBridge.backend.get("quill-backend").invoke("appendImagesInfo", folderPath, self._document.imagesInfo).then(function() {
+                        
+                        /* Create a .smil overlay for each page so it gets into the manifest */
+                        if (CREATE_WITH_READ_ALOUD) {
+                            self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate",
+                                "/pdf-converter/templates/overlay.xhtml",
+                                folderPath + "/OEBPS/overlay/" + (page.pageInfo.pageIndex + 1) + ".xhtml", {
+                                    "pagenumber": (page.pageInfo.pageIndex + 1),
+                                    "audioExtension": ".mp3"
+                                },
+                                true
+                            );
+                        }
                         return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate",
                             "/pdf-converter/templates/page.xhtml",
                             folderPath + "/OEBPS/pages/" + (page.pageInfo.pageIndex + 1) + ".xhtml",
@@ -472,7 +490,7 @@ exports.Main = Component.specialize({
 
                                 lumieres.powerManager.allowIdleSleep();
                                 return true;
-                            });
+                        });
                     });
                 });
             });
