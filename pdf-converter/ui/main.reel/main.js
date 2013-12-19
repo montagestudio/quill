@@ -10,7 +10,7 @@ var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 var MAX_PAGES_PER_RUN  = 8;
 
-var CREATE_WITH_READ_ALOUD;
+var CREATE_WITH_READ_ALOUD = true;
 
 exports.Main = Component.specialize({
 
@@ -158,7 +158,7 @@ exports.Main = Component.specialize({
                                             "-" + pad(now.getUTCDate() + 1) +
                                             "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z"
                                     };
-                                    
+
                                     if(CREATE_WITH_READ_ALOUD){
                                         options["total-audio-duration"] =  self.metadata ? self.metadata["total-audio-duration"] : null || "00:00:00.000";
                                     }
@@ -385,7 +385,7 @@ exports.Main = Component.specialize({
                                 expectedBookDirectoryInAudio = bookId.substring(0, bookId.indexOf("_"));
                             }
 
-                            var simulationExpectedAudioDirFromPDFLocation = "/Audio/" + expectedBookDirectoryInAudio + "/"+finalAudioDirName
+                            var simulationExpectedAudioDirFromPDFLocation = "/Audio/" + expectedBookDirectoryInAudio + "/"+finalAudioDirName,
                                 sourceAudioDir = decodeURI(sourcePath).substring("fs://localhost".length) + simulationExpectedAudioDirFromPDFLocation,
                                 destAudioDir = (result.url + "/OEBPS/audio").substring("fs://localhost".length);
 
@@ -440,22 +440,9 @@ exports.Main = Component.specialize({
                         folderPath = decodeURIComponent((self.outputURL).substring("fs://localhost".length));
 
                     return self.environmentBridge.backend.get("quill-backend").invoke("appendImagesInfo", folderPath, self._document.imagesInfo).then(function() {
-                        
-                        /* Create a .smil overlay for each page so it gets into the manifest */
-                        if (CREATE_WITH_READ_ALOUD) {
-                            self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate",
-                                "/pdf-converter/templates/overlay.xhtml",
-                                folderPath + "/OEBPS/overlay/" + (page.pageInfo.pageIndex + 1) + ".xhtml", {
-                                    "pagenumber": (page.pageInfo.pageIndex + 1),
-                                    "audioExtension": ".mp3"
-                                },
-                                true
-                            );
-                        }
                         return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate",
                             "/pdf-converter/templates/page.xhtml",
-                            folderPath + "/OEBPS/pages/" + (page.pageInfo.pageIndex + 1) + ".xhtml",
-                            {
+                            folderPath + "/OEBPS/pages/" + (page.pageInfo.pageIndex + 1) + ".xhtml", {
                                 "page-width": Math.round(viewport.width),
                                 "page-height": Math.round(viewport.height),
                                 "page-title": "page " + (page.pageInfo.pageIndex + 1),
@@ -466,30 +453,41 @@ exports.Main = Component.specialize({
                             },
                             true
                         ).then(function() {
-                            if (self._pageNumber < self.numberOfPages) {
-                                self._pageNumber ++;
-                                self.params.p = self._pageNumber;
+                            return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate",
+                                "/pdf-converter/templates/overlay.smil",
+                                folderPath + "/OEBPS/overlay/" + (page.pageInfo.pageIndex + 1) + ".smil", {
+                                    "pagenumber": (page.pageInfo.pageIndex + 1),
+                                    "audioExtension": ".mp3"
+                                },
+                                true
+                            ).then(function() {
+                                if (self._pageNumber < self.numberOfPages) {
+                                    self._pageNumber++;
+                                    self.params.p = self._pageNumber;
 
-                                lumieres.powerManager.allowIdleSleep();
-                                if (self._pageNumber % MAX_PAGES_PER_RUN) {
-                                    document.body.removeChild(outputElem);
-                                    return self.convertNextPage();
-                                } else {
-                                    // Reload the window every 8 pages to reduce memory crash
-                                    var newLoc = window.location.origin + window.location.pathname,
-                                        sep = "?";
+                                    lumieres.powerManager.allowIdleSleep();
+                                    if (self._pageNumber % MAX_PAGES_PER_RUN) {
+                                        document.body.removeChild(outputElem);
+                                        return self.convertNextPage();
+                                    } else {
+                                        // Reload the window every 8 pages to reduce memory crash
+                                        var newLoc = window.location.origin + window.location.pathname,
+                                            sep = "?";
 
-                                    for (param in self.params) {
-                                        newLoc += sep + param + "=" + encodeURIComponent(self.params[param]);
-                                        sep = "&";
+                                        for (var param in self.params) {
+                                            newLoc += sep + param + "=" + encodeURIComponent(self.params[param]);
+                                            sep = "&";
+                                        }
+                                        window.location.href = newLoc;
+                                        return false;
                                     }
-                                    window.location.href = newLoc;
-                                    return false;
                                 }
-                            }
 
                                 lumieres.powerManager.allowIdleSleep();
                                 return true;
+                            }, function(error) {
+                                console.log("error creating smil", error);
+                            });
                         });
                     });
                 });

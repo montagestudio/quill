@@ -205,7 +205,10 @@ exports.updateContentInfo = function(item) {
                         }
                         break;
                     case ".wav":
-                        //dont include
+                        type = "audio/wav";
+                        if (firstChar <= "A") {
+                            name = "audioW" + name;
+                        }
                         break;
                     case ".mp4":
                         type = "audio/mp4";
@@ -234,7 +237,7 @@ exports.updateContentInfo = function(item) {
 
 
                     name = name.replace(/[-_+.,;:]/g, "");
-                    manifest.push('<item id="' + name + '" href="' + path + '"' + (properties !== null ? ' properties="' + properties + '"' : '') + ' media-type="' + type +'"/>');
+                    manifest.push('\t\t<item id="' + name + '" href="' + path + '"' + (properties !== null ? ' properties="' + properties + '"' : '') + ' media-type="' + type +'"/>');
 
                     if (path.indexOf("pages/") === 0) {
                         pages.push(name);
@@ -262,7 +265,7 @@ exports.updateContentInfo = function(item) {
             var attributes = item.pagesAttributes[name.substr("page".length) + ".xhtml"] || item.pagesAttributes[name + ".xhtml"],
                 spineItem;
 
-            spineItem = '<itemref idref="' + name + '"';
+            spineItem = '\t\t<itemref idref="' + name + '"';
 
             if (attributes) {
                 for (var property in attributes) {
