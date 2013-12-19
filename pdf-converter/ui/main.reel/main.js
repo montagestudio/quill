@@ -157,7 +157,7 @@ exports.Main = Component.specialize({
                                             "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z"
                                     };
 
-                                    return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", pdf, function(){ self.idle() }).then(function(cache) {
+                                    return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", self.outputURL + "/OEBPS/pages/fonts", pdf, function(){ self.idle() }).then(function(cache) {
                                         PDFJS.objectsCache = cache;
                                         PDFJS.jpegQuality = 1.0;
 

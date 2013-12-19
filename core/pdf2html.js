@@ -463,8 +463,10 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                             if (PDFJS.objectsCache) {
                                 var baseURI = self.rootDirectory,
                                     baseLength = baseURI.length,
-                                    sourceURI = "fs://localhost" + PDFJS.objectsCache.folderPath,
-                                    sourceLength = sourceURI.length,
+                                    assetsURI = "fs://localhost" + PDFJS.objectsCache.assetsFolderPath,
+                                    fontsURI = "fs://localhost" + PDFJS.objectsCache.fontsFolderPath,
+                                    assetsLength = assetsURI.length,
+                                    fontsLength = fontsURI.length,
                                     replacementURI = "",
                                     searchURI,
                                     i = 0;
@@ -472,18 +474,25 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                 if (baseURI.charAt(baseLength - 1) === '/') {
                                     baseURI = baseURI.substr(0, baseLength - 1);
                                 }
-                                if (sourceURI.charAt(sourceLength - 1) === '/') {
-                                    sourceURI = sourceURI.substr(0, sourceLength - 1);
+                                if (assetsURI.charAt(assetsLength - 1) === '/') {
+                                    assetsURI = assetsURI.substr(0, assetsLength - 1);
+                                }
+                                if (fontsURI.charAt(fontsLength - 1) === '/') {
+                                    fontsURI = fontsURI.substr(0, fontsLength - 1);
                                 }
 
                                 baseURI = baseURI.split('/');
                                 baseLength = baseURI.length;
 
-                                sourceURI = sourceURI.split('/');
-                                sourceLength = sourceURI.length;
+                                assetsURI = assetsURI.split('/');
+                                assetsLength = assetsURI.length;
 
-                                while (i < baseLength && i < sourceLength) {
-                                    if (baseURI[i] !== sourceURI[i]) {
+                                fontsURI = fontsURI.split('/');
+                                fontsLength = fontsURI.length;
+
+                                // Fix the assets URLs
+                                while (i < baseLength && i < assetsLength) {
+                                    if (baseURI[i] !== assetsURI[i]) {
                                         break;
                                     }
                                     i ++;
@@ -492,11 +501,33 @@ var PDF2HTML = exports.PDF2HTML = Montage.specialize({
                                 for (var j = i; j < baseLength; j ++) {
                                     replacementURI += "../";
                                 }
+                                if (replacementURI === "") {
+                                    replacementURI= "./";
+                                }
 
-                                searchURI = sourceURI.slice(0, i).join('/') + '/';
-
+                                searchURI = assetsURI.slice(0, i).join('/') + '/';
                                 expr = new RegExp(encodeURI(searchURI), "g");
                                 data = data.replace(expr, replacementURI);
+
+                                // Fix the font URLs
+                                replacementURI = "";
+                                i = 0;
+                                while (i < baseLength && i < fontsLength) {
+                                    if (baseURI[i] !== fontsURI[i]) {
+                                        break;
+                                    }
+                                    i ++;
+                                }
+
+                                for (var j = i; j < baseLength; j ++) {
+                                    replacementURI += "../";
+                                }
+                                if (replacementURI === "") {
+                                    replacementURI= "./";
+                                }
+
+                                searchURI = fontsURI.slice(0, i).join('/') + '/';
+                                expr = new RegExp(encodeURI(searchURI), "g");
                                 style = style.replace(expr, replacementURI);
                             }
 

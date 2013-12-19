@@ -167,12 +167,14 @@ exports.updateContentInfo = function(item) {
                         if (firstChar <= "A") {
                             name = "page" + name;
                         }
+                        pages.push(name);
                         break;
                     case ".xhtml":
                         type = "application/xhtml+xml";
                         if (firstChar <= "A") {
                             name = "page" + name;
                         }
+                        pages.push(name);
                         // Set the SVG property for now, we will remove it later is not needed
                         properties = "svg";
                         pageToRead.push({
@@ -214,10 +216,6 @@ exports.updateContentInfo = function(item) {
 
                     name = name.replace(/[-_+.,;:]/g, "");
                     manifest.push('<item id="' + name + '" href="' + path + '"' + (properties !== null ? ' properties="' + properties + '"' : '') + ' media-type="' + type +'"/>');
-
-                    if (path.indexOf("pages/") === 0) {
-                        pages.push(name);
-                    }
                 }
             });
         });
