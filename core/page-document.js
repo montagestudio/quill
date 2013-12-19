@@ -1,7 +1,8 @@
 var Montage = require("montage").Montage,
     Promise = require("montage/core/promise").Promise,
     Map = require("montage/collections/map"),
-    UUID = require("montage/core/uuid");
+    UUID = require("montage/core/uuid"),
+    ReadAlong = require("core/read-along").ReadAlong;
 
 /**
  * This represents a single physical page in an ebook.
@@ -21,6 +22,11 @@ var PageDocument = exports.PageDocument = Montage.specialize({
         value: function PageDocument () {
             this._deferredMap = new Map();
             this._operationQueue = [];
+
+           /* prepare for read along */
+           this.readAlong = new ReadAlong();
+           this.readAlong.pageDocument = this;
+
             return this.super();
         }
     },
@@ -164,11 +170,16 @@ var PageDocument = exports.PageDocument = Montage.specialize({
             channel.port1.onmessage = (function (self) {
                 return function () {
                     self.handleAgentMessage.apply(self, arguments);
-                }
+                };
             })(this);
 
             this._channelReady = false;
             this._pageWindow.postMessage("openChannel", "fs://localhost", [channel.port2]);
+        
+            this.readAlong.xhtmlUrl = this._url.substring(0, this._url.indexOf("?"));
+            // this.readAlong.playAudio();
+            // this.readAlong.readingOrder = this.getReadingOrder;
+            this.readAlong.connect();
         }
     },
 
@@ -177,7 +188,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
         value: function() {
             var self = this;
             this._operationQueue.forEach(function (message) {
-                console.log("PERFORM QUEUED:", message);
+                // console.log("PERFORM QUEUED:", message);
                 self._agentPort.postMessage(message);
             });
             this._operationQueue.clear();
@@ -208,7 +219,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
                 deferredIdentifier = data.identifier,
                 deferredResult;
 
-            console.log("parent" + this.name + ": onmessage", data);
+            // console.log("parent" + this.name + ": onmessage", data);
 
             if ("disconnect" === data) {
                 this.pageWindow = null;
@@ -302,7 +313,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
 
                 if (property && internalProperty) {
                     promisedResult = promisedResult.then(function (result) {
-                        console.log("get success", property, result);
+                        // console.log("get success", property, result);
                         self._applyChange(property, internalProperty, result);
                         return result;
                     });
@@ -335,7 +346,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
                     //TODO detect success vs failure (the failure handler deals with errors)
 
                     //TODO accept accepted value, instead of value
-                    console.log("set success", property, value);
+                    // console.log("set success", property, value);
 
                     //TODO how do we know what values are affected by this property?
                     //i.e. which cached deferreds to clear?
@@ -423,7 +434,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
      */
     getCopyrightPosition: {
         value: function () {
-           return this._getChannelProperty("copyrightPosition", "copyrightPosition", "_copyrightPosition");
+            return this._getChannelProperty("copyrightPosition", "copyrightPosition", "_copyrightPosition");
         }
     },
 
@@ -466,6 +477,40 @@ var PageDocument = exports.PageDocument = Montage.specialize({
         }
     },
 
+    readAlong: {
+        value: null
+    },
+
+
+    _getReadingOrder: {
+        value: null
+    },
+
+    getReadingOrder: {
+        get: function () {
+            this.getGetReadingOrder().done();
+            return this._getReadingOrder;
+        }
+    },
+
+    getGetReadingOrder: {
+        value: function (value) {
+            return this._setChannelProperty("getReadingOrder", value, "getReadingOrder", "_getReadingOrder");
+        }
+    },
+
+    askIframeToAddClassList: {
+        value: function(value) {
+            return this._setChannelProperty("addCss", value, "addCss", "_addCss");
+        }
+    },
+
+    askIframeToRemoveClassList: {
+        value: function(value) {
+            return this._setChannelProperty("removeCss", value, "removeCss", "_removeCss");
+        }
+    },
+
     /**
      * Clear out cached values from the remote and refresh them
      * with the latest best values
@@ -487,7 +532,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
     URL_PARAMS: {
         value: {
             find: "<head>",
-            insert: '<script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/quill-agent.js" /><script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/html-controller.js" />'
+            insert: '<script class="' + INJECTED_CLASS_NAME + '" src="http://client/node_modules/q/q.js" /><script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/quill-agent.js" /><script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/html-controller.js" />'
         }
     }
 });

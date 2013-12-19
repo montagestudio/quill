@@ -93,3 +93,10 @@ div.page text, div.page tspan, div.page image {
 .overlaySvgText div span {
     color: transparent !important;
 }
+
+
+/* Read along highlighting */
+.-epub-media-overlay-active {
+    background-color: #ffb;
+    opacity: .6;
+}

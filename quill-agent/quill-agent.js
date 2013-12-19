@@ -39,7 +39,7 @@ QuillAgent.prototype = {
     },
 
     handleChannelMessage: function (evt) {
-        console.log("agent: onmessage", evt.data, evt.data.args);
+        // console.log("agent: onmessage", evt.data, evt.data.args);
 
         var method,
             result,
