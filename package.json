@@ -13,8 +13,7 @@
     "q": "0.9.5",
     "q-connection": "0.5.6",
     "q-io": "~1.9.3",
-    "pdf.js": "git+ssh://git@github.com:ducarroz/pdf.js.git#master",
-    "audio-aligner": "git+ssh://git@github.com:cesine/audio-aligner.git"
+    "pdf.js": "git+ssh://git@github.com:ducarroz/pdf.js.git#master"
   },
   "devDependencies": {
     "jasmine-node": "1.2.2",

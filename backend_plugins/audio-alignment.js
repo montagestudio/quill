@@ -1,10 +1,10 @@
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
     AdaptConnection = require("q-connection/adapt"),
-    Connection = require("q-connection"),
-    AudioTextAligner = require("audio-aligner/lib/audio-text-aligner").AudioTextAligner;
+    Connection = require("q-connection");
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
+
 
 exports.AudioAlignment = Montage.specialize({
 
@@ -156,9 +156,6 @@ exports.AudioAlignment = Montage.specialize({
                 //     return;
                 // }
                 console.log("Running the voice audio " + options.voice);
-
-                var aligner = new AudioTextAligner();
-
 
                 self.backend.get("aligner").invoke("run", options.voice, options.text).then(function(result) {
                     // console.log("Alignment is complete: ", result);
