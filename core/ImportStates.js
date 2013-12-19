@@ -9,6 +9,7 @@ exports.importStates = {
     stalled: enumIndex ++,             // Conversion stalled
     converted: enumIndex ++,           // All pages converted
     optimizing: enumIndex ++,          // Optimizing pages and assets
+    convertingAudio: enumIndex ++,     // Converting audio to .raw
     generating: enumIndex ++,          // Generating EPUB3 file
     error: enumIndex ++,               // error, import aborted
     ready: enumIndex ++                // Done!
