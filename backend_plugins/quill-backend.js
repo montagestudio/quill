@@ -135,7 +135,7 @@ exports.updateContentInfo = function(item) {
     var rootDirectory = item.destination,
         options = item.meta,
         root = PATH.join(pathFromURL(rootDirectory), "OEBPS"),
-        directories = ["assets", "pages", "styles"],
+        directories = ["assets", "pages", "styles","overlay","audio"],
         listPromises = [];
 
     options = options || {};
@@ -196,6 +196,24 @@ exports.updateContentInfo = function(item) {
                         type = "image/png";
                         if (firstChar <= "A") {
                             name = "image" + name;
+                        }
+                        break;
+                    case ".mp3":
+                        type = "audio/mp3";
+                        if (firstChar <= "A") {
+                            name = "audioM" + name;
+                        }
+                        break;
+                    case ".mp4":
+                        type = "audio/mp4";
+                        if (firstChar <= "A") {
+                            name = "audioP" + name;
+                        }
+                        break;
+                    case ".smil":
+                        type = "application/smil+xml";
+                        if (firstChar <= "A") {
+                            name = "overlay" + name;
                         }
                         break;
                     case ".otf":
