@@ -418,6 +418,55 @@ exports.optimizeImage = function(sourceURL, destURL, imageSize, quality) {
     }
 };
 
+/**
+ * GC TODO test this function
+ * 
+ * @param  {string} sourceURL location of original audio (any format)
+ * @param  {string} destURL   location of voice only audio (will be in .raw)
+ * @param  {int} audioSize unused parameter
+ * @param  {int} quality   audio quality (should be 16 or 8)
+ * @return {string}           the audio duration
+ */
+exports.getAudioDurationAndCreateRawAudio = function(sourceURL, destURL, audioSize, quality) {
+    var _USE_FFMPEG = false;
+
+    if (_USE_FFMPEG) {
+        var imageMagickRoot = PATH.resolve(__dirname, 'ffmpeg'),
+            sourcePath = pathFromURL(sourceURL).replace(/ /g, "\\ "),
+            destPath = pathFromURL(destURL).replace(/ /g, "\\ "),
+            options = {
+                cwd: PATH.join(imageMagickRoot, "bin"),
+                env: {
+                    MAGICK_HOME: imageMagickRoot,
+                    DYLD_LIBRARY_PATH: PATH.join(imageMagickRoot, "lib/")
+                }
+            };
+
+        return exec('./ffmpeg -i ' + sourcePath, options).then(function(result) {
+            var info = result.split("\n");
+            var duration = "0:00:00.000";
+
+            try {
+                for (var k = 0; k < info.length; k++) {
+                    console.log("FFmpeg info : " + info[k]);
+                    if (info[k].indexOf("Duration") >= 0) {
+                        var pieces = info[k].split(",");
+                        duration = pieces[0].split(": ")[1];
+                    }
+                }
+            } catch (e) {
+                console.log("Error retreiving audio duration.");
+            }
+
+            return exec('./ffmpeg -i ' + sourcePath + ' -ac 1 -f s16le -ar 16k ' + destPath, options).then(function(){
+                return duration;
+            });
+        });
+    } else {
+        return "0:00:00.000";
+    }
+};
+
 exports.getCoverImage = function(item) {
     var root = pathFromURL(item.destination),
         coverImagePath = PATH.join(root, "OEBPS", "assets", "cover.jpeg");

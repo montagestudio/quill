@@ -239,6 +239,8 @@ exports.Main = Component.specialize({
                                 return self.optimize(item).then(function() {
                                     item.lastContact = new Date().getTime() / 1000;
                                     self.updateItemState(item, IMPORT_STATES.generating, 0, 3, item.destination, item.meta);
+                                    //TODO could maybe add audio conversion optionally here...
+
                                     return self.extension.customizeAssets(self.environmentBridge.backend, item).then(function() {
                                         self.updateItemState(item, IMPORT_STATES.generating, 1, 3, item.destination, item.meta);
                                         item.lastContact = new Date().getTime() / 1000;
@@ -249,7 +251,7 @@ exports.Main = Component.specialize({
                                                 item.lastContact = new Date().getTime() / 1000;
                                                 return true;
                                             }, function(error) {
-                                                console.log("generateEpub error:", e.message, e.stack);
+                                                console.log("generateEpub error:", error.message, error.stack);
                                                 item.error = error.message || error.error;
                                                 self.updateItemState(item, IMPORT_STATES.error);
                                             });
@@ -265,7 +267,7 @@ exports.Main = Component.specialize({
                                     });
                                 }, function(error) {
                                     console.log("optimize error:", error.message);
-                                    item.error = errormessage || error.error;
+                                    item.error = error.message || error.error;
                                     self.updateItemState(item, IMPORT_STATES.error);
                                 });
                             }, function(error) {
@@ -636,6 +638,24 @@ exports.Main = Component.specialize({
         }
     },
 
+    /*
+    GC TODO: test this function, it hasnt been turned on yet.
+     */
+    convertAudioForReadAloudRecognition: {
+        value: function(item) {
+            // GC TODO: Add an option to bypass audio conversion
+            if (1) {
+                return this._getAudioDurationAndCreateRawAudio(item, 16);             // JFD TODO: the quality should come from a setting somewhere...
+
+            } else {
+                console.log("--- no audio conversion!");
+                var deferred = Promise.defer();
+                deferred.resolve(0);
+                return deferred.promise;
+            }
+        }
+    },
+
     buildTableOfContent: {
         value: function(meta) {
             var toc = meta.toc,
@@ -880,6 +900,62 @@ exports.Main = Component.specialize({
                     return Promise.when(_optimizeNextBatch());
 
                 });
+            });
+        }
+    },
+
+    /*
+    GC TODO: test this function, it hasnt been turned on yet.
+     */
+    _getAudioDurationAndCreateRawAudio: {
+        value: function(item, quality) {
+            var self = this,
+                folderURL = item.destination;
+
+            console.log("create raw audio :", folderURL);
+            return self.environmentBridge.listTreeAtUrl(folderURL, "*.mp3").then(function(list) {
+                var urls = list,
+                    currentAudio = 0,
+                    nbrAudio = urls.length;
+
+                item.currentPage = 0;
+                item.nbrPages = urls.length;
+
+                var _convertNextBatch = function() {
+                    var promises = [],
+                        i = 0;
+
+                    while (currentAudio < nbrAudio) {
+                        var url = urls[currentAudio++],
+                            originalURL,
+                            info = {};
+
+                        originalURL = url.replace("/OEBPS/audio/", "/OEBPS/voice/");
+                        promises.push(self.environmentBridge.backend.get("quill-backend").invoke("getAudioDurationAndCreateRawAudio",
+                            originalURL, url, info, quality).then(function() {
+                            self.updateItemState(item, IMPORT_STATES.convertingAudio, ++item.currentPage, item.nbrPages, item.destination, item.meta);
+                        }));
+
+                        if (++i > 4) {
+                            break;
+                        }
+                    }
+
+                    self.updateItemState(item, IMPORT_STATES.convertingAudio, item.currentPage, item.nbrPages, item.destination, item.meta);
+
+                    if (promises.length) {
+                        return Promise.allSettled(promises).then(function() {
+                            if (currentAudio < nbrAudio) {
+                                return _convertNextBatch();
+                            }
+                        });
+                    }
+
+                    return null;
+                };
+
+                return Promise.when(_convertNextBatch());
+
             });
         }
     },
