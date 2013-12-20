@@ -457,7 +457,8 @@ self.numberOfPages = 5;
                                 "/pdf-converter/templates/overlay.smil",
                                 folderPath + "/OEBPS/overlay/" + (page.pageInfo.pageIndex + 1) + ".smil", {
                                     "pagenumber": (page.pageInfo.pageIndex + 1),
-                                    "audioExtension": ".mp3"
+                                    "audioExtension": ".mp3",
+                                    "wordId":"textOverlay"
                                 },
                                 true
                             ).then(function() {
