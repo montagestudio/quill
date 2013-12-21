@@ -118,7 +118,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
     initialize: {
         value: function(backend) {
             // check the expiration date, if needed set a new expiration date 10 days from now. Later one we will retrieve the actual expiration date from our server
-            var readAloud = backend.get("readAloud"),
+            var readAloudBackend = backend.get("readAloud"),
                 checkLicense = function() {
                     _checkLicense(backend.get("readAloud"));
                 };
@@ -135,7 +135,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
         }
     },
 
-    readAlong:{
+    readAlong: {
         value: null
     },
 
@@ -282,6 +282,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
             var pageURL = item.destination + "/OEBPS/pages/" + pageNumber + ".xhtml",
                 audioUrl = item.destination + "/OEBPS/audio/" + pageNumber + MP3_EXTENSION,
                 smilUrl = item.destination + "/OEBPS/overlay/" + pageNumber + ".smil",
+                jsonUrl = item.destination + "/json/" + pageNumber + ".json",
                 page,
                 audio;
 
@@ -315,10 +316,24 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
 
                 self._createRawAudio(item, audioUrl, createRaw).then(function(rawAudioConversion) {
                     console.log("rawAudioConversion" + rawAudioConversion);
-                    self._runAudioAlignerOnThisPage(page, pageURL).then(function(result) {
-                        data = JSON.stringify(result, null, 2);
-                        // Rewrite the page now...
-                        backend.get("fs").invoke("write", smilUrl.substring("fs://localhost".length), data).then(function() {
+                    self._runAudioAlignerOnThisPage(page, pageURL).then(function(bestGuessedReadingOrder) {
+                        data = JSON.stringify(bestGuessedReadingOrder, null, 2);
+                        // Writing the json now...
+                        backend.get("fs").invoke("write", jsonUrl.substring("fs://localhost".length), data).then(function() {
+                            self.readAlong.convertToSMIL(bestGuessedReadingOrder).then(function(smilXML) {
+                                // Writing the smil now...
+                                backend.get("fs").invoke("write", smilUrl.substring("fs://localhost".length), smilXML).then(function() {
+                                    deferred.resolve(true);
+                                }, function(error) {
+                                    deferred.reject(error);
+                                }).done(function() {
+                                    // Remove the added nodes now that we are done with them
+                                    console.log("In the done, clean up whatever might need to be cleaned. ");
+                                    // pageElem.parentNode.removeChild(pageElem);
+                                    // bannerElem.parentNode.removeChild(bannerElem);
+                                });
+                            });
+
                             deferred.resolve(true);
                         }, function(error) {
                             deferred.reject(error);

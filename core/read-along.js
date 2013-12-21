@@ -4,7 +4,8 @@ var Montage = require("montage").Montage,
     Q = require("q"),
     Queue = require("q/queue"),
     Connection = require("q-connection"),
-    AudioAlignment = require("backend_plugins/audio-alignment").AudioAlignment;
+    AudioAlignment = require("backend_plugins/audio-alignment").AudioAlignment,
+    Template = require("montage/core/template").Template;
 
 /**
  * This controls the read aloud feature of an ebook page.
@@ -157,6 +158,30 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
+
+    /**
+     * The URL of the .smil file which lets the epub reader highlight words in sync with the audio
+     */
+    _smilWordTimingUrl: {
+        value: null
+    },
+
+    smilWordTimingUrl: {
+        get: function() {
+            var url = this._smilWordTimingUrl;
+
+            if (!url && this._basePath && this._pageNumber) {
+                url = this._basePath + "/overlay/" + this._pageNumber + ".smil";
+            }
+
+            return url;
+        },
+        set: function(value) {
+            if (value && value !== this._smilWordTimingUrl) {
+                this._smilWordTimingUrl = value;
+            }
+        }
+    },
 
     _playReadAloudReady: {
         value: null
@@ -500,6 +525,51 @@ exports.ReadAlong = Montage.specialize({
                 });
             });
             return deferred.promise;
+        }
+    },
+
+    convertToSMIL: {
+        value: function(readingOrder) {
+            var self = this,
+                deffered = Promise.defer();
+
+            Promise.nextTick(function() {
+                console.log("Reading .smil " + self.smilWordTimingUrl);
+
+                require.read(self.smilWordTimingUrl).then(function(smilxml) {
+                    var doc,
+                        template;
+
+                    template = Template.create();
+                    doc = template.createHtmlDocumentWithHtml(smilxml);
+                    var sequentialBlock = doc.getElementById("id1");
+                    for (var item = 0; item < readingOrder.length; item++) {
+                        var paralel = doc.createElement("par");
+                        paralel.id = readingOrder[item].id;
+                        
+                        var text = doc.createElement("text");
+                        text.src = self._pageNumber + ".xhtml" + "#" + readingOrder[item].id;
+
+                        var audio = doc.createElement("audio");
+                        audio.src = "audio/" + self._pageNumber + MP3_EXTENSION;
+                        audio.clipBegin = "0:00:" + readingOrder[item].startTime + "0";
+                        if (audio.clipBegin.length < 11) {
+                            audio.clipBegin = audio.clipBegin + "0";
+                        }
+                        audio.clipEnd = "0:00:" + readingOrder[item].endTime + "0";
+                        if (audio.clipBegin.length < 11) {
+                            audio.clipBegin = audio.clipBegin + "0";
+                        }
+                        paralel.appendChild(audio);
+                        audio.parentNode.insertBefore(text, audio)
+                        sequentialBlock.appendChild(paralel);
+                    }
+
+                    console.log("Returning .smil " + self.smilWordTimingUrl);
+                    deffered.resolve(doc.innerHTML);
+                });
+            });
+            return deffered.promise;
         }
     },
 
