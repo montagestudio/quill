@@ -904,61 +904,6 @@ exports.Main = Component.specialize({
         }
     },
 
-    /*
-    GC TODO: test this function, it hasnt been turned on yet.
-     */
-    _getAudioDurationAndCreateRawAudio: {
-        value: function(item, quality) {
-            var self = this,
-                folderURL = item.destination;
-
-            console.log("create raw audio :", folderURL);
-            return self.environmentBridge.listTreeAtUrl(folderURL, "*.mp3").then(function(list) {
-                var urls = list,
-                    currentAudio = 0,
-                    nbrAudio = urls.length;
-
-                item.currentPage = 0;
-                item.nbrPages = urls.length;
-
-                var _convertNextBatch = function() {
-                    var promises = [],
-                        i = 0;
-
-                    while (currentAudio < nbrAudio) {
-                        var url = urls[currentAudio++],
-                            originalURL,
-                            info = {};
-
-                        originalURL = url.replace("/OEBPS/audio/", "/OEBPS/voice/");
-                        promises.push(self.environmentBridge.backend.get("quill-backend").invoke("getAudioDurationAndCreateRawAudio",
-                            originalURL, url, info, quality).then(function() {
-                            self.updateItemState(item, IMPORT_STATES.convertingAudio, ++item.currentPage, item.nbrPages, item.destination, item.meta);
-                        }));
-
-                        if (++i > 4) {
-                            break;
-                        }
-                    }
-
-                    self.updateItemState(item, IMPORT_STATES.convertingAudio, item.currentPage, item.nbrPages, item.destination, item.meta);
-
-                    if (promises.length) {
-                        return Promise.allSettled(promises).then(function() {
-                            if (currentAudio < nbrAudio) {
-                                return _convertNextBatch();
-                            }
-                        });
-                    }
-
-                    return null;
-                };
-
-                return Promise.when(_convertNextBatch());
-
-            });
-        }
-    },
 
     _importItemForID: {
         value: function(itemID) {

@@ -1,8 +1,8 @@
 /*jshint camelcase:false, maxcomplexity:16 */ // TODO: fix these warnings
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
-    ImportExtension = require("core/ImportExtension").ImportExtension;
-
+    ImportExtension = require("core/ImportExtension").ImportExtension,
+    ReadAloudExtension = require("extensions/read-aloud-extension").ReadAloudExtension;
 
 var g_validLicense = null;      // Null = need to check the license, true = licence ok, false = invalid license
 
@@ -128,7 +128,13 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
             // Check the license now
             checkLicense();
+            this.readAloudExtension = new ReadAloudExtension();
+            this.readAloudExtension.initialize(backend);
         }
+    },
+
+    readAloudExtension : {
+        value: null
     },
 
     canPerformOperation: {
@@ -243,7 +249,8 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
     customizePages: {
         value: function(backend, item) {
-            var deferred = Promise.defer();
+            var deferred = Promise.defer(),
+                self = this;
 
             console.log("*** customizePages", item);
 
@@ -252,7 +259,11 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                 // Let's setup a cover image
                 backend.get("scholastic").invoke("setupCoverImage", item).then(function(coverImage) {
                     item.coverImage = coverImage ? coverImage.url : null;
-                    deferred.resolve(item.id);
+                    
+                    return self.readAloudExtension.customizePages(backend, item);
+                    /* run aligner */
+
+
                 }, function(error) {
                     deferred.reject(error);
                 });

@@ -33,40 +33,48 @@ exports.ReadingOrder = Montage.specialize({
                 console.log("Opening srcUri " + srcUri);
                 require.read(srcUri).then(function(pagehtml) {
                     var doc,
-                        template,
-                        textNode,
-                        count = 0;
+                        template;
 
                     template = Template.create();
                     doc = template.createHtmlDocumentWithHtml(pagehtml);
-                    var textNodes = doc.getElementById("textOverlay").getElementsByTagName("span");
-                    // console.log(textNodes);
-                    for (var node = 0; node < textNodes.length; node++) {
-                        textNode = textNodes[node];
-                        /* TODO consider keeping the , and . and ! and ? punctuation to improve alignment? */
-                        if (textNode.id.indexOf("w") === 0) {
-                            var potentialText = textNode.innerText.trim();
-                            /* skip words that look like they might be the page number */
-                            if (potentialText == self._pageNumber) {
-                                console.log("This looks like it might be the page number, skipping... ", textNode);
-                                continue;
-                            }
-                            count++;
-                            self.contents.push({
-                                "id": textNode.id,
-                                "text": potentialText,
-                                "readingOrder": count
-                            });
-                        }
-                    }
-                    // console.log("This page contains this many words " + JSON.stringify(self.contents.length));
-                    var triggerTextUpdate = self.text;
-                    deffered.resolve(self.contents);
+                    deffered.resolve(self.extractReadingOrder(doc));
                 });
 
             });
 
             return deffered.promise;
+        }
+    },
+
+    extractReadingOrder: {
+        value: function(doc) {
+            var textNode,
+                count = 0;
+
+            this.contents = [];
+            var textNodes = doc.getElementById("textOverlay").getElementsByTagName("span");
+            // console.log(textNodes);
+            for (var node = 0; node < textNodes.length; node++) {
+                textNode = textNodes[node];
+                /* TODO consider keeping the , and . and ! and ? punctuation to improve alignment? */
+                if (textNode.id.indexOf("w") === 0) {
+                    var potentialText = textNode.innerText.trim();
+                    /* skip words that look like they might be the page number */
+                    if (potentialText == this._pageNumber) {
+                        console.log("This looks like it might be the page number, skipping... ", textNode);
+                        continue;
+                    }
+                    count++;
+                    this.contents.push({
+                        "id": textNode.id,
+                        "text": potentialText,
+                        "readingOrder": count
+                    });
+                }
+            }
+            // console.log("This page contains this many words " + JSON.stringify(this.contents.length));
+            var triggerTextUpdate = this.text;
+            return this.contents;
         }
     },
 

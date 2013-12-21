@@ -18,8 +18,6 @@ var RAW_EXTENSION = ".raw",
 /**
  * https://github.com/kriskowal/q-connection/blob/master/spec/q-connection-spec.js
  */
-
-
 exports.ReadAlong = Montage.specialize({
 
     constructor: {
@@ -215,6 +213,7 @@ exports.ReadAlong = Montage.specialize({
             // readingOrderToDraw = bestGuessInTermsOfRecall.readingOrder;
             readingOrderToDraw = bestGuessInTermsOfPrecision.readingOrder;
             console.log("Playing read along guess #" + bestGuessInTermsOfRecall.rank, readingOrderToDraw);
+            console.log(readingOrderToDraw);
             var selfPageDocument = this.pageDocument;
             var timeUpdateFunction = function() {
                 /*
@@ -453,45 +452,54 @@ exports.ReadAlong = Montage.specialize({
             } else {
                 self.alignmentResults = self.alignmentResults || [];
                 var srcUri = this._xhtmlUrl.replace("http://client/index.html?file=", "");
-                this.readingOrder.loadFromXHTML(srcUri).then(function(order) {
-
-                    if (self.audioAlignment) {
-                        self.audioAlignment.readingOrderJson = order;
-                        self.audioAlignment.runAligner({
-                            "xhtml": self.xhtmlUrl.replace("fs://localhost", ""),
-                            "voice": self.voiceAudioUrl.replace("fs://localhost", ""),
-                            "finalAudio": self.finalAudioUrl,
-                            "pageNumber": self._pageNumber,
-                            "basePath": self.basePath,
-                            "readingOrder": order,
-                            "text": null
-                        }).then(function(alignment) {
-
-                            var alignedAudioFile = alignment.finalAudio;
-                            if (alignedAudioFile && alignment.alignmentResults && alignment.alignmentResults[0] && alignment.alignmentResults[0].guesses && alignment.alignmentResults[0].guesses["1"]) {
-                                self.alignmentResults.push(alignment);
-                                console.log("Alignment returned guesses ", alignment);
-                                if (alignedAudioFile.indexOf("/") === 0) {
-                                    alignedAudioFile = "fs://localhost" + alignedAudioFile;
-                                }
-                                // if (!self.finalAudio.src || self.finalAudio.src != alignedAudioFile) {
-                                //     self.finalAudio.src = alignedAudioFile;
-                                // }
-                                self.tryToAutomaticallyPatchTheReadingOrderUsingAudioAlignment(alignment);
-                            }
-                        });
-                    } else {
-                        console.warn("Aligner is not on, this is a problem.");
-                    }
-
-                    self.readingOrder.text.then(function(result) {
-                        console.log("Page content " + result);
-                        self.hasReadAlong = result !== "No text detected on this page.";
-                        self.textContent = result;
-                    });
-
-                });
+                this.readingOrder.loadFromXHTML(srcUri).then(self.triggerAlignerWithReadingOrder);
             }
+        }
+    },
+
+    triggerAlignerWithReadingOrder: {
+        value: function(order) {
+            var deferred = Promise.defer(),
+                self = this;
+
+            Promise.nextTick(function() {
+                if (self.audioAlignment) {
+                    self.audioAlignment.readingOrderJson = order;
+                    self.audioAlignment.runAligner({
+                        "xhtml": self.xhtmlUrl.replace("fs://localhost", ""),
+                        "voice": self.voiceAudioUrl.replace("fs://localhost", ""),
+                        "finalAudio": self.finalAudioUrl,
+                        "pageNumber": self._pageNumber,
+                        "basePath": self.basePath,
+                        "readingOrder": order,
+                        "text": null
+                    }).then(function(alignment) {
+
+                        var alignedAudioFile = alignment.finalAudio;
+                        if (alignedAudioFile && alignment.alignmentResults && alignment.alignmentResults[0] && alignment.alignmentResults[0].guesses && alignment.alignmentResults[0].guesses["1"]) {
+                            self.alignmentResults = self.alignmentResults || [];
+                            self.alignmentResults.push(alignment);
+                            console.log("Alignment returned guesses ", alignment);
+                            if (alignedAudioFile.indexOf("/") === 0) {
+                                alignedAudioFile = "fs://localhost" + alignedAudioFile;
+                            }
+                            // if (!self.finalAudio.src || self.finalAudio.src != alignedAudioFile) {
+                            //     self.finalAudio.src = alignedAudioFile;
+                            // }
+                            deferred.resolve(self.tryToAutomaticallyPatchTheReadingOrderUsingAudioAlignment(alignment));
+                        }
+                    });
+                } else {
+                    console.warn("Aligner is not on, this is a problem.");
+                }
+
+                self.readingOrder.text.then(function(result) {
+                    console.log("Page content " + result);
+                    self.hasReadAlong = result !== "No text detected on self page.";
+                    self.textContent = result;
+                });
+            });
+            return deferred.promise;
         }
     },
 
