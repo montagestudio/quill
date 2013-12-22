@@ -5,17 +5,8 @@ var Q = require("q"),
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 
-var AudioAlignment = function() {
-    console.log("Constructing AudioAlignment... ");
-    Object.call(this);
-};
+exports.AudioAlignment = Object.create({
 
-AudioAlignment.prototype = Object.create(Object.prototype, {
-
-    constructor: {
-        value: AudioAlignment
-    },
-    
     _backend: {
         value: null
     },
@@ -30,7 +21,7 @@ AudioAlignment.prototype = Object.create(Object.prototype, {
 
     backend: {
         get: function() {
-            var self = this;
+            var self = this;`
 
             if (self._backend == null) {
                 var connection = AdaptConnection(new WebSocket("ws://localhost:" + lumieres.nodePort));
@@ -199,6 +190,3 @@ AudioAlignment.prototype = Object.create(Object.prototype, {
         }
     }
 });
-
-
-exports.AudioAlignment = AudioAlignment;
