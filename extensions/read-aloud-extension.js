@@ -268,11 +268,11 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
         value: function(backend, item, options) {
             var self = this,
                 deferred = Promise.defer(),
-                pageNumber = item.currentPage;
+                pageNumber = options.pageIndex;
 
             console.log("Preparing batch read aloud for page " + pageNumber);
             if (!options.assumeOneAudioPerPage) {
-                alert("I dont know how to use one audio for multiple pages...");
+                throw "I dont know how to use one audio for multiple pages...";
             }
 
             if (!pageNumber) {
@@ -284,7 +284,8 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
                 smilUrl = item.destination + "/OEBPS/overlay/" + pageNumber + ".smil",
                 jsonUrl = item.destination + "/json/" + pageNumber + ".json",
                 page,
-                audio;
+                audio,
+                ipc = backend.get("ipc");
 
             this._getDocumentForURL(pageURL).then(function(result) {
                 // Make sure we words in that page
@@ -293,6 +294,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
                 }
                 page = result;
                 return self._getAudioDurationForURL(result, audioUrl).then(function(duration) {
+                    console.log("Page " + pageNumber + " has duration of " + duration);
                     audio = duration;
                 });
             }, function(error) {
@@ -323,7 +325,20 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
                             self.readAlong.convertToSMIL(bestGuessedReadingOrder).then(function(smilXML) {
                                 // Writing the smil now...
                                 backend.get("fs").invoke("write", smilUrl.substring("fs://localhost".length), smilXML).then(function() {
-                                    deferred.resolve(true);
+
+                                    //HACK to change the progress bar... otherwise it looks like it hangs
+                                    item.currentPage = ++pageNumber;
+                                    item.status = IMPORT_STATES.generatingAudioAlignment;
+                                    ipc.invoke("namedProcesses", "monitor").then(function(processID) {
+                                        if (processID) {
+                                            return ipc.invoke("send", item.id, processID[0], ["itemUpdate", item]);
+                                        }
+                                    }).fail(function(e) {
+                                        console.log("ERROR:", e.message, e.stack);
+                                    }).done(function() {
+                                        deferred.resolve(true);
+                                    });
+
                                 }, function(error) {
                                     deferred.reject(error);
                                 }).done(function() {
@@ -453,12 +468,17 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
             var deferred = Promise.defer(),
                 options = {
                     assumeOneAudioPerPage: g_assumeOneAudioPerPage
-                };
+                },
+                promises = [];
 
             console.log("*** customizePages", item);
 
-            // Let's add a copyright banner
-            this.addReadAloud(backend, item, options).then(function(success) {
+            for (var pageIndex = 1; pageIndex <= item.nbrPages; pageIndex++) {
+                options.pageIndex = pageIndex;
+                promises.push(this.addReadAloud(backend, item, options));
+            }
+
+            Promise.all(promises).then(function(success) {
                 deferred.resolve(item.id);
             }, function(error) {
                 deferred.reject(error);
