@@ -1,6 +1,7 @@
 /*jshint camelcase:false, maxcomplexity:16 */ // TODO: fix these warnings
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
+    Q = require("q"),
     ImportExtension = require("core/ImportExtension").ImportExtension,
     IMPORT_STATES = require("core/importStates").importStates,
     ReadAlong = require("core/read-along").ReadAlong;
@@ -14,6 +15,7 @@ var g_remote_secret_hash_key = "cdc1421b4468131ec9411b8522b1df61";
 
 var g_assumeOneAudioPerPage = true;
 var MP3_EXTENSION = ".mp3";
+var WAV_EXTENSION = ".wav";
 
 var _storeExpirationDate = function(readAloud, expiration) {
     expiration = expiration.getTime().toString(16);
@@ -274,103 +276,107 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
             if (!options.assumeOneAudioPerPage) {
                 throw "I dont know how to use one audio for multiple pages...";
             }
-
-            if (!pageNumber) {
-                deferred.resolve();
-            }
-
-            var pageURL = item.destination + "/OEBPS/pages/" + pageNumber + ".xhtml",
-                audioUrl = item.destination + "/OEBPS/audio/" + pageNumber + MP3_EXTENSION,
-                smilUrl = item.destination + "/OEBPS/overlay/" + pageNumber + ".smil",
-                jsonUrl = item.destination + "/json/" + pageNumber + ".json",
-                page,
-                audio,
-                ipc = backend.get("ipc");
-
-            this._getDocumentForURL(pageURL).then(function(result) {
-                // Make sure we words in that page
-                if (!result.document.getElementById("w1")) {
-                    return;
-                }
-                page = result;
-                return self._getAudioDurationForURL(result, audioUrl).then(function(duration) {
-                    console.log("Page " + pageNumber + " has duration of " + duration);
-                    audio = duration;
-                });
-            }, function(error) {
-                console.warn("Cannot retrieve the page contents");
-            }).done(function() {
-                var createSmil = false,
-                    createRaw = false,
-                    data;
-
-                if (!audio) {
-                    deferred.resolve(false);
-                    return;
-                }
-                createSmil = true;
-
-                if (!page) {
-                    console.log("This page has audio, but no text. This is either an error, or by design. Creating a .smil file with one audio for the entire document.");
-                } else {
-                    createRaw = true;
+            Promise.nextTick(function() {
+                if (!pageNumber) {
+                    deferred.resolve("missing page number");
                 }
 
-                self._createRawAudio(item, audioUrl, createRaw).then(function(rawAudioConversion) {
-                    console.log("rawAudioConversion" + rawAudioConversion);
-                    self._runAudioAlignerOnThisPage(page, pageURL).then(function(bestGuessedReadingOrder) {
-                        data = JSON.stringify(bestGuessedReadingOrder, null, 2);
-                        // Writing the json now...
-                        backend.get("fs").invoke("write", jsonUrl.substring("fs://localhost".length), data).then(function() {
-                            self.readAlong.convertToSMIL(bestGuessedReadingOrder).then(function(smilXML) {
-                                // Writing the smil now...
-                                backend.get("fs").invoke("write", smilUrl.substring("fs://localhost".length), smilXML).then(function() {
+                var pageURL = item.destination + "/OEBPS/pages/" + pageNumber + ".xhtml",
+                    audioUrl = item.destination + "/OEBPS/audio/" + pageNumber + WAV_EXTENSION,
+                    smilUrl = item.destination + "/OEBPS/overlay/" + pageNumber + ".smil",
+                    jsonUrl = item.destination + "/json/" + pageNumber + ".json",
+                    page,
+                    audio,
+                    ipc = backend.get("ipc");
 
-                                    //HACK to change the progress bar... otherwise it looks like it hangs
-                                    item.currentPage = ++pageNumber;
-                                    item.status = IMPORT_STATES.generatingAudioAlignment;
-                                    ipc.invoke("namedProcesses", "monitor").then(function(processID) {
-                                        if (processID) {
-                                            return ipc.invoke("send", item.id, processID[0], ["itemUpdate", item]);
-                                        }
-                                    }).fail(function(e) {
-                                        console.log("ERROR:", e.message, e.stack);
-                                    }).done(function() {
-                                        deferred.resolve(true);
-                                    });
-
-                                }, function(error) {
-                                    deferred.reject(error);
-                                }).done(function() {
-                                    // Remove the added nodes now that we are done with them
-                                    console.log("In the done, clean up whatever might need to be cleaned. ");
-                                    // pageElem.parentNode.removeChild(pageElem);
-                                    // bannerElem.parentNode.removeChild(bannerElem);
-                                });
-                            });
-
-                            deferred.resolve(true);
-                        }, function(error) {
-                            deferred.reject(error);
-                        }).done(function() {
-                            // Remove the added nodes now that we are done with them
-                            console.log("In the done, clean up whatever might need to be cleaned. ");
-                            // pageElem.parentNode.removeChild(pageElem);
-                            // bannerElem.parentNode.removeChild(bannerElem);
-                        });
-                    }, function(error) {
-                        console.log("Wasn't able to create the alignment , this is a problem. This page will not have read aloud.");
-                        deferred.resolve(false);
+                self._getDocumentForURL(pageURL).then(function(result) {
+                    // Make sure we words in that page
+                    if (!result.document.getElementById("w1")) {
                         return;
+                    }
+                    page = result;
+                    return self._getAudioDurationForURL(result, audioUrl).then(function(duration) {
+                        console.log("Page " + pageNumber + " has duration of " + duration);
+                        audio = duration;
                     });
                 }, function(error) {
-                    console.log("Wasn't able to create the raw audio, this is a problem. This page will not have read aloud.");
-                    deferred.resolve(false);
-                    return;
+                    console.warn("Cannot retrieve the page contents");
+                }).done(function() {
+                    var createSmil = false,
+                        createRaw = false,
+                        data;
+
+                    if (!audio) {
+                        //deferred.resolve(false);
+                        deferred.resolve(pageNumber + " has no audio");
+                        return;
+                    }
+                    createSmil = true;
+
+                    if (!page) {
+                        console.log("This page has audio, but no text. This is either an error, or by design. Creating a .smil file with one audio for the entire document.");
+                    } else {
+                        createRaw = true;
+                    }
+
+                    self._createRawAudio(item, audioUrl, createRaw).then(function(rawAudioConversion) {
+                        console.log("rawAudioConversion" + rawAudioConversion);
+                        self._runAudioAlignerOnThisPage(page, pageURL).then(function(bestGuessedReadingOrder) {
+                            data = JSON.stringify(bestGuessedReadingOrder, null, 2);
+                            // Writing the json now...
+                            backend.get("fs").invoke("write", jsonUrl.substring("fs://localhost".length), data).then(function() {
+                                self.readAlong.convertToSMIL(bestGuessedReadingOrder).then(function(smilXML) {
+                                    // Writing the smil now...
+                                    backend.get("fs").invoke("write", smilUrl.substring("fs://localhost".length), smilXML).then(function() {
+
+                                        //HACK to change the progress bar... otherwise it looks like it hangs
+                                        item.currentPage = pageNumber + 1;
+                                        item.status = IMPORT_STATES.generatingAudioAlignment;
+                                        ipc.invoke("namedProcesses", "monitor").then(function(processID) {
+                                            if (processID) {
+                                                return ipc.invoke("send", item.processID, processID[0], ["itemUpdate", item]);
+                                            }
+                                        }).fail(function(e) {
+                                            console.log("ERROR:", e.message, e.stack);
+                                        }).done(function() {
+                                            console.log("Done page " + pageNumber);
+                                            deferred.resolve(true);
+                                        });
+
+                                    }, function(error) {
+                                        deferred.reject(error);
+                                    }).done(function() {
+                                        // Remove the added nodes now that we are done with them
+                                        console.log("In the done, clean up whatever might need to be cleaned. ");
+                                        // pageElem.parentNode.removeChild(pageElem);
+                                        // bannerElem.parentNode.removeChild(bannerElem);
+                                    });
+                                });
+
+                                deferred.resolve(true);
+                            }, function(error) {
+                                deferred.reject(error);
+                            }).done(function() {
+                                // Remove the added nodes now that we are done with them
+                                console.log("In the done, clean up whatever might need to be cleaned. ");
+                                // pageElem.parentNode.removeChild(pageElem);
+                                // bannerElem.parentNode.removeChild(bannerElem);
+                            });
+                        }, function(error) {
+                            console.log("Wasn't able to create the alignment , this is a problem. This page will not have read aloud.");
+                            deferred.resolve(error);
+                            // deferred.resolve(true);
+                            return;
+                        });
+                    }, function(error) {
+                        console.log("Wasn't able to create the raw audio, this is a problem. This page will not have read aloud.");
+                        deferred.resolve(error);
+                        // deferred.resolve(true);
+                        return;
+                    });
+
                 });
-
             });
-
 
             return deferred.promise;
         }
@@ -396,13 +402,19 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
     _getAudioDurationForURL: {
         value: function(page, url) {
             var deferred = Promise.defer(),
-                audioElement = page.document.createElement("audio");
+                audioElement = document.createElement("audio");
 
-            audioElement.src = url;
+            audioElement.onload = function(something) {
+                console.log(url + " exists");
+                deferred.resolve(this.duration);
+            }
+            audioElement.onerror = function(error) {
+                console.log(url + " is missing. no audio.");
+                deferred.resolve(null);
+            }
 
             Promise.nextTick(function() {
-                // deferred.resolve(audioElement.duration);
-                deferred.resolve("0:10:10:.500");
+                audioElement.src = url;
             });
 
             return deferred.promise;
@@ -478,10 +490,14 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
                 promises.push(this.addReadAloud(backend, item, options));
             }
 
-            Promise.all(promises).then(function(success) {
+            Q.allSettled(promises).then(function(success) {
+                console.log("all promises in customizePages then ", success);
                 deferred.resolve(item.id);
-            }, function(error) {
+            }).fail(function(error) {
+                console.log("failed with customizePages ", error);
                 deferred.reject(error);
+            }).done(function(e) {
+                console.log("done with customizePages ", e);
             });
 
             return deferred.promise;
