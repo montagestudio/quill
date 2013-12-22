@@ -4,7 +4,7 @@
         <seq id="id1" epub:textref="pages/{{pagenumber}}.xhtml" epub:type="bodymatter part">
             <par id="{{wordId}}">
                 <text src="{{pagenumber}}.xhtml#{{wordId}}"/>
-                <audio src="audio/{{pagenumber}}.{{audioExtension}}" clipBegin="0:00:00.000" clipEnd="0:00:00.000"/>
+                <audio src="audio/{{pagenumber}}{{audioExtension}}" clipBegin="0:00:00.000" clipEnd="0:00:00.000"/>
             </par>
         </seq>
     </body>

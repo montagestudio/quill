@@ -534,6 +534,33 @@ exports.ReadAlong = Montage.specialize({
                 deffered = Promise.defer();
 
             Promise.nextTick(function() {
+                var smilXML = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+                    '<smil xmlns="http://www.w3.org/ns/SMIL" xmlns:epub="http://www.idpf.org/2007/ops" version="3.0">\n' +
+                    '\t<seq id="id1" epub:textref="pages/6.xhtml" epub:type="bodymatter part">\n';
+                for (var item = 0; item < readingOrder.length; item++) {
+                    if (readingOrder[item].startTime === undefined) {
+                        continue;
+                    }
+                    var paralel = '\t\t<par id="' + readingOrder[item].id + '">\n';
+                    paralel = paralel + '\t\t\t<text src="pages/' + self._pageNumber + ".xhtml" + "#" + readingOrder[item].id + '"></text>\n'
+                    paralel = paralel + '\t\t\t<audio src="' + "audio/" + self._pageNumber + MP3_EXTENSION + '" clipBegin="' + readingOrder[item].startTime + '" clipEnd="' + readingOrder[item].endTime + '"></audio>\n';
+                    paralel = paralel + '\t\t</par>\n'
+                    smilXML = smilXML + paralel;
+                }
+                smilXML = smilXML + '\t</seq>\n</smil>'
+                deffered.resolve(smilXML);
+            });
+            return deffered.promise;
+        }
+    },
+
+
+    convertToSMILDeprecated: {
+        value: function(readingOrder) {
+            var self = this,
+                deffered = Promise.defer();
+
+            Promise.nextTick(function() {
                 console.log("Reading .smil " + self.smilWordTimingUrl);
 
                 require.read(self.smilWordTimingUrl).then(function(smilxml) {
@@ -542,31 +569,37 @@ exports.ReadAlong = Montage.specialize({
 
                     template = Template.create();
                     doc = template.createHtmlDocumentWithHtml(smilxml);
+                    var removeTextOverlayTimingSinceWeHaveWords = false;
+
+
                     var sequentialBlock = doc.getElementById("id1");
                     for (var item = 0; item < readingOrder.length; item++) {
+                        if (readingOrder[item].startTime === undefined) {
+                            continue;
+                        }
                         var paralel = doc.createElement("par");
                         paralel.id = readingOrder[item].id;
-                        
+
                         var text = doc.createElement("text");
-                        text.src = self._pageNumber + ".xhtml" + "#" + readingOrder[item].id;
+                        text.setAttribute("src", self._pageNumber + ".xhtml" + "#" + readingOrder[item].id);
 
                         var audio = doc.createElement("audio");
-                        audio.src = "audio/" + self._pageNumber + MP3_EXTENSION;
-                        audio.clipBegin = "0:00:" + readingOrder[item].startTime + "0";
-                        if (audio.clipBegin.length < 11) {
-                            audio.clipBegin = audio.clipBegin + "0";
-                        }
-                        audio.clipEnd = "0:00:" + readingOrder[item].endTime + "0";
-                        if (audio.clipBegin.length < 11) {
-                            audio.clipBegin = audio.clipBegin + "0";
-                        }
+                        audio.setAttribute("src", "audio/" + self._pageNumber + MP3_EXTENSION);
+                        audio.setAttribute("clipBegin", readingOrder[item].startTime);
+                        audio.setAttribute("clipEnd", readingOrder[item].endTime);
                         paralel.appendChild(audio);
-                        audio.parentNode.insertBefore(text, audio)
+                        audio.parentNode.insertBefore(text, audio);
                         sequentialBlock.appendChild(paralel);
+                        removeTextOverlayTimingSinceWeHaveWords = true;
+                    }
+
+                    if (removeTextOverlayTimingSinceWeHaveWords) {
+                        var element = doc.getElementById("textOverlay");
+                        element.parentNode.removeChild(element);
                     }
 
                     console.log("Returning .smil " + self.smilWordTimingUrl);
-                    deffered.resolve(doc.innerHTML);
+                    deffered.resolve('<?xml version="1.0" encoding="UTF-8"?>\n' + doc.body.innerHTML);
                 });
             });
             return deffered.promise;
