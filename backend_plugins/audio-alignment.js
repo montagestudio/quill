@@ -1,11 +1,12 @@
-var Q = require("q"),
+var Montage = require("montage/core/core").Montage,
+    Promise = require("montage/core/promise").Promise,
     AdaptConnection = require("q-connection/adapt"),
     Connection = require("q-connection");
 
 var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 
-exports.AudioAlignment = Object.create({
+exports.AudioAlignment = Montage.specialize({
 
     _backend: {
         value: null
@@ -21,7 +22,7 @@ exports.AudioAlignment = Object.create({
 
     backend: {
         get: function() {
-            var self = this;`
+            var self = this;
 
             if (self._backend == null) {
                 var connection = AdaptConnection(new WebSocket("ws://localhost:" + lumieres.nodePort));
@@ -39,9 +40,9 @@ exports.AudioAlignment = Object.create({
     initialize: {
         value: function(path, pageNumber) {
             var self = this,
-                deferred = Q.defer();
+                deferred = Promise.defer();
 
-            Q.nextTick(function() {
+            Promise.nextTick(function() {
 
                 if (IS_IN_LUMIERES) {
                     //                console.log(">>> SETUP CACHE FOR", decodeURIComponent(path.substring("fs://localhost".length)), pdf.pdfInfo.fingerprint);
@@ -91,7 +92,7 @@ exports.AudioAlignment = Object.create({
                     deferred.reject("The AudioAligner object can only be set when running under Lumieres!");
                 }
             });
-            return deferred.Q;
+            return deferred.promise;
         }
     },
 
@@ -123,10 +124,10 @@ exports.AudioAlignment = Object.create({
 
     runAligner: {
         value: function(options) {
-            var deferred = Q.defer(),
+            var deferred = Promise.defer(),
                 self = this;
 
-            Q.nextTick(function() {
+            Promise.nextTick(function() {
                 console.log("Running aligner...");
 
                 if (options.readingOrder) {
@@ -186,7 +187,7 @@ exports.AudioAlignment = Object.create({
 
 
             });
-            return deferred.Q;
+            return deferred.promise;
         }
     }
 });
