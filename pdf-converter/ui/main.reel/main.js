@@ -131,9 +131,9 @@ exports.Main = Component.specialize({
                                 return self._converter.getDocument(self.url, self.outputURL + "/OEBPS/pages").then(function(pdf) {
                                     self._document = pdf;
                                     self.numberOfPages = pdf.pdfInfo.numPages;
-self.numberOfPages = 5;
-// if (!self.params.p)
-// self.params.p = 5;
+//self.numberOfPages = 3;
+//if (!self.params.p)
+//self.params.p = 3;
 
                                     self._pageNumber = parseInt(self.params.p, 10) || 1;
 
@@ -198,7 +198,7 @@ self.numberOfPages = 5;
                                                         destination: self.outputURL,
                                                         meta: options
                                                     }).then(function() {
-                                                        // lumieres.document.close(true);
+                                                        lumieres.document.close(true);
                                                     });
                                                 });
                                             }
