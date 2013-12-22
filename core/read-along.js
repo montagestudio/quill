@@ -15,6 +15,7 @@ var RAW_EXTENSION = ".raw",
     WAV_EXTENSION = ".wav",
     MP3_EXTENSION = ".mp3";
 
+var debug = false;
 
 /**
  * https://github.com/kriskowal/q-connection/blob/master/spec/q-connection-spec.js
@@ -238,7 +239,9 @@ exports.ReadAlong = Montage.specialize({
             // readingOrderToDraw = bestGuessInTermsOfRecall.readingOrder;
             readingOrderToDraw = bestGuessInTermsOfPrecision.readingOrder;
             console.log("Playing read along guess #" + bestGuessInTermsOfRecall.rank, readingOrderToDraw);
-            console.log(readingOrderToDraw);
+            if (debug) {
+                console.log(readingOrderToDraw);
+            }
             var selfPageDocument = this.pageDocument;
             var timeUpdateFunction = function() {
                 /*
@@ -379,12 +382,16 @@ exports.ReadAlong = Montage.specialize({
 
     readingOrder: {
         get: function() {
-            console.log("get readingOrder", this._readingOrder);
+            if (debug) {
+                console.log("get readingOrder", this._readingOrder);
+            }
 
             return this._readingOrder;
         },
         set: function(value) {
-            console.log("set readingOrder", value);
+            if (debug) {
+                console.log("set readingOrder", value);
+            }
 
             if (value && value !== this._readingOrder) {
                 this._readingOrder.contents = value;
@@ -504,7 +511,9 @@ exports.ReadAlong = Montage.specialize({
                         if (alignedAudioFile && alignment.alignmentResults && alignment.alignmentResults[0] && alignment.alignmentResults[0].guesses && alignment.alignmentResults[0].guesses["1"]) {
                             self.alignmentResults = self.alignmentResults || [];
                             self.alignmentResults.push(alignment);
-                            console.log("Alignment returned guesses ", alignment);
+                            if (debug) {
+                                console.log("Alignment returned guesses ", alignment);
+                            }
                             if (alignedAudioFile.indexOf("/") === 0) {
                                 alignedAudioFile = "fs://localhost" + alignedAudioFile;
                             }
@@ -519,7 +528,9 @@ exports.ReadAlong = Montage.specialize({
                 }
 
                 self.readingOrder.text.then(function(result) {
-                    console.log("Page content " + result);
+                    if (debug) {
+                        console.log("Page content " + result);
+                    }
                     self.hasReadAlong = result !== "No text detected on self page.";
                     self.textContent = result;
                 });
@@ -542,18 +553,17 @@ exports.ReadAlong = Montage.specialize({
                         continue;
                     }
                     var paralel = '\t\t<par id="' + readingOrder[item].id + '">\n';
-                    paralel = paralel + '\t\t\t<text src="pages/' + self._pageNumber + ".xhtml" + "#" + readingOrder[item].id + '"></text>\n'
+                    paralel = paralel + '\t\t\t<text src="pages/' + self._pageNumber + ".xhtml" + "#" + readingOrder[item].id + '"></text>\n';
                     paralel = paralel + '\t\t\t<audio src="' + "audio/" + self._pageNumber + MP3_EXTENSION + '" clipBegin="' + readingOrder[item].startTime + '" clipEnd="' + readingOrder[item].endTime + '"></audio>\n';
                     paralel = paralel + '\t\t</par>\n'
                     smilXML = smilXML + paralel;
                 }
-                smilXML = smilXML + '\t</seq>\n</smil>'
+                smilXML = smilXML + '\t</seq>\n</smil>';
                 deffered.resolve(smilXML);
             });
             return deffered.promise;
         }
     },
-
 
     convertToSMILDeprecated: {
         value: function(readingOrder) {
@@ -561,7 +571,9 @@ exports.ReadAlong = Montage.specialize({
                 deffered = Promise.defer();
 
             Promise.nextTick(function() {
-                console.log("Reading .smil " + self.smilWordTimingUrl);
+                if (debug) {
+                    console.log("Reading .smil " + self.smilWordTimingUrl);
+                }
 
                 require.read(self.smilWordTimingUrl).then(function(smilxml) {
                     var doc,
@@ -598,7 +610,9 @@ exports.ReadAlong = Montage.specialize({
                         element.parentNode.removeChild(element);
                     }
 
-                    console.log("Returning .smil " + self.smilWordTimingUrl);
+                    if (debug) {
+                        console.log("Returning .smil " + self.smilWordTimingUrl);
+                    }
                     deffered.resolve('<?xml version="1.0" encoding="UTF-8"?>\n' + doc.body.innerHTML);
                 });
             });
@@ -766,7 +780,9 @@ exports.ReadAlong = Montage.specialize({
                                     openmindednessForNextWord++;
 
                                 }
-                                console.log("\tThis word is at " + wordsInAudio[wordIndexInAlignment].start + " too far away from the previous word " + previousWordWithKnowEndTime.endTime + " new openmindedness " + openmindednessForNextWord);
+                                if (debug) {
+                                    console.log("\tThis word is at " + wordsInAudio[wordIndexInAlignment].start + " too far away from the previous word " + previousWordWithKnowEndTime.endTime + " new openmindedness " + openmindednessForNextWord);
+                                }
                             }
                         }
                     }
@@ -817,7 +833,9 @@ exports.ReadAlong = Montage.specialize({
                         console.log("skipping word boundaries (silences).");
                         continue;
                     }
-                    console.log(words[w].text);
+                    if (debug) {
+                        console.log(words[w].text);
+                    }
                     uniqueWordsInGuess[words[w].text] = true;
                     numberOfWordsInGuess++;
 
@@ -857,23 +875,31 @@ exports.ReadAlong = Montage.specialize({
                             This only works if the reading order is corrected.
                              */
                             if (span.startTime === undefined && words[w].readingOrder === undefined) {
-                                console.log("previousWordWithKnowEndTime : " + previousWordWithKnowEndTime.endTime + " this words start time " + words[w].start);
+                                if (debug) {
+                                    console.log("previousWordWithKnowEndTime : " + previousWordWithKnowEndTime.endTime + " this words start time " + words[w].start);
+                                }
                                 span.startTime = parseFloat(words[w].start);
                                 span.endTime = parseFloat(words[w].end);
                                 previousWordWithKnowEndTime = span;
                                 countOfWordsWhichMightHaveAReadingOrder++;
                                 words[w].readingOrder = span.readingOrder;
-                                console.log("Found something!", span);
+                                if (debug) {
+                                    console.log("Found something!", span);
+                                }
                                 continue;
                             } else {
-                                console.log(words[w].text + ":" + span.text);
+                                if (debug) {
+                                    console.log(words[w].text + ":" + span.text);
+                                }
                             }
                         }
                     }
 
                 }
             }
-            console.log("Hypothesis " + guess.hypothesis + " has this many words in the dom: " + countOfWordsWhichMightHaveAReadingOrder);
+            if (debug) {
+                console.log("Hypothesis " + guess.hypothesis + " has this many words in the dom: " + countOfWordsWhichMightHaveAReadingOrder);
+            }
             guess.countOfWordsWhichMightHaveAReadingOrder = countOfWordsWhichMightHaveAReadingOrder;
             guess.precision = countOfWordsWhichMightHaveAReadingOrder / numberOfWordsInGuess;
             guess.uniqueWordsInGuess = uniqueWordsInGuess;
