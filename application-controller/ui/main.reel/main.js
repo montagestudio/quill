@@ -638,24 +638,6 @@ exports.Main = Component.specialize({
         }
     },
 
-    /*
-    GC TODO: test this function, it hasnt been turned on yet.
-     */
-    convertAudioForReadAloudRecognition: {
-        value: function(item) {
-            // GC TODO: Add an option to bypass audio conversion
-            if (1) {
-                return this._getAudioDurationAndCreateRawAudio(item, 16);             // JFD TODO: the quality should come from a setting somewhere...
-
-            } else {
-                console.log("--- no audio conversion!");
-                var deferred = Promise.defer();
-                deferred.resolve(0);
-                return deferred.promise;
-            }
-        }
-    },
-
     buildTableOfContent: {
         value: function(meta) {
             var toc = meta.toc,
@@ -903,7 +885,6 @@ exports.Main = Component.specialize({
             });
         }
     },
-
 
     _importItemForID: {
         value: function(itemID) {
