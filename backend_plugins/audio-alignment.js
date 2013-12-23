@@ -189,5 +189,25 @@ exports.AudioAlignment = Montage.specialize({
             });
             return deferred.promise;
         }
+    },
+
+    getAudioDuration: {
+        value: function(audioUrl) {
+            var deferred = Promise.defer(),
+                self = this;
+
+            Promise.nextTick(function() {
+                console.log("Getting audio duration...");
+
+                self.backend.get("aligner").invoke("getAudioDuration", audioUrl).then(function(duration) {
+                    deferred.resolve(duration);
+                }, function(reason) {
+                    console.log("Failed to get audio duration.", reason);
+                    deferred.reject(reason);
+                });
+
+            });
+            return deferred.promise;
+        }
     }
 });

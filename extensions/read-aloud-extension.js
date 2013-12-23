@@ -16,6 +16,7 @@ var g_remote_secret_hash_key = "cdc1421b4468131ec9411b8522b1df61";
 var g_assumeOneAudioPerPage = true;
 var MP3_EXTENSION = ".mp3";
 var WAV_EXTENSION = ".wav";
+var RAW_EXTENSION = ".raw";
 
 var _storeExpirationDate = function(readAloud, expiration) {
     expiration = expiration.getTime().toString(16);
@@ -283,6 +284,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
 
                 var pageURL = item.destination + "/OEBPS/pages/" + pageNumber + ".xhtml",
                     audioUrl = item.destination + "/OEBPS/audio/" + pageNumber + WAV_EXTENSION,
+                    voiceUrl = item.destination + "/OEBPS/voice/" + pageNumber + RAW_EXTENSION,
                     smilUrl = item.destination + "/OEBPS/overlay/" + pageNumber + ".smil",
                     jsonUrl = item.destination + "/json/" + pageNumber + ".json",
                     page,
@@ -295,7 +297,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
                         return;
                     }
                     page = result;
-                    return self._getAudioDurationForURL(result, audioUrl).then(function(duration) {
+                    return self._getAudioDurationForURL(backend, result, audioUrl, voiceUrl).then(function(duration) {
                         console.log("Page " + pageNumber + " has duration of " + duration);
                         audio = duration;
                     });
@@ -340,7 +342,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
                                             console.log("ERROR:", e.message, e.stack);
                                         }).done(function() {
                                             console.log("Done page " + pageNumber);
-                                            deferred.resolve(true);
+                                            deferred.resolve("created smil alignments");
                                         });
 
                                     }, function(error) {
@@ -353,7 +355,6 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
                                     });
                                 });
 
-                                deferred.resolve(true);
                             }, function(error) {
                                 deferred.reject(error);
                             }).done(function() {
@@ -400,26 +401,40 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
     },
 
     _getAudioDurationForURL: {
-        value: function(page, url) {
-            var deferred = Promise.defer(),
+        value: function(backend, page, sourceUrl, destUrl) {
+            var self = this,
+                deferred = Promise.defer(),
                 audioElement = document.createElement("audio");
 
+            //THis doesnt work. 
             audioElement.onload = function(something) {
-                console.log(url + " exists");
-                deferred.resolve(this.duration);
-            }
+                console.log(sourceUrl + " exists");
+                // deferred.resolve(this.duration);
+            };
             audioElement.onerror = function(error) {
-                console.log(url + " is missing. no audio.");
-                deferred.resolve(null);
-            }
+                console.log(sourceUrl + " is missing. no audio.");
+                // deferred.resolve(null);
+            };
 
             Promise.nextTick(function() {
-                audioElement.src = url;
+                // audioElement.src = sourceUrl;
+                deferred.resolve("00:00:10.500");
+                return;
+                // backend.get("readAloud").invoke("getAudioDurationAndCreateRawAudio",
+                //     sourceUrl, destUrl, null, null).then(function(duration) {
+                //     deferred.resolve(duration);
+                // });
+
+                // self.readAlong.getAudioDuration().then(function(duration) {
+                //     deferred.resolve(duration);
+                // });
+
             });
 
             return deferred.promise;
         }
     },
+
 
     _getDocumentForURL: {
         value: function(url) {

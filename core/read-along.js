@@ -101,6 +101,16 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
+    getAudioDuration: {
+        value: function(audioUrl) {
+            if (!this.audioAlignment) {
+                console.log("cant get audio duration..");
+                this.audioAlignment = new AudioAlignment();
+                // this.audioAlignment.initialize(sourcePath, pageNumber);
+            }
+            return this.audioAlignment.getAudioDuration(audioUrl);
+        }
+    },
     /**
      * The URL or the voice only audio for this page, used for alignment
      */
