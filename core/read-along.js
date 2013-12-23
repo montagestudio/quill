@@ -379,7 +379,9 @@ exports.ReadAlong = Montage.specialize({
 
             this.alignmentResults = this.alignmentResults || [];
             var srcUri = this._xhtmlUrl.replace("http://client/index.html?file=", "");
-            this.readingOrder.loadFromXHTML(srcUri).then(self.triggerAlignerWithReadingOrder);
+            this.readingOrder.loadFromXHTML(srcUri).then(function(order) {
+                self.triggerAlignerWithReadingOrder(order);
+            });
         }
     },
 
@@ -422,8 +424,8 @@ exports.ReadAlong = Montage.specialize({
             var deferred = Promise.defer(),
                 self = this;
 
+
             Promise.nextTick(function() {
-                // TODO this connection to the backend doesnt work yet.
                 self.backend.get("read-aloud").invoke("runAligner", {
                     "xhtml": self.xhtmlUrl.replace("fs://localhost", ""),
                     "voice": self.voiceAudioUrl.replace("fs://localhost", ""),

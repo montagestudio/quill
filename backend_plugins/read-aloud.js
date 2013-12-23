@@ -99,7 +99,7 @@ var runAligner = exports.runAligner = function(options) {
         aligner.run(options.voice, options.text)
             .then(function(results) {
                 console.log("Results of calling runAligner", results);
-                options.alignmentResults = result;
+                options.alignmentResults = results;
                 deferred.resolve(options);
             }, function(reason) {
                 console.log("Failed to get alignment result.", reason);

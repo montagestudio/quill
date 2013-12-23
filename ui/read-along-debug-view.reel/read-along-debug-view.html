@@ -14,8 +14,7 @@
 
         "owner": {
             "properties": {
-                "element": {"#": "pageView"},
-                "readAlongButtonState": "../../assets/img/play.png"
+                "element": {"#": "pageView"}
             }
         },
 
@@ -60,7 +59,7 @@
                 "src": "../../assets/img/play.png"
             },
             "bindings": {
-               "src": {"<-": "@owner.readAlongButtonState"}
+               "src": {"<-": "@owner.item.readAlong.playing ? '../../assets/img/pause.png' : '../../assets/img/play.png' "}
             }
         }
     }
