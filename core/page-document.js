@@ -514,7 +514,7 @@ var PageDocument = exports.PageDocument = Montage.specialize({
     URL_PARAMS: {
         value: {
             find: "<head>",
-            insert: '<script class="' + INJECTED_CLASS_NAME + '" src="http://client/node_modules/q/q.js" /><script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/quill-agent.js" /><script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/html-controller.js" />'
+            insert: '<script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/quill-agent.js" /><script class="' + INJECTED_CLASS_NAME + '" src="http://client/quill-agent/html-controller.js" />'
         }
     }
 });
