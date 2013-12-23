@@ -261,7 +261,10 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                     item.coverImage = coverImage ? coverImage.url : null;
                     
                     /* prepare read aloud for all scholastic books */
-                    return self.readAloudExtension.customizePages(backend, item);
+                    self.readAloudExtension.customizePages(backend, item).done(function(){
+                        console.log("Read aloud customization is done.");
+                        deferred.resolve(item.id);
+                    });
 
                 }, function(error) {
                     deferred.reject(error);
