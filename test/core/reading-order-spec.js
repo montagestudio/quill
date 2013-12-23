@@ -8,7 +8,7 @@ describe("core/reading-order-spec", function() {
         expect(readingOrder).toBeDefined();
         return readingOrder.loadFromXHTML("test/read-along/test-book-page.html").then(function(results) {
 
-            console.log("Recievd ", results);
+            console.log("Recieved ", results);
             expect(results).toEqual([{
                 "id": "w2",
                 "text": "Rattle",

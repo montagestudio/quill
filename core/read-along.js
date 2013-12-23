@@ -1,15 +1,10 @@
 var Montage = require("montage").Montage,
     Promise = require("montage/core/promise").Promise,
     ReadingOrder = require("core/reading-order").ReadingOrder,
-    Q = require("q"),
-    Queue = require("q/queue"),
     Connection = require("q-connection"),
-    AudioAlignment = require("backend_plugins/audio-alignment").AudioAlignment,
+    adaptConnection = require("q-connection/adapt"),
     Template = require("montage/core/template").Template;
 
-/**
- * This controls the read aloud feature of an ebook page.
- */
 
 var RAW_EXTENSION = ".raw",
     WAV_EXTENSION = ".wav",
@@ -18,14 +13,12 @@ var RAW_EXTENSION = ".raw",
 var debug = false;
 
 /**
- * https://github.com/kriskowal/q-connection/blob/master/spec/q-connection-spec.js
+ * This controls the read aloud feature of an ebook page.
  */
 exports.ReadAlong = Montage.specialize({
 
     constructor: {
         value: function ReadAlong() {
-
-            this.useWorkaroundForCORSErrorWhenConnectingToIframe = true;
 
             this._readingOrder = new ReadingOrder();
             this.playing = false;
@@ -52,12 +45,14 @@ exports.ReadAlong = Montage.specialize({
             }
         }
     },
+
     /**
      * The URL of the document that houses the content for this page
      */
     _xhtmlUrl: {
         value: null
     },
+
     xhtmlUrl: {
         get: function() {
             return this._xhtmlUrl;
@@ -72,12 +67,6 @@ exports.ReadAlong = Montage.specialize({
 
                 var sourcePath = value.substring(0, value.lastIndexOf("/")).replace("/pages", "");
                 this._basePath = sourcePath;
-
-                if (!this.audioAlignment) {
-                    this.audioAlignment = new AudioAlignment();
-                    this.audioAlignment.initialize(sourcePath, pageNumber);
-                    this.audioAlignment.audioFile = this.finalAudioUrl;
-                }
 
                 if (!this.finalAudio) {
                     var audioElementForThisPage = document.getElementById("audio" + this._pageNumber);
@@ -103,18 +92,13 @@ exports.ReadAlong = Montage.specialize({
 
     getAudioDuration: {
         value: function(audioUrl) {
-            if (!this.audioAlignment) {
-                console.log("cant get audio duration..");
-                this.audioAlignment = new AudioAlignment();
-                // this.audioAlignment.initialize(sourcePath, pageNumber);
-            }
-            return this.audioAlignment.getAudioDuration(audioUrl);
+            return this.backend.get("read-aloud").invoke("getAudioDuration", audioUrl);
         }
     },
+
     /**
      * The URL or the voice only audio for this page, used for alignment
      */
-
     voiceAudio: {
         value: null
     },
@@ -143,7 +127,6 @@ exports.ReadAlong = Montage.specialize({
     /**
      * The URL of the final audio which contains music, foley effects and voice for this page, packaged with the final book
      */
-
     finalAudio: {
         value: null
     },
@@ -316,22 +299,6 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
-    handleAction: {
-        value: function() {
-            this.playAudio();
-        }
-    },
-
-    audioAlignment: {
-        value: null
-    },
-
-    alignAudioAndText: {
-        value: function() {
-            console.log("Aligning");
-        }
-    },
-
     _alignmentConfidence: {
         value: null
     },
@@ -370,19 +337,8 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
-    channel: {
-        value: null
-    },
-
-    peers: {
-        value: null
-    },
 
     hasReadAlong: {
-        value: null
-    },
-
-    sharedReadingOrderMethods: {
         value: null
     },
 
@@ -419,83 +375,45 @@ exports.ReadAlong = Montage.specialize({
 
     connect: {
         value: function() {
-
-            /**
-             * https://github.com/kriskowal/q-connection/blob/master/spec/q-connection-spec.js
-             */
-            var sending = Queue();
-            var receiving = Queue();
-
-            var channel = {
-                l2r: {
-                    get: sending.get,
-                    put: receiving.put,
-                    close: sending.close,
-                    closed: sending.closed
-                },
-                r2l: {
-                    get: receiving.get,
-                    put: sending.put,
-                    close: receiving.close,
-                    closed: receiving.closed
-                },
-                close: function() {
-                    sending.close();
-                    receiving.close();
-                }
-            };
-
-            // To communicate with a single frame on the same origin
-            // (multiple frames will require some handshaking event sources)
-
-            var iframe,
-                local;
-
-            var iFrames = document.getElementsByTagName("iframe");
-            for (var frame = 0; frame < iFrames.length; frame++) {
-                if (iFrames[frame].src.indexOf(this._xhtmlUrl) > -1) {
-                    console.log(iFrames[frame]);
-                    iframe = iFrames[frame];
-                }
-            }
-            if (!iframe) {
-                console.log("No connection to the iframe.");
-                return;
-            }
-
-            /* workaround for Uncaught SecurityError: Blocked a frame with origin "http://client" from accessing a frame with origin "fs://localhost".  The frame requesting access has a protocol of "http", the frame being accessed has a protocol of "fs". Protocols must match.
-             */
-            try {
-                local = iframe.contentWindow.agent.htmlController.sharedReadingOrderMethods;
-            } catch (e) {
-                console.log("Cant connect to the iframe. " + e);
-                local = {};
-            }
-
-            this.channel = channel;
-            this.peers = {
-                local: Connection(channel.l2r, local),
-                remote: Connection(channel.r2l, local, {
-                    origin: window.location.origin,
-                    Q: Q
-                }),
-                close: channel.close
-            };
-
-
             var self = this;
-            if (!this.useWorkaroundForCORSErrorWhenConnectingToIframe) {
-                // this.peers.remote.invoke("hasReadAlong").then(function(result) {
-                //     self.hasReadAlong = result;
-                // });
-                this.peers.remote.invoke("getReadingOrderFromXHTML").then(function(result) {
-                    self.this.readingOrder.contents = result;
+
+            this.alignmentResults = this.alignmentResults || [];
+            var srcUri = this._xhtmlUrl.replace("http://client/index.html?file=", "");
+            this.readingOrder.loadFromXHTML(srcUri).then(self.triggerAlignerWithReadingOrder);
+        }
+    },
+
+    _backend: {
+        value: null
+    },
+
+    backend: {
+        get: function() {
+            var self = this,
+                resolvePort = function() {
+                    if (lumieres.nodePort) {
+                        port.resolve(lumieres.nodePort);
+                    }
+                };
+
+            if (self._backend == null) {
+                var port = Promise.defer();
+                if (lumieres.nodePort) {
+                    port.resolve(lumieres.nodePort);
+                } else {
+                    while (port.promise.isPending()) {
+                        port.promise.delay(20).then(resolvePort);
+                    }
+                }
+                var connection = adaptConnection(new WebSocket("ws://localhost:" + lumieres.nodePort));
+                connection.closed.then(function() {
+                    self._backend = null;
                 });
-            } else {
-                self.alignmentResults = self.alignmentResults || [];
-                var srcUri = this._xhtmlUrl.replace("http://client/index.html?file=", "");
-                this.readingOrder.loadFromXHTML(srcUri).then(self.triggerAlignerWithReadingOrder);
+
+                self._backend = Connection(connection);
             }
+
+            return self._backend;
         }
     },
 
@@ -505,37 +423,30 @@ exports.ReadAlong = Montage.specialize({
                 self = this;
 
             Promise.nextTick(function() {
-                if (self.audioAlignment) {
-                    self.audioAlignment.readingOrderJson = order;
-                    self.audioAlignment.runAligner({
-                        "xhtml": self.xhtmlUrl.replace("fs://localhost", ""),
-                        "voice": self.voiceAudioUrl.replace("fs://localhost", ""),
-                        "finalAudio": self.finalAudioUrl,
-                        "pageNumber": self._pageNumber,
-                        "basePath": self.basePath,
-                        "readingOrder": order,
-                        "text": null
-                    }).then(function(alignment) {
+                // TODO this connection to the backend doesnt work yet.
+                self.backend.get("read-aloud").invoke("runAligner", {
+                    "xhtml": self.xhtmlUrl.replace("fs://localhost", ""),
+                    "voice": self.voiceAudioUrl.replace("fs://localhost", ""),
+                    "finalAudio": self.finalAudioUrl,
+                    "pageNumber": self._pageNumber,
+                    "basePath": self.basePath,
+                    "readingOrder": order,
+                    "text": null
+                }).then(function(alignment) {
 
-                        var alignedAudioFile = alignment.finalAudio;
-                        if (alignedAudioFile && alignment.alignmentResults && alignment.alignmentResults[0] && alignment.alignmentResults[0].guesses && alignment.alignmentResults[0].guesses["1"]) {
-                            self.alignmentResults = self.alignmentResults || [];
-                            self.alignmentResults.push(alignment);
-                            if (debug) {
-                                console.log("Alignment returned guesses ", alignment);
-                            }
-                            if (alignedAudioFile.indexOf("/") === 0) {
-                                alignedAudioFile = "fs://localhost" + alignedAudioFile;
-                            }
-                            // if (!self.finalAudio.src || self.finalAudio.src != alignedAudioFile) {
-                            //     self.finalAudio.src = alignedAudioFile;
-                            // }
-                            deferred.resolve(self.tryToAutomaticallyPatchTheReadingOrderUsingAudioAlignment(alignment));
+                    var alignedAudioFile = alignment.finalAudio;
+                    if (alignedAudioFile && alignment.alignmentResults && alignment.alignmentResults[0] && alignment.alignmentResults[0].guesses && alignment.alignmentResults[0].guesses["1"]) {
+                        self.alignmentResults = self.alignmentResults || [];
+                        self.alignmentResults.push(alignment);
+                        if (debug) {
+                            console.log("Alignment returned guesses ", alignment);
                         }
-                    });
-                } else {
-                    console.warn("Aligner is not on, this is a problem.");
-                }
+                        if (alignedAudioFile.indexOf("/") === 0) {
+                            alignedAudioFile = "fs://localhost" + alignedAudioFile;
+                        }
+                        deferred.resolve(self.tryToAutomaticallyPatchTheReadingOrderUsingAudioAlignment(alignment));
+                    }
+                });
 
                 self.readingOrder.text.then(function(result) {
                     if (debug) {
@@ -565,7 +476,7 @@ exports.ReadAlong = Montage.specialize({
                     var paralel = '\t\t<par id="' + readingOrder[item].id + '">\n';
                     paralel = paralel + '\t\t\t<text src="pages/' + self._pageNumber + ".xhtml" + "#" + readingOrder[item].id + '"></text>\n';
                     paralel = paralel + '\t\t\t<audio src="' + "audio/" + self._pageNumber + MP3_EXTENSION + '" clipBegin="' + readingOrder[item].startTime + '" clipEnd="' + readingOrder[item].endTime + '"></audio>\n';
-                    paralel = paralel + '\t\t</par>\n'
+                    paralel = paralel + '\t\t</par>\n';
                     smilXML = smilXML + paralel;
                 }
                 smilXML = smilXML + '\t</seq>\n</smil>';

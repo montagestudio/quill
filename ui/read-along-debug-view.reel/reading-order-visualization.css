@@ -1,11 +1,6 @@
-
 #textOverlay span {
     position: relative;
     background-color: #5ff;
-    color: #f00 !important; /* the text is way off, we can't use text color */
+    color: #f00 !important;
     opacity: .3;
-}
-body{
-	opacity: .5;
-	background-color: #333;
 }

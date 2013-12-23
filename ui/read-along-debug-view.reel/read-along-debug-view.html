@@ -19,6 +19,13 @@
             }
         },
 
+        "textPromiseController": {
+            "prototype": "montage/core/promise-controller",
+            "bindings": {
+                "promise": {"<-": "@owner.item.readAlong.readingOrder.text"}
+            }
+        },
+
         "readAloudDebug": {
             "prototype": "montage/ui/text.reel",
             "properties": {
@@ -53,15 +60,7 @@
                 "src": "../../assets/img/play.png"
             },
             "bindings": {
-               "src": {"<-": "@owner.item.readAlong.playing ? '../../assets/img/pause.png' : '../../assets/img/play.png' "},
-               "isHidden": {"<-":"!@owner.item.readAlong.hasReadAlong"}
-            }
-        },
-
-        "textPromiseController": {
-            "prototype": "montage/core/promise-controller",
-            "bindings": {
-                "promise": {"<-": "@owner.item.readAlong.readingOrder.text"}
+               "src": {"<-": "@owner.readAlongButtonState"}
             }
         }
     }
@@ -73,7 +72,7 @@
         <iframe seamless scrolling="no"></iframe>
 
         <div class="ReadAlongDebugViewPages-debug">
-            <button data-montage-id="readAlongButton" class="Toolbar-button" >Read Along
+            <button data-montage-id="readAlongButton" class="Toolbar-button" >Read Aloud
                 <img data-montage-id="buttonImage" class="ReadAlongDebugViewPages-icon" src="../../assets/img/play.png"></img>
             </button>
         </div>

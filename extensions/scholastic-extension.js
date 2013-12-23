@@ -260,9 +260,8 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                 backend.get("scholastic").invoke("setupCoverImage", item).then(function(coverImage) {
                     item.coverImage = coverImage ? coverImage.url : null;
                     
+                    /* prepare read aloud for all scholastic books */
                     return self.readAloudExtension.customizePages(backend, item);
-                    /* run aligner */
-
 
                 }, function(error) {
                     deferred.reject(error);
@@ -669,4 +668,3 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
         }
     }
 });
-

@@ -2,40 +2,17 @@
 /*
     ReadAloud specific extension
  */
-
 var Q = require("q"),
-    QFS = require("q-io/fs"),
-    PATH = require("path"),
-    HTTP = require("http"),
-    HTTPS = require("https"),
-    child_process = require('child_process'),
-    crypto = require('crypto');
+    childProcess = require('child_process'),
+    AudioTextAligner = require("audio-aligner/lib/audio-text-aligner").AudioTextAligner;
 
 
-var guard = function(dialectId) {
-    return function(path) {
-        var fileName = PATH.basename(path),
-            expr = new RegExp("[\b-_]*(covers?|" + dialectId + ")[\b-_]*", "i"),
-            matches = fileName.match(expr);
-
-        if (matches) {
-            if (fileName.indexOf(dialectId) !== -1) {
-                var ext = PATH.extname(fileName).toLowerCase();
-                return (ext === ".jpg" || ext === ".jpeg");
-            }
-            return false;
-        } else {
-            return false;
-        }
-    };
-};
-
-var exec = function(command, options) {
+var exec = exports.exec = function(command, options) {
     var deferred = Q.defer(),
         process;
 
     options = options || {};
-    process = child_process.exec(command, options, function (error, stdout, stderr) {
+    process = childProcess.exec(command, options, function(error, stdout, stderr) {
         if (error !== null) {
             console.log("EXCEC COMMAND:", command);
             console.log('exec error: ' + error);
@@ -66,146 +43,76 @@ var pathFromURL = function(path) {
     return path;
 };
 
-/*
-    Use codes from http://en.wikipedia.org/wiki/ISO-language-codes
- */
-var isValiddialectId = function(dialectIdentifier) {
-    var availableDialectsForThisLicenseExample = ["en-US", "en-GB", "es", "fr"];
-    var availableDialectsForThisLicense = ["en-US"];
-    return availableDialectsForThisLicense.indexOf(dialectIdentifier) > -1;
-}
-
-exports.getDialectIdFromFile = function(filePath) {
-    return "en-US";
-};
-
-exports.fetchData = function(options, secure) {
-    var deferred = Q.defer(),
-        http = (secure === true) ? HTTPS : HTTP;
-
-    var request = http.request(options, function(res) {
-        var data = "";
-
-        if (Math.floor(res.statusCode / 100) === 2) {
-            res.on('data', function(chunk) {
-                data += chunk;
-            });
-
-            res.on('end', function() {
-                deferred.resolve({
-                    data: data,
-                    headers: res.headers
-                });
-            });
-        } else {
-            deferred.reject("Cannot connect to " + options.host + ":" + options.port);
-        }
-    });
-
-    request.on('error', function(e) {
-        console.log("Got error: " + e.message);
-        deferred.reject(e);
-    });
-
-    request.end();
-
-    return deferred.promise;
-};
-
-exports.fetchMetaData = function(dialectId) {
-    var options = {
-        host: 'lm.declartiv.com',
-        path: "/services/langaugeModels=" + dialectId,
-        //        host: 'localhost',
-        //        path: "/Projects/ReadAloud.xml?dialectId=" + dialectId,
-        port: 80
-    };
-
-    return exports.fetchData(options, false).then(function(response) {
-        return response.data;
-    });
-};
-
-exports.exec = function(command, options) {
-    var deferred = Q.defer(),
-        process;
-
-    options = options || {};
-    process = child_process.exec(command, options, function(error, stdout, stderr) {
-        if (error !== null) {
-            console.log("EXCEC COMMAND:", command);
-            console.log('exec error: ' + error);
-            console.log('stderr: ' + stderr);
-            deferred.reject(error);
-        } else {
-            deferred.resolve(stdout);
-        }
-    });
-
-    return deferred.promise;
-};
-
-exports.hash = function(data) {
-    var md5Hash = crypto.createHash('md5');
-    md5Hash.update(data);
-    return md5Hash.digest('hex');
-};
-
-
 /**
- * GC TODO test this function
+ * Use this to get default North American English
+ *  * Acoustic model
+ *  * Dictionary model
  *
- * @param  {string} sourceURL location of original audio (any format)
- * @param  {string} destURL   location of voice only audio (will be in .raw)
- * @param  {int} audioSize unused parameter
- * @param  {int} quality   audio quality (should be 16 or 8)
- * @return {string}           the audio duration
+ * @param  {[type]} options HTTP post information
+ * @return {[type]}         [description]
  */
-exports.getAudioDurationAndCreateRawAudio = function(sourceURL, destURL, audioSize, quality) {
-    var _USE_FFMPEG = true;
+var fetchLanguageModelsData = function(options) {
+    var deferred = Q.defer();
 
-    if (_USE_FFMPEG) {
-        console.log("Running getAudioDurationAndCreateRawAudio");
-        var ffmpegRoot = PATH.resolve(__dirname, 'ffmpeg'),
-            sourcePath = pathFromURL(sourceURL).replace(/ /g, "\\ "),
-            destPath = pathFromURL(destURL).replace(/ /g, "\\ "),
-            options = {
-                cwd: PATH.join(ffmpegRoot, "bin"),
-                env: {
-                    FFMPEG_HOME: ffmpegRoot,
-                    DYLD_LIBRARY_PATH: PATH.join(ffmpegRoot, "lib/")
-                }
+    Q.nextTick(function() {
+
+        //TODO contact Declarativ server, with license info and download models...
+        deferred.resolve(true);
+    });
+
+    return deferred.promise;
+};
+exports.fetchLanguageModelsData = fetchLanguageModelsData;
+
+var aligner;
+
+var runAligner = exports.runAligner = function(options) {
+    var deferred = Q.defer();
+
+    Q.nextTick(function() {
+
+        console.log("Running aligner...");
+
+        if (options.readingOrder) {
+            options.text = "";
+            options.text = options.readingOrder.map(function(item) {
+                return item.text;
+            }).join(" ");
+        }
+        if (!options.text) {
+            console.log("There is no text, resolving the reading order only.");
+            options.alignmentResults = {
+                "guesses": {},
+                "info": "empty text, not running aligner"
             };
+            deferred.resolve(options);
+            return;
+        }
 
-        return exec('./ffmpeg -i ' + sourcePath, options).then(function(result) {
-            var info = result.split("\n");
-            var duration = "0:00:00.000";
+        // TODO verify the .raw, if its not there, create it?
 
-            try {
-                for (var k = 0; k < info.length; k++) {
-                    console.log("FFmpeg info : " + info[k]);
-                    if (info[k].indexOf("Duration") >= 0) {
-                        var pieces = info[k].split(",");
-                        duration = pieces[0].split(": ")[1];
-                    }
-                }
-            } catch (e) {
-                console.log("Error retreiving audio duration.");
-            }
+        console.log("Running the voice audio " + options.voice);
+        if (!aligner) {
+            aligner = new AudioTextAligner();
+        }
 
-            return exec('./ffmpeg -i ' + sourcePath + ' -ac 1 -f s16le -ar 16k ' + destPath, options).then(function() {
-                return duration;
+        aligner.run(options.voice, options.text)
+            .then(function(results) {
+                console.log("Results of calling runAligner", results);
+                options.alignmentResults = result;
+                deferred.resolve(options);
+            }, function(reason) {
+                console.log("Failed to get alignment result.", reason);
+                deferred.reject(reason);
             });
-        });
-    } else {
-        return "0:00:00.000";
-    }
+    });
+    return deferred.promise;
 };
 
-exports.random = function(length) {
-    try {
-        return crypto.randomBytes(length).toString("hex");
-    } catch (error) {
-        return null;
-    }
+var getAudioDuration = exports.getAudioDuration = function(audioUrl) {
+    return exec("ffprobe " + audioUrl);
+};
+
+var convertToRawAudio = exports.convertToRawAudio = function(sourceAudioUrl, destAudioUrl) {
+    return exec("ffmpeg -i " + sourceAudioUrl + " -ac 1 -f s16le -ar 16k  " + destAudioUrl);
 };

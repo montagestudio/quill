@@ -5,7 +5,6 @@ var Montage = require("montage").Montage,
 /**
  * This controls the reading order feature of an ebook page.
  */
-
 exports.ReadingOrder = Montage.specialize({
 
     constructor: {
@@ -78,10 +77,6 @@ exports.ReadingOrder = Montage.specialize({
         }
     },
 
-    workaroundForPromiseController: {
-        value: null
-    },
-
     text: {
         get: function() {
             var deffered = Promise.defer(),
@@ -94,7 +89,6 @@ exports.ReadingOrder = Montage.specialize({
                         return item.text;
                     }).join(":::");
                 }
-                self.workaroundForPromiseController = text;
                 deffered.resolve(text);
             });
             return deffered.promise;
