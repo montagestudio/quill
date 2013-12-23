@@ -375,7 +375,10 @@ self.numberOfPages = 5;
                             var expectedBookDirectoryInAudio = "00000000",
                                 bookId = self.url.substring(self.url.lastIndexOf("/") + 1),
                                 sourcePath = self.url.substring(0, self.url.lastIndexOf("/")),
-                                finalAudioDirName = "final",
+                                sourceFinalAudioDirName = "final",
+                                destFinalAudioDirName = "OEBPS/audio",          //This places the final audio into the final epub
+                                sourceVoiceAudioDirName = "voice",
+                                destVoiceAudioDirName = "read-aloud-data/voice",  //This places the voice outside the final epub
                                 extIndex = bookId.lastIndexOf(".");
 
                             if (extIndex !== -1) {
@@ -385,16 +388,22 @@ self.numberOfPages = 5;
                                 expectedBookDirectoryInAudio = bookId.substring(0, bookId.indexOf("_"));
                             }
 
-                            var simulationExpectedAudioDirFromPDFLocation = "/Audio/" + expectedBookDirectoryInAudio + "/"+finalAudioDirName,
+                            var simulationExpectedAudioDirFromPDFLocation = "/Audio/" + expectedBookDirectoryInAudio + "/" + sourceFinalAudioDirName,
                                 sourceAudioDir = decodeURI(sourcePath).substring("fs://localhost".length) + simulationExpectedAudioDirFromPDFLocation,
-                                destAudioDir = (result.url + "/OEBPS/audio").substring("fs://localhost".length);
+                                destAudioDir = (result.url + "/" + destFinalAudioDirName).substring("fs://localhost".length);
 
                             console.log("\tSymLinking audio " + sourceAudioDir + " to " + destAudioDir);
 
                             return self.environmentBridge.backend.get("fs").invoke("symbolicLink", destAudioDir, sourceAudioDir, "directory").then(function() {
-                                console.log("\tSymLinking audio " + sourceAudioDir.replace(finalAudioDirName, "voice") + " to " + destAudioDir.replace("audio", "voice"));
+                                console.log("\tSymLinking audio " 
+                                    + sourceAudioDir.replace(sourceFinalAudioDirName, sourceVoiceAudioDirName) 
+                                    + " to " 
+                                    + destAudioDir.replace(destFinalAudioDirName, destVoiceAudioDirName));
 
-                                return self.environmentBridge.backend.get("fs").invoke("symbolicLink", destAudioDir.replace("audio", "voice"), sourceAudioDir.replace(finalAudioDirName,"voice"), "directory").then(function() {
+                                return self.environmentBridge.backend.get("fs").invoke("symbolicLink", 
+                                    destAudioDir.replace(destFinalAudioDirName, destVoiceAudioDirName),
+                                    sourceAudioDir.replace(sourceFinalAudioDirName, sourceVoiceAudioDirName), 
+                                    "directory").then(function() {
                                     return result.url;
                                 }, function() {
                                     return result.url;

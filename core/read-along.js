@@ -112,7 +112,7 @@ exports.ReadAlong = Montage.specialize({
             var url = this._voiceAudioUrl;
 
             if (!url && this._basePath && this._pageNumber) {
-                url = this._basePath + "/voice/" + this._pageNumber + RAW_EXTENSION;
+                url = this._basePath.replace("OEBPS","read-aloud-data") + "/voice/" + this._pageNumber + RAW_EXTENSION;
             }
 
             return url;
