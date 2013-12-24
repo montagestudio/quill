@@ -129,7 +129,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
                         var ipc = backend.get("ipc");
 
                         //HACK to change the progress bar... otherwise it looks like it hangs
-                        item.currentPage = pageNumber + 1;
+                        item.currentPage = item.currentPage + 1;
                         item.status = IMPORT_STATES.generatingAudioAlignment;
                         ipc.invoke("namedProcesses", "monitor").then(function(processID) {
                             console.log("Sending generatingAudioAlignment update.");
