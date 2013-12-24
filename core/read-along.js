@@ -112,7 +112,7 @@ exports.ReadAlong = Montage.specialize({
             var url = this._voiceAudioUrl;
 
             if (!url && this._basePath && this._pageNumber) {
-                url = this._basePath.replace("OEBPS","read-aloud-data") + "/voice/" + this._pageNumber + RAW_EXTENSION;
+                url = this._basePath.replace("OEBPS", "read-aloud-data") + "/voice/" + this._pageNumber + RAW_EXTENSION;
             }
 
             return url;
@@ -210,28 +210,9 @@ exports.ReadAlong = Montage.specialize({
                 this.playing = true;
                 return;
             }
-            var readingOrderToDraw;
-            var guesses = this.alignmentResults[this.alignmentResults.length - 1].alignmentResults[0].guesses;
-            var bestGuessInTermsOfRecall;
-            var bestGuessInTermsOfPrecision;
 
-            for (var g in guesses) {
-                if (guesses.hasOwnProperty(g)) {
-                    var guess = guesses[g];
-                    console.log("Guess: " + guess.rank + " Precision: " + guess.precision + " Recall: " + guess.recall);
-                    if (guess.readingOrder) {
-                        if (!bestGuessInTermsOfRecall || guess.recall > bestGuessInTermsOfRecall.recall) {
-                            bestGuessInTermsOfRecall = guess;
-                        }
-                        if (!bestGuessInTermsOfPrecision || guess.precision > bestGuessInTermsOfRecall.precision) {
-                            bestGuessInTermsOfPrecision = guess;
-                        }
-                    }
-                }
-            }
-            // readingOrderToDraw = bestGuessInTermsOfRecall.readingOrder;
-            readingOrderToDraw = bestGuessInTermsOfPrecision.readingOrder;
-            console.log("Playing read along guess #" + bestGuessInTermsOfRecall.rank, readingOrderToDraw);
+            var readingOrderToDraw = this.getBestGuessForReadingOrder();
+            console.log("Playing read along guess ", readingOrderToDraw);
             if (debug) {
                 console.log(readingOrderToDraw);
             }
@@ -380,7 +361,7 @@ exports.ReadAlong = Montage.specialize({
             this.alignmentResults = this.alignmentResults || [];
             var srcUri = this._xhtmlUrl.replace("http://client/index.html?file=", "");
             this.readingOrder.loadFromXHTML(srcUri).then(function(order) {
-                self.triggerAlignerWithReadingOrder(order);
+                self.triggerAlignerWithReadingOrder();
             });
         }
     },
@@ -420,45 +401,87 @@ exports.ReadAlong = Montage.specialize({
     },
 
     triggerAlignerWithReadingOrder: {
-        value: function(order) {
+        value: function() {
             var deferred = Promise.defer(),
                 self = this;
 
-
             Promise.nextTick(function() {
-                self.backend.get("read-aloud").invoke("runAligner", {
-                    "xhtml": self.xhtmlUrl.replace("fs://localhost", ""),
-                    "voice": self.voiceAudioUrl.replace("fs://localhost", ""),
-                    "finalAudio": self.finalAudioUrl,
-                    "pageNumber": self._pageNumber,
-                    "basePath": self.basePath,
-                    "readingOrder": order,
-                    "text": null
-                }).then(function(alignment) {
 
-                    var alignedAudioFile = alignment.finalAudio;
-                    if (alignedAudioFile && alignment.alignmentResults && alignment.alignmentResults[0] && alignment.alignmentResults[0].guesses && alignment.alignmentResults[0].guesses["1"]) {
-                        self.alignmentResults = self.alignmentResults || [];
-                        self.alignmentResults.push(alignment);
-                        if (debug) {
-                            console.log("Alignment returned guesses ", alignment);
+                self.readingOrder.text.then(function(text) {
+                    self.textContent = text;
+                    self.backend.get("read-aloud").invoke("runAligner", {
+                        "xhtml": self.xhtmlUrl.replace("fs://localhost", ""),
+                        "voice": self.voiceAudioUrl.replace("fs://localhost", ""),
+                        "finalAudio": self.finalAudioUrl,
+                        "pageNumber": self._pageNumber,
+                        "basePath": self.basePath,
+                        "readingOrder": self.readingOrder.contents,
+                        "text": text
+                    }).then(function(alignment) {
+
+                        var alignedAudioFile = alignment.finalAudio;
+                        if (alignedAudioFile && alignment.alignmentResults && alignment.alignmentResults[0] && alignment.alignmentResults[0].guesses && alignment.alignmentResults[0].guesses["1"]) {
+                            self.alignmentResults = self.alignmentResults || [];
+                            self.alignmentResults.push(alignment);
+                            if (debug) {
+                                console.log("Alignment returned guesses ", alignment);
+                            }
+                            if (alignedAudioFile.indexOf("/") === 0) {
+                                alignedAudioFile = "fs://localhost" + alignedAudioFile;
+                            }
+                            var bestReadingOrder = self.tryToAutomaticallyPatchTheReadingOrderUsingAudioAlignment(alignment);
+                            if (debug) {
+                                console.log("Recieved the bestReadingOrder of " + bestReadingOrder);
+                            }
+                            deferred.resolve(bestReadingOrder);
+                            return;
+                        } else {
+                            console.log(self.xhtmlUrl + "Aligned audio file or alignment results is missing, returning empty reading order.");
                         }
-                        if (alignedAudioFile.indexOf("/") === 0) {
-                            alignedAudioFile = "fs://localhost" + alignedAudioFile;
-                        }
-                        deferred.resolve(self.tryToAutomaticallyPatchTheReadingOrderUsingAudioAlignment(alignment));
-                    }
+                        deferred.resolve([]);
+
+                    }, function(error) {
+                        console.log("Error running the aligner. " + self.xhtmlUrl, error);
+                        deferred.resolve([]);
+                    });
+                }, function(error) {
+                    console.log("Error extracting text for " + self.xhtmlUrl, error);
+                    deferred.resolve([]);
                 });
 
-                self.readingOrder.text.then(function(result) {
-                    if (debug) {
-                        console.log("Page content " + result);
-                    }
-                    self.hasReadAlong = result !== "No text detected on self page.";
-                    self.textContent = result;
-                });
             });
             return deferred.promise;
+        }
+    },
+
+    getBestGuessForReadingOrder: {
+        value: function() {
+            var guesses = this.alignmentResults[this.alignmentResults.length - 1].alignmentResults[0].guesses;
+            var bestGuessInTermsOfRecall;
+            var bestGuessInTermsOfPrecision;
+            var bestGuessInTermsOffScore;
+
+            for (var g in guesses) {
+                if (guesses.hasOwnProperty(g)) {
+                    var guess = guesses[g];
+                    console.log(this.xhtmlUrl + " Guess: " + guess.hypothesis + " rank: " + guess.rank + " Precision: " + guess.precision + " Recall: " + guess.recall);
+                    if (guess.readingOrder) {
+                        if (!bestGuessInTermsOfRecall || guess.recall > bestGuessInTermsOfRecall.recall) {
+                            bestGuessInTermsOfRecall = guess;
+                        }
+                        if (!bestGuessInTermsOfPrecision || guess.precision > bestGuessInTermsOfPrecision.precision) {
+                            bestGuessInTermsOfPrecision = guess;
+                        }
+                        if (!bestGuessInTermsOffScore || guess.fScore > bestGuessInTermsOffScore.precision) {
+                            bestGuessInTermsOffScore = guess;
+                        }
+                    } else {
+                        console.log("This guess is missing a reading order. " + guess.rank);
+                    }
+                }
+            }
+
+            return bestGuessInTermsOffScore.readingOrder;
         }
     },
 
@@ -581,9 +604,13 @@ exports.ReadAlong = Montage.specialize({
                     // }
                     // console.log(guess);
                     // }
+                    this.playReadAloudReady = true;
                 }
             }
-            this.playReadAloudReady = true;
+            if (debug) {
+                console.log("tryToAutomaticallyPatchTheReadingOrderUsingAudioAlignment" + JSON.stringify(alignment, null, 2));
+            }
+            return this.getBestGuessForReadingOrder();
         }
     },
 
@@ -727,9 +754,18 @@ exports.ReadAlong = Montage.specialize({
                     wordsInDom++;
                 }
             }
-
-            guess.recall = wordsInGuess / wordsInDom;
-            guess.precision = precision;
+            guess.recall = 0;
+            guess.precision = 0;
+            if (wordsInDom) {
+                guess.recall = wordsInGuess / wordsInDom;
+            }
+            if (readingOrder.length > 0) {
+                guess.precision = precision / readingOrder.length;
+            }
+            guess.fScore = 0;
+            if (guess.precision && guess.recall) {
+                guess.fScore = 2 * ((guess.precision * guess.recall) / (guess.precision + guess.recall));
+            }
             guess.readingOrder = wordsInDomReadingOrder;
             guess.uniqueWordsInGuess = uniqueWordsInGuess;
             guess.uniqueWordsInReadingOrder = uniqueWordsInReadingOrder;
