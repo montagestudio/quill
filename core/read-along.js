@@ -206,7 +206,7 @@ exports.ReadAlong = Montage.specialize({
             /* if we are not at the beginning of the audio, resume play */
             if (this.finalAudio.currentTime > 0) {
                 this.finalAudio.play();
-                console.log("Resumed play read aloud for " + this.xhtmlUrl);
+                console.log("Resumed play read aloud for " + this._pageNumber);
                 this.playing = true;
                 return;
             }
@@ -464,7 +464,7 @@ exports.ReadAlong = Montage.specialize({
             for (var g in guesses) {
                 if (guesses.hasOwnProperty(g)) {
                     var guess = guesses[g];
-                    console.log(this.xhtmlUrl + " Guess: " + guess.hypothesis + " rank: " + guess.rank + " Precision: " + guess.precision + " Recall: " + guess.recall);
+                    console.log(this._pageNumber + " Guess: " + guess.hypothesis + " rank: " + guess.rank + " Precision: " + guess.precision + " Recall: " + guess.recall);
                     if (guess.readingOrder) {
                         if (!bestGuessInTermsOfRecall || guess.recall > bestGuessInTermsOfRecall.recall) {
                             bestGuessInTermsOfRecall = guess;

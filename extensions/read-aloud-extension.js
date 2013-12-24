@@ -110,7 +110,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
                         return;
                     }
 
-                    console.log("Recieved non-empty reading order for " + pageURL);
+                    console.log("Recieved non-empty reading order for " + pageNumber);
                     readAlong.xhtmlUrl = pageURL;
 
                     readAlong.triggerAlignerWithReadingOrder().then(function(results) {
