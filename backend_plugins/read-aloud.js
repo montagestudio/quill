@@ -71,8 +71,6 @@ var runAligner = exports.runAligner = function(options) {
 
     Q.nextTick(function() {
 
-        console.log("Running aligner...");
-
         if (options.readingOrder) {
             options.text = "";
             options.text = options.readingOrder.map(function(item) {
@@ -88,17 +86,17 @@ var runAligner = exports.runAligner = function(options) {
             deferred.resolve(options);
             return;
         }
+        console.log("Running aligner..." + options.text + " " + options.voice);
 
         // TODO verify the .raw, if its not there, create it?
 
-        console.log("Running the voice audio " + options.voice);
         if (!aligner) {
             aligner = new AudioTextAligner();
         }
 
         aligner.run(options.voice, options.text)
             .then(function(results) {
-                console.log("Results of calling runAligner", results);
+                // console.log("Results of calling runAligner ", results);
                 options.alignmentResults = results;
                 deferred.resolve(options);
             }, function(reason) {
