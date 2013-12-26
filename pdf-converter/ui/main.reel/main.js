@@ -159,7 +159,8 @@ self.numberOfPages = 5;
                                     };
 
                                     if(CREATE_WITH_READ_ALOUD){
-                                        options["total-audio-duration"] =  self.metadata ? self.metadata["total-audio-duration"] : null || "00:00:00.000";
+                                        options["total-audio-duration"] =  self.metadata ? self.metadata["total-audio-duration"] : null || "00:00:10.000";
+                                        options["document-narrator"] = self.metadata ? self.metadata["document-narrator"] : null || "Unknown";
                                     }
 
                                     return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", pdf, function(){ self.idle() }).then(function(cache) {

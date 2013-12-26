@@ -23,8 +23,8 @@
         <meta property="ibooks:specified-fonts">true</meta>
         <meta property="ibooks:version">1.0</meta>
 
-          <!--MEDIA OVERLAY METADATA-->
-        <meta property="media:duration" refines="#{{pageNumber}}_overlay">{{pageNumber-audio-duration}}</meta>
+          <!--MEDIA OVERLAY METADATA
+        <meta property="media:duration" refines="#{{pageNumber}}_overlay">{{pageNumber-audio-duration}}</meta> -->
         <meta property="media:duration">{{total-audio-duration}}</meta>
         <meta property="media:narrator">{{document-narrator}}</meta>
 

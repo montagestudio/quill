@@ -204,6 +204,12 @@ exports.updateContentInfo = function(item) {
                             name = "audioM" + name;
                         }
                         break;
+                    case ".mp4":
+                        type = "audio/mp4";
+                        if (firstChar <= "A") {
+                            name = "audioMM" + name;
+                        }
+                        break;
                     case ".wav":
                         type = "audio/wav";
                         if (firstChar <= "A") {
