@@ -94,7 +94,7 @@ exports.ActivityListItem = Component.specialize({
 
             else if (item.status === IMPORT_STATES.generatingAudioAlignment) {
                 if (item.currentPage > 0 && item.nbrPages > 0) {
-                    this.statusLabel = "Generating read aloud for page " + item.currentPage + " of " + item.nbrPages;
+                    this.statusLabel = "Generated " + item.currentPage + " of " + item.nbrPages + " pages for read aloud";
                 } else {
                     this.statusLabel = "Generating read aloud...";
                 }
