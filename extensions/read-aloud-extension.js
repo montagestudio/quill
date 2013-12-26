@@ -92,62 +92,85 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
         }
     },
 
+    _updateReadAloudStatus: {
+        value: function(backend, item, pageNumber, deferred, message) {
+            var ipc = backend.get("ipc");
+
+            //HACK to change the progress bar... otherwise it looks like it hangs
+            item.currentPage = item.currentPage + 1;
+            item.status = IMPORT_STATES.generatingAudioAlignment;
+            ipc.invoke("namedProcesses", "monitor").then(function(processID) {
+                console.log("Sending generatingAudioAlignment update.");
+                if (processID) {
+                    return ipc.invoke("send", item.processID, processID[0], ["itemUpdate", item]);
+                }
+            }, function(e) {
+                console.log("ERROR UPDATING IMPORT STATE:", e.message, e.stack);
+            }).done(function() {
+                deferred.resolve(message + pageNumber);
+            });
+        }
+    },
+
     _addReadAloudToPage: {
         value: function(backend, item, pageNumber) {
-            var deferred = Promise.defer();
+            var deferred = Promise.defer(),
+                self = this;
 
             Promise.nextTick(function() {
                 console.log("*** Requesting read aloud for page " + pageNumber);
 
                 var pageURL = item.destination + "/OEBPS/pages/" + pageNumber + ".xhtml",
                     smilUrl = item.destination + "/OEBPS/overlay/" + pageNumber + ".smil",
-                    jsonUrl = item.destination + "/json/" + pageNumber + ".json",
+                    jsonUrl = item.destination + "/read-aloud-data/json/" + pageNumber + ".json",
                     readAlong = new ReadAlong();
 
                 readAlong.readingOrder.loadFromXHTML(pageURL).then(function(order) {
                     if (!order || order.length <= 0) {
-                        deferred.resolve("No reading order in " + pageNumber);
+                        self._updateReadAloudStatus(backend, item, pageNumber, deferred, "No reading order in ");
                         return;
                     }
 
                     console.log("Recieved non-empty reading order for " + pageNumber);
                     readAlong.xhtmlUrl = pageURL;
+                    readAlong.triggerAlignerWithReadingOrder().then(function(resultingBestGuessedReadingOrder) {
 
-                    readAlong.triggerAlignerWithReadingOrder().then(function(results) {
-                        console.log("\tResults of calling runAligner on page " + pageNumber, results);
-                        //TODO save smil here
-                        if (results) {
-                            console.log("ready to save smil ");
-                            // console.log("ready to save smil " + JSON.stringify(results, null, 2));
-                            deferred.resolve("got " + results.length + " results on page " + pageNumber);
+                        console.log("\tResults of calling runAligner on page " + pageNumber, resultingBestGuessedReadingOrder);
+                        if (resultingBestGuessedReadingOrder) {
+                            console.log("ready to save smil for " + pageNumber);
+                            // deferred.resolve("got " + resultingBestGuessedReadingOrder.length + " resultingBestGuessedReadingOrder on page " + pageNumber);
+                            readAlong.convertToSMIL(resultingBestGuessedReadingOrder).then(function(smilContents) {
+                                var flags = {
+                                    flags: "w",
+                                    charset: 'utf-8'
+                                };
+                                backend.get("fs").invoke("write", smilUrl.substring("fs://localhost".length), smilContents, flags).then(function(x) {
+                                    console.log("Saved smil file: " + smilUrl), x;
+                                }, function(error) {
+                                    console.log("There was an error saving smil file." + pageNumber, error);
+                                }).done(function() {
+                                    self._updateReadAloudStatus(backend, item, pageNumber, deferred, "Saved smil file: ");
+                                });
+                            }, function(error) {
+                                console.log("There was an error build smil contents." + pageNumber);
+                                console.log(error);
+                                self._updateReadAloudStatus(backend, item, pageNumber, deferred, "There was an error building smil contents.");
+                            });
+
                         } else {
-                            deferred.resolve("got no results on page " + pageNumber);
+                            self._updateReadAloudStatus(backend, item, pageNumber, deferred, "Got no results on page ");
                         }
-                    }, function(error) {
-                        console.log("Error calling runAligner", error);
-                    }).done(function() {
-                        var ipc = backend.get("ipc");
 
-                        //HACK to change the progress bar... otherwise it looks like it hangs
-                        item.currentPage = item.currentPage + 1;
-                        item.status = IMPORT_STATES.generatingAudioAlignment;
-                        ipc.invoke("namedProcesses", "monitor").then(function(processID) {
-                            console.log("Sending generatingAudioAlignment update.");
-                            if (processID) {
-                                return ipc.invoke("send", item.processID, processID[0], ["itemUpdate", item]);
-                            }
-                        }, function(e) {
-                            console.log("ERROR UPDATING IMPORT STATE:", e.message, e.stack);
-                        }).done(function() {
-                            deferred.resolve("All done with page " + pageNumber);
-                        });
+                    }, function(error) {
+                        console.log("Error calling runAligner ", error);
+                        self._updateReadAloudStatus(backend, item, pageNumber, deferred, "Error calling runAligner ");
                     });
 
                 }, function(error) {
                     console.log("Error getting reading order.", error);
-                    deferred.resolve("Error getting reading order in page " + pageNumber);
+                    // deferred.resolve("Error getting reading order in page " + pageNumber);
+                    self._updateReadAloudStatus(backend, item, pageNumber, deferred, "Error getting reading order ");
                 });
-
 
             });
             return deferred.promise;
