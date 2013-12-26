@@ -8,7 +8,11 @@ var Montage = require("montage").Montage,
 
 var RAW_EXTENSION = ".raw",
     WAV_EXTENSION = ".wav",
-    MP3_EXTENSION = ".mp3";
+    MP3_EXTENSION = ".mp3",
+    MP4_EXTENSION = ".mp4";
+
+var VOICE_EXTENSION = MP3_EXTENSION,
+    FINAL_EXTENSION = WAV_EXTENSION; //TODO this should be mp4 but it wont play in plume audio tag
 
 var debug = false;
 
@@ -112,7 +116,7 @@ exports.ReadAlong = Montage.specialize({
             var url = this._voiceAudioUrl;
 
             if (!url && this._basePath && this._pageNumber) {
-                url = this._basePath.replace("OEBPS", "read-aloud-data") + "/voice/" + this._pageNumber + RAW_EXTENSION;
+                url = this._basePath.replace("OEBPS", "read-aloud-data") + "/voice/" + this._pageNumber + VOICE_EXTENSION;
             }
 
             return url;
@@ -140,7 +144,7 @@ exports.ReadAlong = Montage.specialize({
             var url = this._finalAudioUrl;
 
             if (!url && this._basePath && this._pageNumber) {
-                url = this._basePath + "/audio/" + this._pageNumber + WAV_EXTENSION;
+                url = this._basePath + "/audio/" + this._pageNumber + FINAL_EXTENSION;
             }
 
             return url;
@@ -500,7 +504,7 @@ exports.ReadAlong = Montage.specialize({
                     }
                     var paralel = '\t\t<par id="' + readingOrder[item].id + '">\n';
                     paralel = paralel + '\t\t\t<text src="pages/' + self._pageNumber + ".xhtml" + "#" + readingOrder[item].id + '"></text>\n';
-                    paralel = paralel + '\t\t\t<audio src="' + "audio/" + self._pageNumber + MP3_EXTENSION + '" clipBegin="' + readingOrder[item].startTime + '" clipEnd="' + readingOrder[item].endTime + '"></audio>\n';
+                    paralel = paralel + '\t\t\t<audio src="' + "audio/" + self._pageNumber + FINAL_EXTENSION + '" clipBegin="' + readingOrder[item].startTime + '" clipEnd="' + readingOrder[item].endTime + '"></audio>\n';
                     paralel = paralel + '\t\t</par>\n';
                     smilXML = smilXML + paralel;
                 }
@@ -542,7 +546,7 @@ exports.ReadAlong = Montage.specialize({
                         text.setAttribute("src", self._pageNumber + ".xhtml" + "#" + readingOrder[item].id);
 
                         var audio = doc.createElement("audio");
-                        audio.setAttribute("src", "audio/" + self._pageNumber + MP3_EXTENSION);
+                        audio.setAttribute("src", "audio/" + self._pageNumber + FINAL_EXTENSION);
                         audio.setAttribute("clipBegin", readingOrder[item].startTime);
                         audio.setAttribute("clipEnd", readingOrder[item].endTime);
                         paralel.appendChild(audio);
