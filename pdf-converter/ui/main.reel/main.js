@@ -147,7 +147,6 @@ self.numberOfPages = 5;
                                         "original-resolution": "500x800",       // JFD TODO: we need a real value!!!
                                         "document-title": self.metadata ? self.metadata["document-title"] : null || "Untitled",
                                         "document-author": self.metadata ? self.metadata["document-author"] : null || "Unknown",
-                                        "document-narrator": self.metadata ? self.metadata["document-narrator"] : null || "Unknown",
                                         "document-description": self.metadata ? self.metadata["document-description"] : null || "",
                                         "document-publisher": self.metadata ? self.metadata["document-publisher"] : null || "Unknown",
                                         "document-type": self.metadata ? self.metadata["document-type"] : null || "Unknown",
@@ -376,15 +375,15 @@ self.numberOfPages = 5;
                                 bookId = self.url.substring(self.url.lastIndexOf("/") + 1),
                                 sourcePath = self.url.substring(0, self.url.lastIndexOf("/")),
                                 sourceFinalAudioDirName = "final",
-                                destFinalAudioDirName = "OEBPS/audio",          //This places the final audio into the final epub
+                                destFinalAudioDirName = "OEBPS/audio", //This places the final audio into the final epub
                                 sourceVoiceAudioDirName = "voice",
-                                destVoiceAudioDirName = "read-aloud-data/voice",  //This places the voice outside the final epub
+                                destVoiceAudioDirName = "read-aloud-data/voice", //This places the voice outside the final epub
                                 extIndex = bookId.lastIndexOf(".");
 
                             if (extIndex !== -1) {
                                 bookId = bookId.substring(0, extIndex);
                             }
-                            if(bookId){
+                            if (bookId) {
                                 expectedBookDirectoryInAudio = bookId.substring(0, bookId.indexOf("_"));
                             }
 
@@ -400,9 +399,9 @@ self.numberOfPages = 5;
                                     + " to " 
                                     + destAudioDir.replace(destFinalAudioDirName, destVoiceAudioDirName));
 
-                                return self.environmentBridge.backend.get("fs").invoke("symbolicLink", 
+                                return self.environmentBridge.backend.get("fs").invoke("symbolicLink",
                                     destAudioDir.replace(destFinalAudioDirName, destVoiceAudioDirName),
-                                    sourceAudioDir.replace(sourceFinalAudioDirName, sourceVoiceAudioDirName), 
+                                    sourceAudioDir.replace(sourceFinalAudioDirName, sourceVoiceAudioDirName),
                                     "directory").then(function() {
                                     return result.url;
                                 }, function() {
@@ -451,7 +450,8 @@ self.numberOfPages = 5;
                     return self.environmentBridge.backend.get("quill-backend").invoke("appendImagesInfo", folderPath, self._document.imagesInfo).then(function() {
                         return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate",
                             "/pdf-converter/templates/page.xhtml",
-                            folderPath + "/OEBPS/pages/" + (page.pageInfo.pageIndex + 1) + ".xhtml", {
+                            folderPath + "/OEBPS/pages/" + (page.pageInfo.pageIndex + 1) + ".xhtml",
+                            {
                                 "page-width": Math.round(viewport.width),
                                 "page-height": Math.round(viewport.height),
                                 "page-title": "page " + (page.pageInfo.pageIndex + 1),
@@ -462,42 +462,30 @@ self.numberOfPages = 5;
                             },
                             true
                         ).then(function() {
-                            return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate",
-                                "/pdf-converter/templates/overlay.smil",
-                                folderPath + "/OEBPS/overlay/" + (page.pageInfo.pageIndex + 1) + ".smil", {
-                                    "pagenumber": (page.pageInfo.pageIndex + 1),
-                                    "audioExtension": ".mp3",
-                                    "wordId":"textOverlay"
-                                },
-                                true
-                            ).then(function() {
-                                if (self._pageNumber < self.numberOfPages) {
-                                    self._pageNumber++;
-                                    self.params.p = self._pageNumber;
-
-                                    lumieres.powerManager.allowIdleSleep();
-                                    if (self._pageNumber % MAX_PAGES_PER_RUN) {
-                                        document.body.removeChild(outputElem);
-                                        return self.convertNextPage();
-                                    } else {
-                                        // Reload the window every 8 pages to reduce memory crash
-                                        var newLoc = window.location.origin + window.location.pathname,
-                                            sep = "?";
-
-                                        for (var param in self.params) {
-                                            newLoc += sep + param + "=" + encodeURIComponent(self.params[param]);
-                                            sep = "&";
-                                        }
-                                        window.location.href = newLoc;
-                                        return false;
-                                    }
-                                }
+                            if (self._pageNumber < self.numberOfPages) {
+                                self._pageNumber ++;
+                                self.params.p = self._pageNumber;
 
                                 lumieres.powerManager.allowIdleSleep();
-                                return true;
-                            }, function(error) {
-                                console.log("error creating smil", error);
-                            });
+                                if (self._pageNumber % MAX_PAGES_PER_RUN) {
+                                    document.body.removeChild(outputElem);
+                                    return self.convertNextPage();
+                                } else {
+                                    // Reload the window every 8 pages to reduce memory crash
+                                    var newLoc = window.location.origin + window.location.pathname,
+                                        sep = "?";
+
+                                    for (param in self.params) {
+                                        newLoc += sep + param + "=" + encodeURIComponent(self.params[param]);
+                                        sep = "&";
+                                    }
+                                    window.location.href = newLoc;
+                                    return false;
+                                }
+                            }
+
+                            lumieres.powerManager.allowIdleSleep();
+                            return true;
                         });
                     });
                 });
