@@ -1,8 +1,7 @@
 var Montage = require("montage").Montage,
     Promise = require("montage/core/promise").Promise,
     Map = require("montage/collections/map"),
-    UUID = require("montage/core/uuid"),
-    ReadAlong = require("core/read-along").ReadAlong;
+    UUID = require("montage/core/uuid");
 
 /**
  * This represents a single physical page in an ebook.
@@ -22,10 +21,6 @@ var PageDocument = exports.PageDocument = Montage.specialize({
         value: function PageDocument () {
             this._deferredMap = new Map();
             this._operationQueue = [];
-
-           /* prepare for read along */
-           this.readAlong = new ReadAlong();
-           this.readAlong.pageDocument = this;
 
             return this.super();
         }
@@ -176,10 +171,6 @@ var PageDocument = exports.PageDocument = Montage.specialize({
             this._channelReady = false;
             this._pageWindow.postMessage("openChannel", "fs://localhost", [channel.port2]);
         
-            if(this._url){
-                this.readAlong.xhtmlUrl = this._url.substring(0, this._url.indexOf("?"));
-                this.readAlong.connect();
-            }
         }
     },
 
@@ -475,10 +466,6 @@ var PageDocument = exports.PageDocument = Montage.specialize({
                 return pageDom;
             });
         }
-    },
-
-    readAlong: {
-        value: null
     },
 
     askIframeToAddClassList: {

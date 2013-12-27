@@ -21,7 +21,7 @@
         "textPromiseController": {
             "prototype": "montage/core/promise-controller",
             "bindings": {
-                "promise": {"<-": "@owner.item.readAlong.readingOrder.text"}
+                "promise": {"<-": "@owner.readAlong.readingOrder.text"}
             }
         },
 
@@ -41,8 +41,8 @@
                 "element": {"#": "readAlongButton"}
             },
             "bindings": {
-                "disabled" : {"<-": "!@owner.item.readAlong.playReadAloudReady"},
-                "classList.has('disabled')": {"<-": "!@owner.item.readAlong.playReadAloudReady"}
+                "disabled" : {"<-": "!@owner.readAlong.playReadAloudReady"},
+                "classList.has('disabled')": {"<-": "!@owner.readAlong.playReadAloudReady"}
             },
             "listeners": [{
                 "type": "action",
@@ -59,7 +59,7 @@
                 "src": "../../assets/img/play.png"
             },
             "bindings": {
-               "src": {"<-": "@owner.item.readAlong.playing ? '../../assets/img/pause.png' : '../../assets/img/play.png' "}
+               "src": {"<-": "@owner.readAlong.playing ? '../../assets/img/pause.png' : '../../assets/img/play.png' "}
             }
         }
     }
