@@ -136,7 +136,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
                     readAlong.triggerAlignerWithReadingOrder().then(function(resultingBestGuessedReadingOrder) {
 
                         console.log("\tResults of calling runAligner on page " + pageNumber, resultingBestGuessedReadingOrder);
-                        if (resultingBestGuessedReadingOrder) {
+                        if (resultingBestGuessedReadingOrder && resultingBestGuessedReadingOrder.length > 0) {
                             console.log("ready to save smil for " + pageNumber);
                             // deferred.resolve("got " + resultingBestGuessedReadingOrder.length + " resultingBestGuessedReadingOrder on page " + pageNumber);
                             readAlong.convertToSMIL(resultingBestGuessedReadingOrder).then(function(smilContents) {
