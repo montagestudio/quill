@@ -430,8 +430,6 @@ exports.optimizeImage = function(sourceURL, destURL, imageSize, quality) {
     }
 };
 
-
-
 exports.getCoverImage = function(item) {
     var root = pathFromURL(item.destination),
         coverImagePath = PATH.join(root, "OEBPS", "assets", "cover.jpeg");

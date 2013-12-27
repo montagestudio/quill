@@ -4,7 +4,6 @@
     height: inherit;
 }
 
-
 .ReadAlongDebugViewPages > iframe {
     position: absolute;
     border: none;
@@ -24,7 +23,6 @@
     z-index: 1000;
     opacity: .8;
 }
-
 
 .ReadAlong {
     display: flex;

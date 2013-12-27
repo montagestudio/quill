@@ -239,8 +239,6 @@ exports.Main = Component.specialize({
                                 return self.optimize(item).then(function() {
                                     item.lastContact = new Date().getTime() / 1000;
                                     self.updateItemState(item, IMPORT_STATES.generating, 0, 3, item.destination, item.meta);
-                                    //TODO could maybe add audio conversion optionally here...
-
                                     return self.extension.customizeAssets(self.environmentBridge.backend, item).then(function() {
                                         self.updateItemState(item, IMPORT_STATES.generating, 1, 3, item.destination, item.meta);
                                         item.lastContact = new Date().getTime() / 1000;

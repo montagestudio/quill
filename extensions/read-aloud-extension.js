@@ -21,7 +21,6 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
 
             console.log("*** customizePages with Read Aloud");
 
-            //HACK to change the progress bar... otherwise it looks like it hangs
             var ipc = backend.get("ipc");
             item.currentPage = 1;
             item.status = IMPORT_STATES.generatingAudioAlignment;
@@ -96,7 +95,6 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
         value: function(backend, item, pageNumber, deferred, message) {
             var ipc = backend.get("ipc");
 
-            //HACK to change the progress bar... otherwise it looks like it hangs
             item.currentPage = item.currentPage + 1;
             item.status = IMPORT_STATES.generatingAudioAlignment;
             ipc.invoke("namedProcesses", "monitor").then(function(processID) {
@@ -137,8 +135,8 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
 
                         console.log("\tResults of calling runAligner on page " + pageNumber, resultingBestGuessedReadingOrder);
                         if (resultingBestGuessedReadingOrder && resultingBestGuessedReadingOrder.length > 0) {
+                            
                             console.log("ready to save smil for " + pageNumber);
-                            // deferred.resolve("got " + resultingBestGuessedReadingOrder.length + " resultingBestGuessedReadingOrder on page " + pageNumber);
                             readAlong.convertToSMIL(resultingBestGuessedReadingOrder).then(function(smilContents) {
                                 var flags = {
                                     flags: "w",
@@ -168,7 +166,6 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
 
                 }, function(error) {
                     console.log("Error getting reading order.", error);
-                    // deferred.resolve("Error getting reading order in page " + pageNumber);
                     self._updateReadAloudStatus(backend, item, pageNumber, deferred, "Error getting reading order ");
                 });
 

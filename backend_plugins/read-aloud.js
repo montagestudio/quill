@@ -1,6 +1,10 @@
 /*jshint node:true */
 /*
-    ReadAloud specific extension
+    ReadAloud specific extension.
+
+    This is loaded by node and makes it possible to call aligner methods from quil.
+    eg: self.backend.get("read-aloud").invoke("runAligner",....
+    
  */
 var Q = require("q"),
     childProcess = require('child_process'),
@@ -70,7 +74,6 @@ var runAligner = exports.runAligner = function(options) {
     var deferred = Q.defer();
 
     Q.nextTick(function() {
-
         if (options.readingOrder) {
             options.text = "";
             options.text = options.readingOrder.map(function(item) {
@@ -86,14 +89,11 @@ var runAligner = exports.runAligner = function(options) {
             deferred.resolve(options);
             return;
         }
+
         console.log("Running aligner..." + options.text + " " + options.voice);
-
-        // TODO verify the .raw, if its not there, create it?
-
         if (!aligner) {
             aligner = new AudioTextAligner();
         }
-
         aligner.run(options.voice, options.text)
             .then(function(results) {
                 // console.log("Results of calling runAligner ", results);
@@ -105,12 +105,4 @@ var runAligner = exports.runAligner = function(options) {
             });
     });
     return deferred.promise;
-};
-
-var getAudioDuration = exports.getAudioDuration = function(audioUrl) {
-    return exec("ffprobe " + audioUrl);
-};
-
-var convertToRawAudio = exports.convertToRawAudio = function(sourceAudioUrl, destAudioUrl) {
-    return exec("ffmpeg -i " + sourceAudioUrl + " -ac 1 -f s16le -ar 16k  " + destAudioUrl);
 };

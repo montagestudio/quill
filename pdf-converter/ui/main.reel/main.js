@@ -368,7 +368,7 @@ exports.Main = Component.specialize({
                     return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate", "pdf-converter/templates/epub3", outputPath).then(function(result) {
                         var source = decodeURI(self.url).substring("fs://localhost".length),
                             dest = (result.url + "/original.pdf").substring("fs://localhost".length);
-                        //                        return self.environmentBridge.backend.get("fs").invoke("link", source, dest).then(function() {   // Use that for an hard link (copy the original)
+//                        return self.environmentBridge.backend.get("fs").invoke("link", source, dest).then(function() {   // Use that for an hard link (copy the original)
                         return self.environmentBridge.backend.get("fs").invoke("symbolicLink", dest, source, "file").then(function() {
                             
                             // Also create a sym link to the final audio, or maybe copy it what about network drives?
@@ -378,7 +378,7 @@ exports.Main = Component.specialize({
                                 sourceFinalAudioDirName = "final",
                                 destFinalAudioDirName = "OEBPS/audio", //This places the final audio into the final epub
                                 sourceVoiceAudioDirName = "voice",
-                                destVoiceAudioDirName = "read-aloud-data/voice", //This places the voice outside the final epub
+                                destVoiceAudioDirName = "read-aloud-data/voice", //This places the voice data outside the final epub
                                 extIndex = bookId.lastIndexOf(".");
 
                             if (extIndex !== -1) {
