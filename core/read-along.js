@@ -506,8 +506,8 @@ exports.ReadAlong = Montage.specialize({
                     return;
                 }
                 var smilXML = '<?xml version="1.0" encoding="UTF-8"?>\n' +
-                    '<body>' +
                     '<smil xmlns="http://www.w3.org/ns/SMIL" xmlns:epub="http://www.idpf.org/2007/ops" version="3.0">\n' +
+                    '<body>' +
                     '\t<seq id="id1" epub:textref="../pages/' + self._pageNumber + '.xhtml" epub:type="bodymatter part">\n';
                 for (var item = 0; item < readingOrder.length; item++) {
                     if (readingOrder[item].startTime === undefined) {
@@ -519,7 +519,7 @@ exports.ReadAlong = Montage.specialize({
                     paralel = paralel + '\t\t</par>\n';
                     smilXML = smilXML + paralel;
                 }
-                smilXML = smilXML + '\t</seq>\n</smil>\n</body>';
+                smilXML = smilXML + '\t</seq>\n</body>\n</smil>';
                 deffered.resolve(smilXML);
             });
             return deffered.promise;
@@ -528,6 +528,7 @@ exports.ReadAlong = Montage.specialize({
 
     convertAudioTimeToSmilTime: {
         value: function(time) {
+            time = time+"";
             var result = "";
             var pieces = time.split(".");
             var miliseconds = "000";
