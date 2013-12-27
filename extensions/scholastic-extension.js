@@ -11,6 +11,7 @@ var g_TrialPeriod = 10;     //in days
 var g_local_secret_hash_key =  "e9161e517f3db0bed9ecf45f634f1f25";
 var g_remote_secret_hash_key = "cdc1421b4468131ec9411b8522b1df61";
 
+var CREATE_WITH_READ_ALOUD = true;
 
 var _storeExpirationDate = function(scholastic, expiration) {
     expiration = expiration.getTime().toString(16);
@@ -128,8 +129,10 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
             // Check the license now
             checkLicense();
-            this.readAloudExtension = new ReadAloudExtension();
-            this.readAloudExtension.initialize(backend);
+            if(CREATE_WITH_READ_ALOUD){
+                this.readAloudExtension = new ReadAloudExtension();
+                this.readAloudExtension.initialize(backend);
+            }
         }
     },
 
@@ -260,11 +263,14 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                 backend.get("scholastic").invoke("setupCoverImage", item).then(function(coverImage) {
                     item.coverImage = coverImage ? coverImage.url : null;
                     
-                    /* prepare read aloud for all scholastic books */
-                    self.readAloudExtension.customizePages(backend, item).done(function(){
-                        console.log("Read aloud customization is done.");
+                    if (CREATE_WITH_READ_ALOUD) {
+                        self.readAloudExtension.customizePages(backend, item).done(function() {
+                            console.log("Read aloud customization is done.");
+                            deferred.resolve(item.id);
+                        });
+                    } else {
                         deferred.resolve(item.id);
-                    });
+                    }
 
                 }, function(error) {
                     deferred.reject(error);
