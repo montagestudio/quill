@@ -12,7 +12,7 @@ var RAW_EXTENSION = ".raw",
     MP4_EXTENSION = ".mp4";
 
 var VOICE_EXTENSION = MP3_EXTENSION,
-    FINAL_EXTENSION = MP4_EXTENSION; //TODO this should be mp4, but it wont play in plume audio tag
+    FINAL_EXTENSION = WAV_EXTENSION; //TODO this should be mp4, but it wont play in plume audio tag
 
 var debug = false;
 
