@@ -12,7 +12,7 @@ var RAW_EXTENSION = ".raw",
     MP4_EXTENSION = ".mp4";
 
 var VOICE_EXTENSION = MP3_EXTENSION,
-    FINAL_EXTENSION = WAV_EXTENSION; //TODO this should be mp4 but it wont play in plume audio tag
+    FINAL_EXTENSION = MP4_EXTENSION; //TODO this should be mp4 but it wont play in plume audio tag
 
 var debug = false;
 
@@ -312,16 +312,22 @@ exports.ReadAlong = Montage.specialize({
         }
     },
 
+    //TODO test this
     save: {
         value: function() {
             if (!this.alignmentResults) {
-                return;
+                return null;
             }
-            console.log("saving prevous read along details" + JSON.stringify(this.alignmentResults));
-            return new Promise();
+            console.log("saving read along details");
+            var path = this._basePath.replace("OEBPS", "read-aloud-data/json") + this._pageNumber + ".json";
+            var flags = {
+                flags: "w",
+                charset: 'utf-8'
+            };
+            var content = JSON.stringify(this.alignmentResults, null, 2);
+            return this.backend.get("fs").invoke("write", path, content, flags);
         }
     },
-
 
     hasReadAlong: {
         value: null
@@ -495,23 +501,69 @@ exports.ReadAlong = Montage.specialize({
                 deffered = Promise.defer();
 
             Promise.nextTick(function() {
+                if (!readingOrder || readingOrder.length < 1) {
+                    deffered.resolve("");
+                    return;
+                }
                 var smilXML = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+                    '<body>' +
                     '<smil xmlns="http://www.w3.org/ns/SMIL" xmlns:epub="http://www.idpf.org/2007/ops" version="3.0">\n' +
-                    '\t<seq id="id1" epub:textref="pages/6.xhtml" epub:type="bodymatter part">\n';
+                    '\t<seq id="id1" epub:textref="../pages/' + self._pageNumber + '.xhtml" epub:type="bodymatter part">\n';
                 for (var item = 0; item < readingOrder.length; item++) {
                     if (readingOrder[item].startTime === undefined) {
                         continue;
                     }
                     var paralel = '\t\t<par id="' + readingOrder[item].id + '">\n';
-                    paralel = paralel + '\t\t\t<text src="pages/' + self._pageNumber + ".xhtml" + "#" + readingOrder[item].id + '"></text>\n';
-                    paralel = paralel + '\t\t\t<audio src="' + "audio/" + self._pageNumber + FINAL_EXTENSION + '" clipBegin="' + readingOrder[item].startTime + '" clipEnd="' + readingOrder[item].endTime + '"></audio>\n';
+                    paralel = paralel + '\t\t\t<text src="../pages/' + self._pageNumber + ".xhtml" + "#" + readingOrder[item].id + '"/>\n';
+                    paralel = paralel + '\t\t\t<audio src="' + "../audio/" + self._pageNumber + FINAL_EXTENSION + '" clipBegin="' + self.convertAudioTimeToSmilTime(readingOrder[item].startTime) + '" clipEnd="' + self.convertAudioTimeToSmilTime(readingOrder[item].endTime) + '"/>\n';
                     paralel = paralel + '\t\t</par>\n';
                     smilXML = smilXML + paralel;
                 }
-                smilXML = smilXML + '\t</seq>\n</smil>';
+                smilXML = smilXML + '\t</seq>\n</smil>\n</body>';
                 deffered.resolve(smilXML);
             });
             return deffered.promise;
+        }
+    },
+
+    convertAudioTimeToSmilTime: {
+        value: function(time) {
+            var result = "";
+            var pieces = time.split(".");
+            var miliseconds = "000";
+            var minutes = "00";
+            var seconds = "00";
+            if (pieces[1]) {
+                miliseconds = pieces[1];
+                if (miliseconds.length === 1) {
+                    miliseconds = miliseconds + "00";
+                } else if (miliseconds.length === 2) {
+                    miliseconds = miliseconds + "0";
+                }
+            }
+            if (pieces[0]) {
+                seconds = pieces[0];
+                if (seconds.length > 1) {
+                    seconds = parseInt(seconds, 10);
+                    if (seconds > 59) {
+                        minutes = Math.floor(seconds / 60);
+                        seconds = seconds - (minutes * 60);
+                        minutes = minutes + "";
+                    }
+                    seconds = seconds + "";
+                }
+                if (seconds.length === 1) {
+                    seconds = "0" + seconds;
+                }
+            }
+            if (minutes) {
+                if (minutes.length === 1) {
+                    minutes = "0" + minutes;
+                }
+            }
+            result = "0:" + minutes + ":" + seconds + "." + miliseconds;
+
+            return result;
         }
     },
 
