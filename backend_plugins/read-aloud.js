@@ -78,7 +78,7 @@ var runAligner = exports.runAligner = function(options) {
             options.text = "";
             options.text = options.readingOrder.map(function(item) {
                 return item.text;
-            }).join(" ");
+            }).join(" ").trim();
         }
         if (!options.text) {
             console.log("There is no text, resolving the reading order only.");
@@ -89,11 +89,24 @@ var runAligner = exports.runAligner = function(options) {
             deferred.resolve(options);
             return;
         }
-
-        console.log("Running aligner..." + options.text + " " + options.voice);
+        if (!options.voice) {
+            console.log("There is no voice url, resolving the reading order only.");
+            options.alignmentResults = {
+                "guesses": {},
+                "info": "missing voice audio url, not running aligner"
+            };
+            deferred.resolve(options);
+            return;
+        }
         if (!aligner) {
             aligner = new AudioTextAligner();
         }
+
+        console.log("Decoding uri: "+ options.voice);
+        options.voice = decodeURI(options.voice);
+        console.log(options.voice);
+
+        console.log("Running aligner..." + options.text + " " + options.voice);
         aligner.run(options.voice, options.text)
             .then(function(results) {
                 // console.log("Results of calling runAligner ", results);
