@@ -448,7 +448,7 @@ exports.ReadAlong = Montage.specialize({
 
                     }, function(error) {
                         console.log("Error running the aligner. " + self.xhtmlUrl, error);
-                        deferred.resolve([]);
+                        deferred.reject(error);
                     });
                 }, function(error) {
                     console.log("Error extracting text for " + self.xhtmlUrl, error);

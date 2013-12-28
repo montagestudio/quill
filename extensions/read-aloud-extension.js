@@ -72,20 +72,39 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
         value: function(backend, item) {
             var promises = [],
                 deferred = Promise.defer(),
-                self = this;
+                self = this,
+                pageIndex = 1,
+                onePageAtATime = true;
 
             Promise.nextTick(function() {
-                for (var pageIndex = 1; pageIndex < item.nbrPages; pageIndex++) {
-                    promises.push(self._addReadAloudToPage(backend, item, pageIndex));
+                if (onePageAtATime) {
+                    var recursivelyRunReadAloudUntilDone = function(pageIndex) {
+                        if (pageIndex < item.nbrPages) {
+                            self._addReadAloudToPage(backend, item, pageIndex).done(function() {
+                                console.log("Done page " + pageIndex);
+                                pageIndex = pageIndex + 1;
+                                recursivelyRunReadAloudUntilDone(pageIndex);
+                            });
+                        } else {
+                            console.log("Done batch running the read aloud.");
+                            deferred.resolve(item.id);
+                        }
+                    };
+                    recursivelyRunReadAloudUntilDone(pageIndex);
+                } else {
+                    for (pageIndex = 1; pageIndex < item.nbrPages; pageIndex++) {
+                        promises.push(self._addReadAloudToPage(backend, item, pageIndex));
+                    }
+                    Promise.allSettled(promises).then(function(result) {
+                        console.log("Success of all pages when batch running the read aloud.", result);
+                    }, function(error) {
+                        console.log("Error on some pages when batch running the read aloud.", error);
+                    }).done(function() {
+                        console.log("Done batch running the read aloud.");
+                        deferred.resolve(item.id);
+                    });
                 }
-                Promise.allSettled(promises).then(function(result) {
-                    console.log("Success of all pages when batch running the read aloud.", result);
-                }, function(error) {
-                    console.log("Error on some pages when batch running the read aloud.", error);
-                }).done(function() {
-                    console.log("Done batch running the read aloud.");
-                    deferred.resolve(item.id);
-                });
+
             });
             return deferred.promise;
         }
@@ -93,20 +112,31 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
 
     _updateReadAloudStatus: {
         value: function(backend, item, pageNumber, deferred, message) {
-            var ipc = backend.get("ipc");
+            var pauseInCaseWebSocketClosed = 500;
 
-            item.currentPage = item.currentPage + 1;
-            item.status = IMPORT_STATES.generatingAudioAlignment;
-            ipc.invoke("namedProcesses", "monitor").then(function(processID) {
-                console.log("Sending generatingAudioAlignment update.");
-                if (processID) {
-                    return ipc.invoke("send", item.processID, processID[0], ["itemUpdate", item]);
-                }
-            }, function(e) {
-                console.log("ERROR UPDATING IMPORT STATE:", e.message, e.stack);
-            }).done(function() {
-                deferred.resolve(message + pageNumber);
-            });
+            if (message === "Error calling runAligner ") {
+                console.log("This page " + pageNumber + " might have crashed the websocket, tried waiting 15 seconds for socket to come back online before going to next page. But it doesnt seem to come back after a seg fault...");
+                pauseInCaseWebSocketClosed = 15000;
+            }
+
+            setTimeout(function() {
+                console.log("Updating generatingAudioAlignment");
+                var ipc = backend.get("ipc");
+
+                item.currentPage = item.currentPage + 1;
+                item.status = IMPORT_STATES.generatingAudioAlignment;
+                ipc.invoke("namedProcesses", "monitor").then(function(processID) {
+                    console.log("Sending generatingAudioAlignment update.");
+                    if (processID) {
+                        return ipc.invoke("send", item.processID, processID[0], ["itemUpdate", item]);
+                    }
+                }, function(e) {
+                    console.log("ERROR UPDATING IMPORT STATE:", e.message, e.stack);
+                }).done(function() {
+                    deferred.resolve(message + pageNumber);
+                });
+
+            }, pauseInCaseWebSocketClosed);
         }
     },
 
@@ -135,7 +165,7 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
 
                         console.log("\tResults of calling runAligner on page " + pageNumber, resultingBestGuessedReadingOrder);
                         if (resultingBestGuessedReadingOrder && resultingBestGuessedReadingOrder.length > 0) {
-                            
+
                             console.log("ready to save smil for " + pageNumber);
                             readAlong.convertToSMIL(resultingBestGuessedReadingOrder).then(function(smilContents) {
                                 var flags = {
