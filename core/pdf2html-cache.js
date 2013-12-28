@@ -101,7 +101,11 @@ exports.PDF2HTMLCache = Montage.specialize({
         }
     },
 
-    folderPath: {
+    assetsFolderPath: {
+        value: null
+    },
+
+    fontsFolderPath: {
         value: null
     },
 
@@ -118,7 +122,7 @@ exports.PDF2HTMLCache = Montage.specialize({
     },
 
     initialize: {
-        value: function(path, pdf, log) {
+        value: function(assetsPath, fontsPath, pdf, log) {
             var self = this,
                 deferred = Promise.defer();
 
@@ -129,20 +133,36 @@ exports.PDF2HTMLCache = Montage.specialize({
                     self._log = log;
                 }
 
-                if (path.indexOf("fs://localhost") === 0) {
+                if (assetsPath.indexOf("fs://localhost") === 0 && fontsPath.indexOf("fs://localhost") === 0) {
                     var fs = self.backend.get("fs");
 
-                    this.folderPath = decodeURIComponent(path.substring("fs://localhost".length));
-                    if (this.folderPath.charAt(this.folderPath.length - 1) !== "/") {
-                        this.folderPath += "/";
+                    this.assetsFolderPath = decodeURIComponent(assetsPath.substring("fs://localhost".length));
+                    if (this.assetsFolderPath.charAt(this.assetsFolderPath.length - 1) !== "/") {
+                        this.assetsFolderPath += "/";
                     }
-                    fs.invoke("makeTree", self.folderPath).then(function() {
-                        fs.invoke("exists", self.folderPath).then(function(exists){
+
+                    this.fontsFolderPath = decodeURIComponent(fontsPath.substring("fs://localhost".length));
+                    if (this.fontsFolderPath.charAt(this.fontsFolderPath.length - 1) !== "/") {
+                        this.fontsFolderPath += "/";
+                    }
+
+                    fs.invoke("makeTree", self.assetsFolderPath).then(function() {
+                        fs.invoke("exists", self.assetsFolderPath).then(function(exists){
                             if (exists) {
                                 deferred.resolve(self);
                             } else {
-                                deferred.reject("Cannot initialize the PDF Object cache: cache path does not exist!");
+                                deferred.reject("Cannot initialize the PDF assets cache: cache path does not exist!");
                             }
+                        });
+                    }).done(function() {
+                        fs.invoke("makeTree", self.fontsFolderPath).then(function() {
+                            fs.invoke("exists", self.fontsFolderPath).then(function(exists){
+                                if (exists) {
+                                    deferred.resolve(self);
+                                } else {
+                                    deferred.reject("Cannot initialize the PDF fonts cache: cache path does not exist!");
+                                }
+                            });
                         });
                     });
                 } else {
@@ -216,7 +236,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                 objectData = data[3],
                 referenceID = data[4],
                 hasMask = data[5],
-                filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
+                filePath = this.assetsFolderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
                 bytes,
                 length;
 
@@ -297,9 +317,8 @@ exports.PDF2HTMLCache = Montage.specialize({
                 if (fontName.length > 7 && fontName.charAt(6) === "+") {
                     fontName = font.loadedName.substr(2) + fontName.substr(6);
                 }
-                filePath = self.folderPath + fontName + ".otf";
+                filePath = self.fontsFolderPath + fontName + ".otf";
                 fontURL = encodeURI("fs://localhost" + filePath);
-
 
                 return fs.invoke("exists", filePath).then(function(exists) {
                     if (!exists) {
@@ -354,7 +373,7 @@ exports.PDF2HTMLCache = Montage.specialize({
                 type = data[2],
                 referenceID = data[3],
                 hasMask = data[4],
-                filePath = this.folderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
+                filePath = this.assetsFolderPath + "image_" + (referenceID ? referenceID.num + "_" + referenceID.gen : name),
                 url = null;
 
 //            console.log(">>> CACHE GET OBJECT URL:", filePath, type);

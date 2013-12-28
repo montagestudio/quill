@@ -163,7 +163,7 @@ exports.Main = Component.specialize({
                                         options["document-narrator"] = self.metadata ? self.metadata["document-narrator"] : null || "Unknown";
                                     }
 
-                                    return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", pdf, function(){ self.idle() }).then(function(cache) {
+                                    return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", self.outputURL + "/OEBPS/pages/fonts", pdf, function(){ self.idle() }).then(function(cache) {
                                         PDFJS.objectsCache = cache;
                                         PDFJS.jpegQuality = 1.0;
 
