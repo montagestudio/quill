@@ -64,16 +64,34 @@ exports.ReadingOrder = Montage.specialize({
                         continue;
                     }
                     count++;
-                    this.contents.push({
-                        "id": textNode.id,
-                        "text": potentialText,
-                        "readingOrder": count
-                    });
+                    potentialText = potentialText ? this.cleanTextForLongConsonantsAndVowels(potentialText) : "";
+                    if (potentialText) {
+                        this.contents.push({
+                            "id": textNode.id,
+                            "text": potentialText,
+                            "readingOrder": count
+                        });
+                    }
                 }
             }
             // console.log("This page contains this many words " + JSON.stringify(this.contents.length));
             var triggerTextUpdate = this.text;
             return this.contents;
+        }
+    },
+
+    cleanTextForLongConsonantsAndVowels: {
+        value: function(text) {
+            var result = text.toLowerCase();
+            // If there is a letter which repeats 3 or more times, its probably not a real word and will result in poor dictionary lookup
+            // replace with one letter.
+            result = result.replace(/([a-z])\1{3,}/g, "$1");
+            if (result !== text.toLowerCase()) {
+                console.log("This word is strange: " + text + ", replacing with something which might be more available in the dictionary (in the epub, and in the read aloud aligner): " + result);
+                return result;
+            } else {
+                return text;
+            }
         }
     },
 
