@@ -45,28 +45,6 @@ exports.ReadAloudExtension = Montage.create(ImportExtension, {
         }
     },
 
-    customizeAssets: {
-        value: function(backend, item) {
-            var deferred = Promise.defer();
-            Promise.nextTick(function() {
-                console.log("*** customizeAssets with Read Aloud");
-                deferred.resolve(item.id);
-            });
-            return deferred.promise;
-        }
-    },
-
-    customizeEbook: {
-        value: function(backend, item) {
-            var deferred = Promise.defer();
-            Promise.nextTick(function() {
-                console.log("*** customizeEbook with Read Aloud");
-                deferred.resolve(item.id);
-            });
-            return deferred.promise;
-        }
-    },
-
     /* Internal Methods for Read Aloud Batch Processing Extension  */
     _addReadAloudToEPub: {
         value: function(backend, item) {
