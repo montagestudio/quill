@@ -23,12 +23,8 @@
         <meta property="ibooks:specified-fonts">true</meta>
         <meta property="ibooks:version">1.0</meta>
 
-        <!--MEDIA OVERLAY METADATA
-        <meta property="media:duration" refines="#{{pageNumber}}_overlay">{{pageNumber-audio-duration}}</meta> -->
-        <meta property="media:duration">{{total-audio-duration}}</meta>
-        <meta property="media:narrator">{{document-narrator}}</meta>
-        <meta property="media:active-class">-epub-media-overlay-active</meta>
-
+        {{content-extra-meta}}
+        
     </metadata>
     <manifest>
         <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>

@@ -158,11 +158,15 @@ exports.Main = Component.specialize({
                                             "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z"
                                     };
 
-                                    if(CREATE_WITH_READ_ALOUD){
-                                        options["total-audio-duration"] =  self.metadata ? self.metadata["total-audio-duration"] : null || "0:00:10.000";
-                                        options["document-narrator"] = self.metadata ? self.metadata["document-narrator"] : null || "Unknown";
+                                    options["content-extra-meta"] = "";
+                                    if (CREATE_WITH_READ_ALOUD) {
+                                        var narrator = self.metadata ? self.metadata["document-narrator"] : null || "Unknown";
+                                        var audioDuration = self.metadata ? self.metadata["total-audio-duration"] : null || "0:00:10.000";
+                                        options["content-extra-meta"] =
+                                            '\n\t\t<meta property="media:duration">' + audioDuration + '</meta>' +
+                                            '\n\t\t<meta property="media:narrator">' + narrator + '</meta>' +
+                                            '\n\t\t<meta property="media:active-class">-epub-media-overlay-active</meta>';
                                     }
-
                                     return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", self.outputURL + "/OEBPS/pages/fonts", pdf, function(){ self.idle() }).then(function(cache) {
                                         PDFJS.objectsCache = cache;
                                         PDFJS.jpegQuality = 1.0;
