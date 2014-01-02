@@ -218,12 +218,6 @@ exports.updateContentInfo = function(item) {
                             name = "audioW" + name;
                         }
                         break;
-                    case ".mp4":
-                        type = "audio/mp4";
-                        if (firstChar <= "A") {
-                            name = "audioP" + name;
-                        }
-                        break;
                     case ".smil":
                         type = "application/smil+xml";
                         if (firstChar <= "A") {
