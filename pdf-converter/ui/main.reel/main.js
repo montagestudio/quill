@@ -147,7 +147,7 @@ exports.Main = Component.specialize({
                                         "original-resolution": "500x800",       // JFD TODO: we need a real value!!!
                                         "document-title": self.metadata ? self.metadata["document-title"] : null || "Untitled",
                                         "document-author": self.metadata ? self.metadata["document-author"] : null || "Unknown",
-                                        "document-description": self.metadata ? self.metadata["document-description"] : null || "-",
+                                        "document-description": self.metadata ? self.metadata["document-description"] : null || " ",
                                         "document-publisher": self.metadata ? self.metadata["document-publisher"] : null || "Unknown",
                                         "document-type": self.metadata ? self.metadata["document-type"] : null || "Unknown",
                                         "document-date": now.getUTCFullYear() + "-" + (now.getUTCMonth() + 1) + "-" + (now.getUTCDate() + 1),
