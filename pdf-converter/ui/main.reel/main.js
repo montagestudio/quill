@@ -155,10 +155,10 @@ exports.Main = Component.specialize({
                                         "book-id": "0",
                                         "modification-date": now.getUTCFullYear() + "-" + pad(now.getUTCMonth() + 1) +
                                             "-" + pad(now.getUTCDate() + 1) +
-                                            "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z"
+                                            "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z",
+                                        "content-extra-meta": ""
                                     };
 
-                                    options["content-extra-meta"] = "";
                                     if (CREATE_WITH_READ_ALOUD) {
                                         var narrator = self.metadata ? self.metadata["document-narrator"] : null || "Unknown";
                                         var audioDuration = self.metadata ? self.metadata["total-audio-duration"] : null || "0:00:10.000";
