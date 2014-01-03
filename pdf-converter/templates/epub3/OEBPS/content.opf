@@ -22,6 +22,9 @@
         <meta property="rendition:spread">auto</meta>
         <meta property="ibooks:specified-fonts">true</meta>
         <meta property="ibooks:version">1.0</meta>
+
+        {{content-extra-meta}}
+        
     </metadata>
     <manifest>
         <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>

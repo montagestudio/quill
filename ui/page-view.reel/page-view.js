@@ -146,7 +146,7 @@ exports.PageView = Component.specialize({
     loadPage: {
         value: function() {
             var item = this.item,
-                blankPage = '<html><head></head><body style="background-color: white; height:100%; width:100%"></body></html>';
+                blankPage = '<html><head></head><body style="background-color: grey; height:100%; width:100%"></body></html>';
 
             if (item) {
                 if (item.type === "image") {

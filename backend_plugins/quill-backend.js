@@ -135,7 +135,7 @@ exports.updateContentInfo = function(item) {
     var rootDirectory = item.destination,
         options = item.meta,
         root = PATH.join(pathFromURL(rootDirectory), "OEBPS"),
-        directories = ["assets", "pages", "styles"],
+        directories = ["assets", "pages", "styles","overlay","audio"],
         listPromises = [];
 
     options = options || {};
@@ -200,6 +200,30 @@ exports.updateContentInfo = function(item) {
                             name = "image" + name;
                         }
                         break;
+                    case ".mp3":
+                        type = "audio/mp3";
+                        if (firstChar <= "A") {
+                            name = "audioM" + name;
+                        }
+                        break;
+                    case ".mp4":
+                        type = "audio/mp4";
+                        if (firstChar <= "A") {
+                            name = "audioMM" + name;
+                        }
+                        break;
+                    case ".wav":
+                        type = "audio/wav";
+                        if (firstChar <= "A") {
+                            name = "audioW" + name;
+                        }
+                        break;
+                    case ".smil":
+                        type = "application/smil+xml";
+                        if (firstChar <= "A") {
+                            name = "overlay" + name;
+                        }
+                        break;
                     case ".otf":
                         type = "font/opentype";
                         if (firstChar <= "A") {
@@ -215,7 +239,7 @@ exports.updateContentInfo = function(item) {
 
 
                     name = name.replace(/[-_+.,;:]/g, "");
-                    manifest.push('<item id="' + name + '" href="' + path + '"' + (properties !== null ? ' properties="' + properties + '"' : '') + ' media-type="' + type +'"/>');
+                    manifest.push('\t\t<item id="' + name + '" href="' + path + '"' + (properties !== null ? ' properties="' + properties + '"' : '') + ' media-type="' + type +'"/>');
                 }
             });
         });
@@ -239,7 +263,7 @@ exports.updateContentInfo = function(item) {
             var attributes = item.pagesAttributes[name.substr("page".length) + ".xhtml"] || item.pagesAttributes[name + ".xhtml"],
                 spineItem;
 
-            spineItem = '<itemref idref="' + name + '"';
+            spineItem = '\t\t<itemref idref="' + name + '"';
 
             if (attributes) {
                 for (var property in attributes) {

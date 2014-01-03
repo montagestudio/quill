@@ -249,7 +249,7 @@ exports.Main = Component.specialize({
                                                 item.lastContact = new Date().getTime() / 1000;
                                                 return true;
                                             }, function(error) {
-                                                console.log("generateEpub error:", e.message, e.stack);
+                                                console.log("generateEpub error:", error.message, error.stack);
                                                 item.error = error.message || error.error;
                                                 self.updateItemState(item, IMPORT_STATES.error);
                                             });
@@ -265,7 +265,7 @@ exports.Main = Component.specialize({
                                     });
                                 }, function(error) {
                                     console.log("optimize error:", error.message);
-                                    item.error = errormessage || error.error;
+                                    item.error = error.message || error.error;
                                     self.updateItemState(item, IMPORT_STATES.error);
                                 });
                             }, function(error) {

@@ -1,0 +1,6 @@
+#textOverlay span {
+    position: relative;
+    background-color: #5ff;
+    color: #f00 !important;
+    opacity: .3;
+}

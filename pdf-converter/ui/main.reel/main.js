@@ -10,6 +10,7 @@ var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 var MAX_PAGES_PER_RUN  = 8;
 
+var CREATE_WITH_READ_ALOUD = false;
 
 exports.Main = Component.specialize({
 
@@ -146,7 +147,7 @@ exports.Main = Component.specialize({
                                         "original-resolution": "500x800",       // JFD TODO: we need a real value!!!
                                         "document-title": self.metadata ? self.metadata["document-title"] : null || "Untitled",
                                         "document-author": self.metadata ? self.metadata["document-author"] : null || "Unknown",
-                                        "document-description": self.metadata ? self.metadata["document-description"] : null || "",
+                                        "document-description": self.metadata ? self.metadata["document-description"] : null || " ",
                                         "document-publisher": self.metadata ? self.metadata["document-publisher"] : null || "Unknown",
                                         "document-type": self.metadata ? self.metadata["document-type"] : null || "Unknown",
                                         "document-date": now.getUTCFullYear() + "-" + (now.getUTCMonth() + 1) + "-" + (now.getUTCDate() + 1),
@@ -154,9 +155,18 @@ exports.Main = Component.specialize({
                                         "book-id": "0",
                                         "modification-date": now.getUTCFullYear() + "-" + pad(now.getUTCMonth() + 1) +
                                             "-" + pad(now.getUTCDate() + 1) +
-                                            "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z"
+                                            "T" + pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()) + "Z",
+                                        "content-extra-meta": ""
                                     };
 
+                                    if (CREATE_WITH_READ_ALOUD) {
+                                        var narrator = self.metadata ? self.metadata["document-narrator"] : null || "Unknown";
+                                        var audioDuration = self.metadata ? self.metadata["total-audio-duration"] : null || "0:00:10.000";
+                                        options["content-extra-meta"] =
+                                            '\n\t\t<meta property="media:duration">' + audioDuration + '</meta>' +
+                                            '\n\t\t<meta property="media:narrator">' + narrator + '</meta>' +
+                                            '\n\t\t<meta property="media:active-class">-epub-media-overlay-active</meta>';
+                                    }
                                     return PDF2HTMLCache.create().initialize(self.outputURL + "/OEBPS/assets/", self.outputURL + "/OEBPS/pages/fonts", pdf, function(){ self.idle() }).then(function(cache) {
                                         PDFJS.objectsCache = cache;
                                         PDFJS.jpegQuality = 1.0;
@@ -358,14 +368,54 @@ exports.Main = Component.specialize({
             return this.environmentBridge.backend.get("fs").invoke("exists", outputPath.substring("fs://localhost".length)).then(function(exists) {
                 if (exists && !forceCreate) {
                     return outputPath;
-                } else  {
+                } else {
                     return self.environmentBridge.backend.get("quill-backend").invoke("createFromTemplate", "pdf-converter/templates/epub3", outputPath).then(function(result) {
                         var source = decodeURI(self.url).substring("fs://localhost".length),
                             dest = (result.url + "/original.pdf").substring("fs://localhost".length);
-
 //                        return self.environmentBridge.backend.get("fs").invoke("link", source, dest).then(function() {   // Use that for an hard link (copy the original)
                         return self.environmentBridge.backend.get("fs").invoke("symbolicLink", dest, source, "file").then(function() {
-                            return result.url;
+                            
+                            // Also create a sym link to the final audio, or maybe copy it what about network drives?
+                            var expectedBookDirectoryInAudio = "00000000",
+                                bookId = self.url.substring(self.url.lastIndexOf("/") + 1),
+                                sourcePath = self.url.substring(0, self.url.lastIndexOf("/")),
+                                sourceFinalAudioDirName = "final",
+                                destFinalAudioDirName = "OEBPS/audio", //This places the final audio into the final epub
+                                sourceVoiceAudioDirName = "voice",
+                                destVoiceAudioDirName = "read-aloud-data/voice", //This places the voice data outside the final epub
+                                extIndex = bookId.lastIndexOf(".");
+
+                            if (extIndex !== -1) {
+                                bookId = bookId.substring(0, extIndex);
+                            }
+                            if (bookId) {
+                                expectedBookDirectoryInAudio = bookId.substring(0, bookId.indexOf("_"));
+                            }
+
+                            var simulationExpectedAudioDirFromPDFLocation = "/Audio/" + expectedBookDirectoryInAudio + "/" + sourceFinalAudioDirName,
+                                sourceAudioDir = decodeURI(sourcePath).substring("fs://localhost".length) + simulationExpectedAudioDirFromPDFLocation,
+                                destAudioDir = (result.url + "/" + destFinalAudioDirName).substring("fs://localhost".length);
+
+                            console.log("\tSymLinking audio " + sourceAudioDir + " to " + destAudioDir);
+
+                            return self.environmentBridge.backend.get("fs").invoke("symbolicLink", destAudioDir, sourceAudioDir, "directory").then(function() {
+                                console.log("\tSymLinking audio " 
+                                    + sourceAudioDir.replace(sourceFinalAudioDirName, sourceVoiceAudioDirName) 
+                                    + " to " 
+                                    + destAudioDir.replace(destFinalAudioDirName, destVoiceAudioDirName));
+
+                                return self.environmentBridge.backend.get("fs").invoke("symbolicLink",
+                                    destAudioDir.replace(destFinalAudioDirName, destVoiceAudioDirName),
+                                    sourceAudioDir.replace(sourceFinalAudioDirName, sourceVoiceAudioDirName),
+                                    "directory").then(function() {
+                                    return result.url;
+                                }, function() {
+                                    return result.url;
+                                });
+                            }, function() {
+                                return result.url;
+                            });
+
                         }, function() {
                             return result.url;
                         });
@@ -439,9 +489,9 @@ exports.Main = Component.specialize({
                                 }
                             }
 
-                                lumieres.powerManager.allowIdleSleep();
-                                return true;
-                            });
+                            lumieres.powerManager.allowIdleSleep();
+                            return true;
+                        });
                     });
                 });
             });

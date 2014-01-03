@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+    <title>Page View</title>
+    <meta charset="utf-8">
+
+    <link href="read-along-debug-view.css" rel="stylesheet" />
+
+    <script type="text/montage-serialization">
+    {
+        "localizer": {
+            "object": "montage/core/localizer[defaultLocalizer]"
+        },
+
+        "owner": {
+            "properties": {
+                "element": {"#": "pageView"}
+            }
+        },
+
+        "textPromiseController": {
+            "prototype": "montage/core/promise-controller",
+            "bindings": {
+                "promise": {"<-": "@owner.readAlong.readingOrder.text"}
+            }
+        },
+
+        "readAloudDebug": {
+            "prototype": "montage/ui/text.reel",
+            "properties": {
+                "element": {"#": "readAloudDebug"}
+            },
+            "bindings": {
+                "value": {"<-": "@textPromiseController.value"}
+            }
+        },
+
+        "readAlongButton": {
+            "prototype": "matte/ui/button.reel",
+            "properties": {
+                "element": {"#": "readAlongButton"}
+            },
+            "bindings": {
+                "disabled" : {"<-": "!@owner.readAlong.playReadAloudReady"},
+                "classList.has('disabled')": {"<-": "!@owner.readAlong.playReadAloudReady"}
+            },
+            "listeners": [{
+                "type": "action",
+                "listener": {
+                    "@": "owner"
+                }
+            }]
+        },
+
+        "buttonImage": {
+            "prototype": "matte/ui/image.reel",
+            "properties": {
+                "element": {"#": "buttonImage"},
+                "src": "../../assets/img/play.png"
+            },
+            "bindings": {
+               "src": {"<-": "@owner.readAlong.playing ? '../../assets/img/pause.png' : '../../assets/img/play.png' "}
+            }
+        }
+    }
+    </script>
+
+</head>
+<body>
+    <section data-montage-id="pageView" class="ReadAlong ReadAlongDebugViewPages">
+        <iframe seamless scrolling="no"></iframe>
+
+        <div class="ReadAlongDebugViewPages-debug">
+            <button data-montage-id="readAlongButton" class="Toolbar-button" >Read Aloud
+                <img data-montage-id="buttonImage" class="ReadAlongDebugViewPages-icon" src="../../assets/img/play.png"></img>
+            </button>
+        </div>
+        <div data-montage-id="readAloudDebug" hidden class="ReadAlongDebugViewPages-debug"></div>
+    </section>
+</body>
+</html>

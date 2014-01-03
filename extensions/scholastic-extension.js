@@ -1,8 +1,8 @@
 /*jshint camelcase:false, maxcomplexity:16 */ // TODO: fix these warnings
 var Montage = require("montage/core/core").Montage,
     Promise = require("montage/core/promise").Promise,
-    ImportExtension = require("core/ImportExtension").ImportExtension;
-
+    ImportExtension = require("core/ImportExtension").ImportExtension,
+    ReadAloudExtension = require("extensions/read-aloud-extension").ReadAloudExtension;
 
 var g_validLicense = null;      // Null = need to check the license, true = licence ok, false = invalid license
 
@@ -11,6 +11,7 @@ var g_TrialPeriod = 10;     //in days
 var g_local_secret_hash_key =  "e9161e517f3db0bed9ecf45f634f1f25";
 var g_remote_secret_hash_key = "cdc1421b4468131ec9411b8522b1df61";
 
+var CREATE_WITH_READ_ALOUD = false;
 
 var _storeExpirationDate = function(scholastic, expiration) {
     expiration = expiration.getTime().toString(16);
@@ -128,7 +129,15 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
             // Check the license now
             checkLicense();
+            if(CREATE_WITH_READ_ALOUD){
+                this.readAloudExtension = new ReadAloudExtension();
+                this.readAloudExtension.initialize(backend);
+            }
         }
+    },
+
+    readAloudExtension : {
+        value: null
     },
 
     canPerformOperation: {
@@ -193,7 +202,8 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                                 "language": "document-language",
                                 "publisher": "document-publisher",
                                 "title": "document-title",
-                                "eReader_Category_Output": "document-type"
+                                "eReader_Category_Output": "document-type",
+                                "narrator": "document-narrator" // GC TODO: not verified what is the scholastic key for narrator, if any
 
                                 // JFD TODO: add more names as needed
                             };
@@ -242,7 +252,8 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
 
     customizePages: {
         value: function(backend, item) {
-            var deferred = Promise.defer();
+            var deferred = Promise.defer(),
+                self = this;
 
             console.log("*** customizePages", item);
 
@@ -251,7 +262,16 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
                 // Let's setup a cover image
                 backend.get("scholastic").invoke("setupCoverImage", item).then(function(coverImage) {
                     item.coverImage = coverImage ? coverImage.url : null;
-                    deferred.resolve(item.id);
+                    
+                    if (CREATE_WITH_READ_ALOUD) {
+                        self.readAloudExtension.customizePages(backend, item).done(function() {
+                            console.log("Read aloud customization is done.");
+                            deferred.resolve(item.id);
+                        });
+                    } else {
+                        deferred.resolve(item.id);
+                    }
+
                 }, function(error) {
                     deferred.reject(error);
                 });
@@ -657,4 +677,3 @@ exports.ScholasticExtension = Montage.create(ImportExtension, {
         }
     }
 });
-

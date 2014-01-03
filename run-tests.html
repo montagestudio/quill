@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title></title>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<title></title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 </head>
 <body>
-    <script src="node_modules/montage-testing/support/jasmine.js"></script>
-    <script src="node_modules/montage-testing/support/js-beautify/beautify.js"></script>
-    <link  href="node_modules/montage-testing/reporter/style.css" rel="stylesheet" type="text/css" >
-    <script src="node_modules/montage-testing/reporter/trivial-html.js"></script>
-    <script src="node_modules/montage-testing/jasmine-additions.js" ></script>
+	<iframe seamless="" scrolling="no" src="test/read-along/test-book-page.html" width="1024" height="1223" style="z-index: 200; position: absolute; top:0; opacity: .5;"></iframe>
 
-    <script src="node_modules/montage/montage.js" data-module="test/all"></script>
+	<iframe seamless="" scrolling="no" src="test/read-along/test-book-page-incorrect-reading-order.html" width="1024" height="1223" style="z-index: 200; position: absolute; top:50em; opacity: .5;"></iframe>
+
+	<script src="node_modules/montage-testing/support/jasmine.js"></script>
+	<script src="node_modules/montage-testing/support/js-beautify/beautify.js"></script>
+	<link  href="node_modules/montage-testing/reporter/style.css" rel="stylesheet" type="text/css" >
+	<script src="node_modules/montage-testing/reporter/trivial-html.js"></script>
+	<script src="node_modules/montage-testing/jasmine-additions.js" ></script>
+
+	<script src="node_modules/montage/montage.js" data-module="test/all"></script>
 </body>
 </html>
