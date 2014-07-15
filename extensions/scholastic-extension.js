@@ -11,7 +11,7 @@ var g_TrialPeriod = 10;     //in days
 var g_local_secret_hash_key =  "e9161e517f3db0bed9ecf45f634f1f25";
 var g_remote_secret_hash_key = "cdc1421b4468131ec9411b8522b1df61";
 
-var CREATE_WITH_READ_ALOUD = false;
+var CREATE_WITH_READ_ALOUD = true;
 
 var _storeExpirationDate = function(scholastic, expiration) {
     expiration = expiration.getTime().toString(16);

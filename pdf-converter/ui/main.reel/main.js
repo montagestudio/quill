@@ -10,7 +10,7 @@ var IS_IN_LUMIERES = (typeof lumieres !== "undefined");
 
 var MAX_PAGES_PER_RUN  = 8;
 
-var CREATE_WITH_READ_ALOUD = false;
+var CREATE_WITH_READ_ALOUD = true;
 
 exports.Main = Component.specialize({
 
